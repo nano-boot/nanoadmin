@@ -6,7 +6,7 @@
 -- 创建数据库（如果不存在）
 CREATE DATABASE IF NOT EXISTS theadmin CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE danciya;
+USE theadmin;
 
 -- 1. 用户表
 CREATE TABLE IF NOT EXISTS `th_sys_user` (
@@ -55,7 +55,7 @@ CREATE TABLE `th_sys_admin` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='管理员表';
 
 -- 2. 角色表
-CREATE TABLE IF NOT EXISTS th_sys_roles (
+CREATE TABLE IF NOT EXISTS th_sys_role (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '角色ID',
     code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色代码',
     name VARCHAR(100) NOT NULL COMMENT '角色名称',
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS th_sys_roles (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
 
 -- 3. 权限表
-CREATE TABLE IF NOT EXISTS th_sys_permissions (
+CREATE TABLE IF NOT EXISTS th_sys_permission (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '权限ID',
     code VARCHAR(100) NOT NULL UNIQUE COMMENT '权限代码',
     name VARCHAR(100) NOT NULL COMMENT '权限名称',
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS th_sys_menu (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='菜单表';
 
 -- 5. 用户角色关联表
-CREATE TABLE IF NOT EXISTS th_sys_admin_roles (
+CREATE TABLE IF NOT EXISTS th_sys_admin_role (
     admin_id BIGINT NOT NULL COMMENT '管理员ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     PRIMARY KEY (admin_id, role_id),
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS th_sys_admin_roles (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员角色关联表';
 
 -- 6. 角色权限关联表
-CREATE TABLE IF NOT EXISTS th_sys_role_permissions (
+CREATE TABLE IF NOT EXISTS th_sys_role_permission (
     role_id BIGINT NOT NULL COMMENT '角色ID',
     permission_id BIGINT NOT NULL COMMENT '权限ID',
     PRIMARY KEY (role_id, permission_id),
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS th_sys_role_permissions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限关联表';
 
 -- 7. 角色菜单关联表
-CREATE TABLE IF NOT EXISTS th_sys_role_menus (
+CREATE TABLE IF NOT EXISTS th_sys_role_menu (
     role_id BIGINT NOT NULL COMMENT '角色ID',
     menu_id BIGINT NOT NULL COMMENT '菜单ID',
     
