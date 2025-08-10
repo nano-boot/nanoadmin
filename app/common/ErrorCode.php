@@ -19,7 +19,8 @@ enum ErrorCode: int
     case LOGIN_FAILED = 40002;           // 登录失败
     case TOKEN_EXPIRED = 40003;          // 令牌已过期
     case TOKEN_INVALID = 40004;          // 令牌无效
-    case PASSWORD_ERROR = 40005;         // 密码错误
+    case TOKEN_MISSING = 40005;          // 令牌缺失
+    case PASSWORD_ERROR = 40006;         // 密码错误
 
     case UNAUTHORIZED = 40300;           // 未授权访问
     case FORBIDDEN = 40301;              // 权限不足
@@ -65,6 +66,7 @@ enum ErrorCode: int
             self::LOGIN_FAILED => '登录失败',
             self::TOKEN_EXPIRED => '令牌已过期',
             self::TOKEN_INVALID => '令牌无效',
+            self::TOKEN_MISSING => '令牌缺失',
             self::PASSWORD_ERROR => '密码错误',
             self::ACCOUNT_DISABLED => '账户已禁用',
             self::FORBIDDEN => '权限不足',
@@ -119,6 +121,7 @@ enum ErrorCode: int
             self::LOGIN_FAILED,
             self::TOKEN_EXPIRED,
             self::TOKEN_INVALID,
+            self::TOKEN_MISSING,
             self::PASSWORD_ERROR,
             self::ACCOUNT_DISABLED => 401,
 

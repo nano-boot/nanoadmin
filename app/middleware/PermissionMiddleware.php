@@ -22,36 +22,36 @@ class PermissionMiddleware implements MiddlewareInterface
      */
     protected array $routePermissions = [
         // 管理员管理
-        'GET:/api/admins' => 'admin.list',
-        'POST:/api/admins' => 'admin.create',
-        'GET:/api/admins/*' => 'admin.view',
-        'PUT:/api/admins/*' => 'admin.update',
-        'DELETE:/api/admins/*' => 'admin.delete',
-        'POST:/api/admins/*/roles' => 'admin.assign_roles',
+        'GET:/sys/admins' => 'admin.list',
+        'POST:/sys/admins' => 'admin.create',
+        'GET:/sys/admins/*' => 'admin.view',
+        'PUT:/sys/admins/*' => 'admin.update',
+        'DELETE:/sys/admins/*' => 'admin.delete',
+        'POST:/sys/admins/*/roles' => 'admin.assign_roles',
 
         // 角色管理
-        'GET:/api/roles' => 'role.list',
-        'POST:/api/roles' => 'role.create',
-        'GET:/api/roles/*' => 'role.view',
-        'PUT:/api/roles/*' => 'role.update',
-        'DELETE:/api/roles/*' => 'role.delete',
-        'POST:/api/roles/*/permissions' => 'role.assign_permissions',
-        'POST:/api/roles/*/menus' => 'role.assign_menus',
+        'GET:/sys/roles' => 'role.list',
+        'POST:/sys/roles' => 'role.create',
+        'GET:/sys/roles/*' => 'role.view',
+        'PUT:/sys/roles/*' => 'role.update',
+        'DELETE:/sys/roles/*' => 'role.delete',
+        'POST:/sys/roles/*/permissions' => 'role.assign_permissions',
+        'POST:/sys/roles/*/menus' => 'role.assign_menus',
 
         // 权限管理
-        'GET:/api/permissions' => 'permission.list',
-        'POST:/api/permissions' => 'permission.create',
-        'GET:/api/permissions/*' => 'permission.view',
-        'PUT:/api/permissions/*' => 'permission.update',
-        'DELETE:/api/permissions/*' => 'permission.delete',
+        'GET:/sys/permissions' => 'permission.list',
+        'POST:/sys/permissions' => 'permission.create',
+        'GET:/sys/permissions/*' => 'permission.view',
+        'PUT:/sys/permissions/*' => 'permission.update',
+        'DELETE:/sys/permissions/*' => 'permission.delete',
 
         // 菜单管理
-        'GET:/api/menus' => 'menu.list',
-        'POST:/api/menus' => 'menu.create',
-        'GET:/api/menus/*' => 'menu.view',
-        'PUT:/api/menus/*' => 'menu.update',
-        'DELETE:/api/menus/*' => 'menu.delete',
-        'POST:/api/menus/sort' => 'menu.sort',
+        'GET:/sys/menus' => 'menu.list',
+        'POST:/sys/menus' => 'menu.create',
+        'GET:/sys/menus/*' => 'menu.view',
+        'PUT:/sys/menus/*' => 'menu.update',
+        'DELETE:/sys/menus/*' => 'menu.delete',
+        'POST:/sys/menus/sort' => 'menu.sort',
     ];
 
     /**
@@ -59,13 +59,13 @@ class PermissionMiddleware implements MiddlewareInterface
      * @var array
      */
     protected array $excludeRoutes = [
-        '/api/auth/login',
-        '/api/auth/logout',
-        '/api/auth/refresh',
-        '/api/auth/profile',
-        '/api/auth/permissions',
-        '/api/auth/menus',
-        '/api/install',
+        '/sys/auth/login',
+        '/sys/auth/logout',
+        '/sys/auth/refresh',
+        '/sys/auth/profile',
+        '/sys/auth/permissions',
+        '/sys/auth/menus',
+        '/sys/install',
     ];
 
     /**
