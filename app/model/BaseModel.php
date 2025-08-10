@@ -2,8 +2,14 @@
 
 namespace plugin\theadmin\app\model;
 
+use think\Collection;
+use think\db\exception\DataNotFoundException;
+use think\db\exception\DbException;
+use think\db\exception\ModelNotFoundException;
+use think\db\Query;
 use think\Model;
 use think\model\concern\SoftDelete;
+use think\Paginator;
 
 /**
  * 基础模型类
@@ -17,76 +23,72 @@ abstract class BaseModel extends Model
      * 软删除字段
      * @var string
      */
-    protected $deleteTime = 'deleted';
+    protected string $deleteTime = 'deleted';
 
     /**
      * 软删除字段默认值
      * @var mixed
      */
-    protected $defaultSoftDelete = false;
+    protected mixed $defaultSoftDelete = false;
 
     /**
      * 自动时间戳
      * @var bool|string
      */
-    protected $autoWriteTimestamp = true;
+    protected bool|string $autoWriteTimestamp = true;
 
     /**
      * 创建时间字段
      * @var string
      */
-    protected $createTime = 'created_at';
+    protected string $createTime = 'created_at';
 
     /**
      * 更新时间字段
      * @var string
      */
-    protected $updateTime = 'updated_at';
+    protected string $updateTime = 'updated_at';
 
     /**
      * 时间字段取出后的默认时间格式
      * @var string
      */
-    protected $dateFormat = 'Y-m-d H:i:s';
+    protected string $dateFormat = 'Y-m-d H:i:s';
 
     /**
      * 全局查询范围 - 排除软删除
-     * @param \think\db\Query $query
-     * @return void
+     * @param Query $query
      */
-    public function scopeActive($query)
+    public function scopeActive(Query $query): void
     {
         $query->where($this->deleteTime, '=', $this->defaultSoftDelete);
     }
 
     /**
      * 状态范围查询 - 启用状态
-     * @param \think\db\Query $query
-     * @return void
+     * @param Query $query
      */
-    public function scopeEnabled($query)
+    public function scopeEnabled(Query $query): void
     {
         $query->where('status', '=', 1);
     }
 
     /**
      * 状态范围查询 - 禁用状态
-     * @param \think\db\Query $query
-     * @return void
+     * @param Query $query
      */
-    public function scopeDisabled($query)
+    public function scopeDisabled(Query $query): void
     {
         $query->where('status', '=', 0);
     }
 
     /**
      * 排序范围查询
-     * @param \think\db\Query $query
+     * @param Query $query
      * @param string $field 排序字段
      * @param string $order 排序方向
-     * @return void
      */
-    public function scopeSort($query, $field = 'sort', $order = 'asc')
+    public function scopeSort(Query $query, string $field = 'sort', string $order = 'asc'): void
     {
         $query->order($field, $order);
     }
@@ -97,9 +99,10 @@ abstract class BaseModel extends Model
      * @param int $page 页码
      * @param int $limit 每页数量
      * @param string $order 排序
-     * @return \think\Paginator
+     * @return Paginator
+     * @throws DbException
      */
-    public function getList($where = [], $page = 1, $limit = 15, $order = 'id desc')
+    public function getList(array $where = [], int $page = 1, int $limit = 15, string $order = 'id desc'): Paginator
     {
         $query = $this->where($where);
         
@@ -118,9 +121,12 @@ abstract class BaseModel extends Model
      * @param array $where 查询条件
      * @param string $order 排序
      * @param string $field 字段
-     * @return \think\Collection
+     * @return Collection
+     * @throws DbException
+     * @throws DataNotFoundException
+     * @throws ModelNotFoundException
      */
-    public function getAll($where = [], $order = 'id desc', $field = '*')
+    public function getAll(array $where = [], string $order = 'id desc', string $field = '*'): Collection
     {
         $query = $this->field($field)->where($where);
         
@@ -135,9 +141,12 @@ abstract class BaseModel extends Model
      * 根据ID获取记录
      * @param int $id
      * @param string $field 字段
-     * @return static|null
+     * @return BaseModel
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
-    public function getById($id, $field = '*')
+    public function getById(int $id, string $field = '*'): BaseModel
     {
         return $this->field($field)->find($id);
     }
@@ -147,8 +156,11 @@ abstract class BaseModel extends Model
      * @param array $where 查询条件
      * @param string $field 字段
      * @return static|null
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
-    public function getOne($where, $field = '*')
+    public function getOne(array $where, string $field = '*'): ?BaseModel
     {
         return $this->field($field)->where($where)->find();
     }
@@ -156,9 +168,9 @@ abstract class BaseModel extends Model
     /**
      * 添加记录
      * @param array $data 数据
-     * @return static|false
+     * @return BaseModel|false
      */
-    public function add($data)
+    public function add(array $data): BaseModel|bool|static
     {
         return $this->save($data) ? $this : false;
     }
@@ -169,14 +181,14 @@ abstract class BaseModel extends Model
      * @param array $where 条件
      * @return bool
      */
-    public function edit($data, $where = [])
+    public function edit(array $data, array $where = []): bool
     {
         if (empty($where) && isset($data['id'])) {
             $where = ['id' => $data['id']];
             unset($data['id']);
         }
         
-        return $this->where($where)->update($data) !== false;
+        return $this->where($where)->update($data) != false;
     }
 
     /**
@@ -184,7 +196,7 @@ abstract class BaseModel extends Model
      * @param int|array $id ID或条件
      * @return bool
      */
-    public function remove($id)
+    public function remove(int|array $id): bool
     {
         if (is_array($id)) {
             return $this->where($id)->delete() !== false;
@@ -198,7 +210,7 @@ abstract class BaseModel extends Model
      * @param int|array $id ID或条件
      * @return bool
      */
-    public function forceRemove($id)
+    public function forceRemove(int|array $id): bool
     {
         if (is_array($id)) {
             return $this->where($id)->force()->delete() !== false;
@@ -212,8 +224,11 @@ abstract class BaseModel extends Model
      * @param int $id ID
      * @param string $field 字段名
      * @return bool
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
-    public function toggleStatus($id, $field = 'status')
+    public function toggleStatus(int $id, string $field = 'status'): bool
     {
         $model = $this->find($id);
         if (!$model) {
@@ -229,7 +244,7 @@ abstract class BaseModel extends Model
      * @param array $data 数据 [['id' => 1, 'sort' => 10], ...]
      * @return bool
      */
-    public function updateSort($data)
+    public function updateSort(array $data): bool
     {
         if (empty($data)) {
             return false;
@@ -255,7 +270,7 @@ abstract class BaseModel extends Model
      * @param array $where 查询条件
      * @return int
      */
-    public function getNextSort($where = [])
+    public function getNextSort(array $where = []): int
     {
         $maxSort = $this->where($where)->max('sort');
         return $maxSort ? $maxSort + 10 : 100;
@@ -267,7 +282,7 @@ abstract class BaseModel extends Model
      * @param int $excludeId 排除的ID
      * @return bool
      */
-    public function checkExists($where, $excludeId = 0)
+    public function checkExists(array $where, int $excludeId = 0): bool
     {
         $query = $this->where($where);
         

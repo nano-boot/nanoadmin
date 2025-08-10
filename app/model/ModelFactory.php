@@ -12,13 +12,13 @@ class ModelFactory
      * 模型实例缓存
      * @var array
      */
-    private static $instances = [];
+    private static array $instances = [];
 
     /**
      * 获取Admin模型实例
      * @return Admin
      */
-    public static function admin()
+    public static function admin(): Admin
     {
         return self::getInstance(Admin::class);
     }
@@ -27,7 +27,7 @@ class ModelFactory
      * 获取Role模型实例
      * @return Role
      */
-    public static function role()
+    public static function role(): Role
     {
         return self::getInstance(Role::class);
     }
@@ -36,7 +36,7 @@ class ModelFactory
      * 获取Permission模型实例
      * @return Permission
      */
-    public static function permission()
+    public static function permission(): Permission
     {
         return self::getInstance(Permission::class);
     }
@@ -45,7 +45,7 @@ class ModelFactory
      * 获取Menu模型实例
      * @return Menu
      */
-    public static function menu()
+    public static function menu(): Menu
     {
         return self::getInstance(Menu::class);
     }
@@ -55,7 +55,7 @@ class ModelFactory
      * @param string $className 模型类名
      * @return mixed
      */
-    private static function getInstance($className)
+    private static function getInstance(string $className): mixed
     {
         if (!isset(self::$instances[$className])) {
             self::$instances[$className] = new $className();
@@ -69,7 +69,7 @@ class ModelFactory
      * @param string|null $className 模型类名，为空则清除所有
      * @return void
      */
-    public static function clearCache($className = null)
+    public static function clearCache(string $className = null): void
     {
         if ($className) {
             unset(self::$instances[$className]);

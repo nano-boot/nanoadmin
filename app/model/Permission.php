@@ -2,6 +2,13 @@
 
 namespace plugin\theadmin\app\model;
 
+use think\Collection;
+use think\db\exception\DataNotFoundException;
+use think\db\exception\DbException;
+use think\db\exception\ModelNotFoundException;
+use think\model\relation\BelongsToMany;
+use think\Paginator;
+
 /**
  * 权限模型
  */
@@ -23,7 +30,7 @@ class Permission extends BaseModel
      * 字段类型转换
      * @var array
      */
-    protected $type = [
+    protected array $type = [
         'id' => 'integer',
         'status' => 'boolean',
         'sort' => 'integer',
@@ -34,9 +41,9 @@ class Permission extends BaseModel
 
     /**
      * 关联角色
-     * @return \think\model\relation\BelongsToMany
+     * @return BelongsToMany
      */
-    public function roles()
+    public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'sys_role_permission', 'role_id', 'permission_id');
     }
@@ -46,27 +53,25 @@ class Permission extends BaseModel
      * @param array $where 查询条件
      * @param int $page 页码
      * @param int $limit 每页数量
-     * @return \think\Paginator
+     * @return Paginator
+     * @throws DbException
      */
-    public function getListGrouped($where = [], $page = 1, $limit = 15)
+    public function getListGrouped(array $where = [], int $page = 1, int $limit = 15): Paginator
     {
         $query = $this->where($where);
         
         // 支持权限名称搜索
-        if (isset($where['name']) && !empty($where['name'])) {
-            unset($where['name']);
+        if (!empty($where['name'])) {
             $query->where('name', 'like', '%' . $where['name'] . '%');
         }
         
         // 支持权限代码搜索
-        if (isset($where['code']) && !empty($where['code'])) {
-            unset($where['code']);
+        if (!empty($where['code'])) {
             $query->where('code', 'like', '%' . $where['code'] . '%');
         }
         
         // 支持资源类型筛选
-        if (isset($where['resource']) && !empty($where['resource'])) {
-            unset($where['resource']);
+        if (!empty($where['resource'])) {
             $query->where('resource', $where['resource']);
         }
         
@@ -81,7 +86,7 @@ class Permission extends BaseModel
      * @param array $data 权限数据
      * @return static|false
      */
-    public function createPermission($data)
+    public function createPermission(array $data): bool|Permission|static
     {
         // 检查权限代码是否已存在
         if ($this->checkExists(['code' => $data['code']])) {
@@ -102,7 +107,7 @@ class Permission extends BaseModel
      * @param array $data 更新数据
      * @return bool
      */
-    public function updatePermission($id, $data)
+    public function updatePermission(int $id, array $data): bool
     {
         // 检查权限代码是否已存在（排除自己）
         if (isset($data['code']) && $this->checkExists(['code' => $data['code']], $id)) {
@@ -117,7 +122,7 @@ class Permission extends BaseModel
      * @param int $id 权限ID
      * @return bool
      */
-    public function isUsed($id)
+    public function isUsed(int $id): bool
     {
         // 检查是否有角色使用此权限
         $roleCount = $this->roles()->where('permission_id', $id)->count();
@@ -129,7 +134,7 @@ class Permission extends BaseModel
      * 获取权限树形结构（按资源分组）
      * @return array
      */
-    public function getTree()
+    public function getTree(): array
     {
         $permissions = $this->enabled()->order('resource asc, sort asc')->select();
         $tree = [];
@@ -162,7 +167,7 @@ class Permission extends BaseModel
      * @param string $resource 资源类型
      * @return string
      */
-    private function getResourceLabel($resource)
+    private function getResourceLabel(string $resource): string
     {
         $labels = [
             'admin' => '管理员管理',
@@ -177,9 +182,9 @@ class Permission extends BaseModel
 
     /**
      * 获取启用的权限列表（用于角色分配）
-     * @return \think\Collection
+     * @return Collection
      */
-    public function getEnabledList()
+    public function getEnabledList(): Collection
     {
         return $this->enabled()->order('resource asc, sort asc')->select();
     }
@@ -189,8 +194,11 @@ class Permission extends BaseModel
      * @param string $resource 资源类型
      * @param string $action 操作类型
      * @return static|null
+     * @throws DbException
+     * @throws DataNotFoundException
+     * @throws ModelNotFoundException
      */
-    public function getByResourceAction($resource, $action)
+    public function getByResourceAction(string $resource, string $action): static
     {
         return $this->where([
             'resource' => $resource,
@@ -204,7 +212,7 @@ class Permission extends BaseModel
      * @param array $permissions 权限数据数组
      * @return bool
      */
-    public function batchCreate($permissions)
+    public function batchCreate(array $permissions): bool
     {
         if (empty($permissions)) {
             return false;
@@ -230,7 +238,7 @@ class Permission extends BaseModel
      * 获取资源类型列表
      * @return array
      */
-    public function getResourceTypes()
+    public function getResourceTypes(): array
     {
         $resources = $this->distinct(true)->column('resource');
         $types = [];
@@ -250,7 +258,7 @@ class Permission extends BaseModel
      * @param string $resource 资源类型
      * @return array
      */
-    public function getActionTypes($resource = '')
+    public function getActionTypes(string $resource = ''): array
     {
         $query = $this->distinct(true);
         
@@ -276,7 +284,7 @@ class Permission extends BaseModel
      * @param string $action 操作类型
      * @return string
      */
-    private function getActionLabel($action)
+    private function getActionLabel(string $action): string
     {
         $labels = [
             'list' => '查看列表',

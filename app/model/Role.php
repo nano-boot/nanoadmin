@@ -2,8 +2,16 @@
 
 namespace plugin\theadmin\app\model;
 
+use think\Collection;
+use think\db\exception\DbException;
+use think\model\Pivot;
+use think\model\relation\BelongsToMany;
+use think\Paginator;
+
 /**
  * 角色模型
+ * @property mixed $permissions
+ * @property mixed $menus
  */
 class Role extends BaseModel
 {
@@ -23,7 +31,7 @@ class Role extends BaseModel
      * 字段类型转换
      * @var array
      */
-    protected $type = [
+    protected array $type = [
         'id' => 'integer',
         'status' => 'boolean',
         'sort' => 'integer',
@@ -34,27 +42,27 @@ class Role extends BaseModel
 
     /**
      * 关联管理员
-     * @return \think\model\relation\BelongsToMany
+     * @return BelongsToMany
      */
-    public function admins()
+    public function admins(): BelongsToMany
     {
         return $this->belongsToMany(Admin::class, 'sys_admin_role', 'admin_id', 'role_id');
     }
 
     /**
      * 关联权限
-     * @return \think\model\relation\BelongsToMany
+     * @return BelongsToMany
      */
-    public function permissions()
+    public function permissions(): BelongsToMany
     {
         return $this->belongsToMany(Permission::class, 'sys_role_permission', 'permission_id', 'role_id');
     }
 
     /**
      * 关联菜单
-     * @return \think\model\relation\BelongsToMany
+     * @return BelongsToMany
      */
-    public function menus()
+    public function menus(): BelongsToMany
     {
         return $this->belongsToMany(Menu::class, 'sys_role_menu', 'menu_id', 'role_id');
     }
@@ -64,21 +72,20 @@ class Role extends BaseModel
      * @param array $where 查询条件
      * @param int $page 页码
      * @param int $limit 每页数量
-     * @return \think\Paginator
+     * @return Paginator
+     * @throws DbException
      */
-    public function getListWithCounts($where = [], $page = 1, $limit = 15)
+    public function getListWithCounts(array $where = [], int $page = 1, int $limit = 15): Paginator
     {
         $query = $this->where($where);
         
         // 支持角色名称搜索
-        if (isset($where['name']) && !empty($where['name'])) {
-            unset($where['name']);
+        if (!empty($where['name'])) {
             $query->where('name', 'like', '%' . $where['name'] . '%');
         }
         
         // 支持角色代码搜索
-        if (isset($where['code']) && !empty($where['code'])) {
-            unset($where['code']);
+        if (!empty($where['code'])) {
             $query->where('code', 'like', '%' . $where['code'] . '%');
         }
         
@@ -93,7 +100,7 @@ class Role extends BaseModel
      * @param array $data 角色数据
      * @return static|false
      */
-    public function createRole($data)
+    public function createRole(array $data): Role|bool|static
     {
         // 检查角色代码是否已存在
         if ($this->checkExists(['code' => $data['code']])) {
@@ -114,22 +121,23 @@ class Role extends BaseModel
      * @param array $data 更新数据
      * @return bool
      */
-    public function updateRole($id, $data)
+    public function updateRole(int $id, array $data): bool
     {
         // 检查角色代码是否已存在（排除自己）
         if (isset($data['code']) && $this->checkExists(['code' => $data['code']], $id)) {
             return false;
         }
         
-        return $this->where('id', $id)->update($data) !== false;
+        return $this->where('id', $id)->update($data) != false;
     }
 
     /**
      * 分配权限
      * @param array $permissionIds 权限ID数组
-     * @return bool
+     * @return array|bool|Pivot
+     * @throws DbException
      */
-    public function assignPermissions($permissionIds)
+    public function assignPermissions(array $permissionIds): bool|array|Pivot
     {
         // 先删除现有权限关联
         $this->permissions()->detach();
@@ -145,9 +153,10 @@ class Role extends BaseModel
     /**
      * 分配菜单
      * @param array $menuIds 菜单ID数组
-     * @return bool
+     * @return array|bool|Pivot
+     * @throws DbException
      */
-    public function assignMenus($menuIds)
+    public function assignMenus(array $menuIds): bool|array|Pivot
     {
         // 先删除现有菜单关联
         $this->menus()->detach();
@@ -165,7 +174,7 @@ class Role extends BaseModel
      * @param int $id 角色ID
      * @return bool
      */
-    public function isUsed($id)
+    public function isUsed(int $id): bool
     {
         // 检查是否有管理员使用此角色
         $adminCount = $this->admins()->where('role_id', $id)->count();
@@ -177,7 +186,7 @@ class Role extends BaseModel
      * 获取角色的权限代码列表
      * @return array
      */
-    public function getPermissionCodes()
+    public function getPermissionCodes(): array
     {
         $permissions = $this->permissions;
         $codes = [];
@@ -193,7 +202,7 @@ class Role extends BaseModel
      * 获取角色的菜单ID列表
      * @return array
      */
-    public function getMenuIds()
+    public function getMenuIds(): array
     {
         $menus = $this->menus;
         $ids = [];
@@ -210,7 +219,7 @@ class Role extends BaseModel
      * @param string $permission 权限代码
      * @return bool
      */
-    public function hasPermission($permission)
+    public function hasPermission(string $permission): bool
     {
         $permissions = $this->permissions;
         
@@ -225,9 +234,9 @@ class Role extends BaseModel
 
     /**
      * 获取启用的角色列表（用于下拉选择）
-     * @return \think\Collection
+     * @return Collection
      */
-    public function getEnabledList()
+    public function getEnabledList(): Collection
     {
         return $this->enabled()->order('sort asc, id desc')->select();
     }

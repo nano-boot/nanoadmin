@@ -2,6 +2,13 @@
 
 namespace plugin\theadmin\app\model;
 
+use think\db\exception\DataNotFoundException;
+use think\db\exception\DbException;
+use think\db\exception\ModelNotFoundException;
+use think\model\relation\BelongsTo;
+use think\model\relation\BelongsToMany;
+use think\model\relation\HasMany;
+
 /**
  * 菜单模型
  */
@@ -23,7 +30,7 @@ class Menu extends BaseModel
      * 字段类型转换
      * @var array
      */
-    protected $type = [
+    protected array $type = [
         'id' => 'integer',
         'parent_id' => 'integer',
         'menu_type' => 'integer',
@@ -39,27 +46,27 @@ class Menu extends BaseModel
 
     /**
      * 关联父菜单
-     * @return \think\model\relation\BelongsTo
+     * @return BelongsTo
      */
-    public function parent()
+    public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
     /**
      * 关联子菜单
-     * @return \think\model\relation\HasMany
+     * @return HasMany
      */
-    public function children()
+    public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id')->order('sort asc');
     }
 
     /**
      * 关联角色
-     * @return \think\model\relation\BelongsToMany
+     * @return BelongsToMany
      */
-    public function roles()
+    public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'sys_role_menu', 'role_id', 'menu_id');
     }
@@ -68,8 +75,11 @@ class Menu extends BaseModel
      * 获取菜单树形结构
      * @param array $where 查询条件
      * @return array
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
-    public function getTree($where = [])
+    public function getTree(array $where = []): array
     {
         $menus = $this->where($where)->order('sort asc, id asc')->select();
         
@@ -82,7 +92,7 @@ class Menu extends BaseModel
      * @param int $parentId 父级ID
      * @return array
      */
-    private function buildTree($menus, $parentId = 0)
+    private function buildTree(array $menus, int $parentId = 0): array
     {
         $tree = [];
         
@@ -103,8 +113,11 @@ class Menu extends BaseModel
      * 获取菜单列表（平铺结构，带层级标识）
      * @param array $where 查询条件
      * @return array
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
-    public function getListWithLevel($where = [])
+    public function getListWithLevel(array $where = []): array
     {
         $tree = $this->getTree($where);
         $list = [];
@@ -121,7 +134,7 @@ class Menu extends BaseModel
      * @param int $level 层级
      * @return void
      */
-    private function treeToList($tree, &$list, $level = 0)
+    private function treeToList(array $tree, array &$list, int $level = 0): void
     {
         foreach ($tree as $item) {
             $item['level'] = $level;
@@ -143,7 +156,7 @@ class Menu extends BaseModel
      * @param array $data 菜单数据
      * @return static|false
      */
-    public function createMenu($data)
+    public function createMenu(array $data): bool|Menu|static
     {
         // 设置默认排序值
         if (!isset($data['sort'])) {
@@ -159,7 +172,7 @@ class Menu extends BaseModel
      * @param array $data 更新数据
      * @return bool
      */
-    public function updateMenu($id, $data)
+    public function updateMenu(int $id, array $data): bool
     {
         // 检查是否将父级设置为自己或自己的子级
         if (isset($data['parent_id']) && $data['parent_id'] > 0) {
@@ -177,7 +190,7 @@ class Menu extends BaseModel
      * @param int $childId 子级ID
      * @return bool
      */
-    private function isChildOf($parentId, $childId)
+    private function isChildOf(int $parentId, int $childId): bool
     {
         $children = $this->where('parent_id', $parentId)->column('id');
         
@@ -199,7 +212,7 @@ class Menu extends BaseModel
      * @param int $id 菜单ID
      * @return bool
      */
-    public function deleteMenu($id)
+    public function deleteMenu(int $id): bool
     {
         // 检查是否有子菜单
         $childCount = $this->where('parent_id', $id)->count();
@@ -215,7 +228,7 @@ class Menu extends BaseModel
      * @param array $data 排序数据
      * @return bool
      */
-    public function updateMenuSort($data)
+    public function updateMenuSort(array $data): bool
     {
         if (empty($data)) {
             return false;
@@ -252,8 +265,11 @@ class Menu extends BaseModel
      * 获取用户菜单树（根据角色权限）
      * @param array $roleIds 角色ID数组
      * @return array
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
-    public function getUserMenuTree($roleIds)
+    public function getUserMenuTree(array $roleIds): array
     {
         if (empty($roleIds)) {
             return [];
@@ -281,8 +297,11 @@ class Menu extends BaseModel
      * 获取面包屑导航
      * @param int $menuId 菜单ID
      * @return array
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
-    public function getBreadcrumb($menuId)
+    public function getBreadcrumb(int $menuId): array
     {
         $breadcrumb = [];
         $menu = $this->find($menuId);
@@ -305,7 +324,7 @@ class Menu extends BaseModel
      * 获取菜单类型选项
      * @return array
      */
-    public function getMenuTypes()
+    public function getMenuTypes(): array
     {
         return [
             ['value' => 1, 'label' => '目录'],
@@ -318,8 +337,11 @@ class Menu extends BaseModel
      * 获取父级菜单选项
      * @param int $excludeId 排除的菜单ID
      * @return array
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
-    public function getParentOptions($excludeId = 0)
+    public function getParentOptions(int $excludeId = 0): array
     {
         $where = ['menu_type' => ['in', [1, 2]]]; // 只有目录和菜单可以作为父级
         
@@ -344,7 +366,7 @@ class Menu extends BaseModel
      * @param int $id 菜单ID
      * @return bool
      */
-    public function isUsed($id)
+    public function isUsed(int $id): bool
     {
         // 检查是否有角色使用此菜单
         $roleCount = $this->roles()->where('menu_id', $id)->count();
