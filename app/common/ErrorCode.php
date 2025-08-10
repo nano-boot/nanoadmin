@@ -6,7 +6,7 @@ namespace plugin\theadmin\app\common;
  * 错误码枚举类
  * 使用类似HTTP状态码的格式：
  * - 20000: 成功
- * - 40xxx: 客户端错误
+ * - 40xxx: 业务错误
  * - 50xxx: 服务器错误
  */
 enum ErrorCode: int
@@ -58,7 +58,7 @@ enum ErrorCode: int
     {
         return match($this) {
             self::SUCCESS => '操作成功',
-            
+
             // 业务错误
             self::PARAMETER_ERROR => '参数错误',
             self::UNAUTHORIZED => '未授权访问',
@@ -75,25 +75,25 @@ enum ErrorCode: int
             self::HAS_CHILDREN => '存在子项，无法删除',
             self::DATA_IN_USE => '数据正在使用中，无法删除',
             self::INVALID_SORT_ORDER => '排序值无效',
-            
+
             // 业务资源不存在
             self::MENU_NOT_FOUND => '菜单不存在',
             self::ROLE_NOT_FOUND => '角色不存在',
             self::ADMIN_NOT_FOUND => '管理员不存在',
             self::PERMISSION_NOT_FOUND => '权限不存在',
-            
+
             // 文件相关错误
             self::FILE_UPLOAD_FAILED => '文件上传失败',
             self::FILE_NOT_FOUND => '文件不存在',
             self::FILE_TYPE_ERROR => '文件类型不支持',
             self::FILE_SIZE_ERROR => '文件大小超出限制',
-            
+
             // 服务器错误
             self::SYSTEM_ERROR => '系统错误',
             self::DATABASE_ERROR => '数据库错误',
             self::CACHE_ERROR => '缓存错误',
             self::NETWORK_ERROR => '网络错误',
-            
+
             default => '未知错误',
         };
     }
@@ -105,15 +105,15 @@ enum ErrorCode: int
     {
         return match($this) {
             self::SUCCESS => 200,
-            
+
             // 400系列错误
-            self::PARAMETER_ERROR, 
+            self::PARAMETER_ERROR,
             self::VALIDATION_ERROR,
             self::DUPLICATE_NAME,
             self::HAS_CHILDREN,
             self::DATA_IN_USE,
             self::INVALID_SORT_ORDER => 400,
-            
+
             // 401未授权
             self::UNAUTHORIZED,
             self::LOGIN_FAILED,
@@ -121,10 +121,10 @@ enum ErrorCode: int
             self::TOKEN_INVALID,
             self::PASSWORD_ERROR,
             self::ACCOUNT_DISABLED => 401,
-            
+
             // 403权限不足
             self::FORBIDDEN => 403,
-            
+
             // 404资源不存在
             self::NOT_FOUND,
             self::MENU_NOT_FOUND,
@@ -132,25 +132,25 @@ enum ErrorCode: int
             self::ADMIN_NOT_FOUND,
             self::PERMISSION_NOT_FOUND,
             self::FILE_NOT_FOUND => 404,
-            
+
             // 405方法不允许
             self::METHOD_NOT_ALLOWED => 405,
-            
+
             // 413文件过大
             self::FILE_SIZE_ERROR => 413,
-            
+
             // 415不支持的媒体类型
             self::FILE_TYPE_ERROR => 415,
-            
+
             // 422处理失败
             self::FILE_UPLOAD_FAILED => 422,
-            
+
             // 500服务器错误
             self::SYSTEM_ERROR,
             self::DATABASE_ERROR,
             self::CACHE_ERROR,
             self::NETWORK_ERROR => 500,
-            
+
             default => 500,
         };
     }

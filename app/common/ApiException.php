@@ -2,7 +2,6 @@
 
 namespace plugin\theadmin\app\common;
 
-use plugin\theadmin\app\common\ErrorCode;
 use Exception;
 
 /**
@@ -13,7 +12,7 @@ class ApiException extends Exception
     /**
      * 错误码
      */
-    protected $errorCode;
+    protected int|ErrorCode $errorCode;
 
     /**
      * HTTP状态码
@@ -31,7 +30,7 @@ class ApiException extends Exception
         if ($errorCode instanceof ErrorCode) {
             $this->errorCode = $errorCode->value;
             $this->httpCode = $httpCode ?: $errorCode->getHttpCode();
-            
+
             // 如果没有提供消息，使用枚举的默认消息
             if (empty($message)) {
                 $message = $errorCode->getMessage();
@@ -39,13 +38,13 @@ class ApiException extends Exception
         } else {
             $this->errorCode = $errorCode;
             $this->httpCode = $httpCode ?: ErrorCode::getHttpCodeByCode($errorCode);
-            
+
             // 如果没有提供消息，使用默认消息
             if (empty($message)) {
                 $message = ErrorCode::getMessageByCode($errorCode);
             }
         }
-        
+
         $this->data = $data;
         parent::__construct($message);
     }

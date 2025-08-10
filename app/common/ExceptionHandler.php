@@ -2,9 +2,6 @@
 
 namespace plugin\theadmin\app\common;
 
-use app\common\ApiException;
-use app\common\ApiResponse;
-use app\common\ErrorCode;
 use Throwable;
 use Webman\Http\Request;
 use Webman\Http\Response;
@@ -38,11 +35,6 @@ class ExceptionHandler
         // 处理404异常
         if ($exception instanceof \Webman\Exception\NotFoundException) {
             return $this->handleNotFoundException($exception);
-        }
-
-        // 处理方法不允许异常
-        if ($exception instanceof \Webman\Exception\MethodNotAllowedException) {
-            return $this->handleMethodNotAllowedException($exception);
         }
 
         // 记录系统异常日志
@@ -113,15 +105,6 @@ class ExceptionHandler
     {
         $data = ApiResponse::notFound('接口不存在');
         return json($data, 404);
-    }
-
-    /**
-     * 处理方法不允许异常
-     */
-    private function handleMethodNotAllowedException(\Webman\Exception\MethodNotAllowedException $exception): Response
-    {
-        $data = ApiResponse::error(ErrorCode::METHOD_NOT_ALLOWED, '请求方法不允许');
-        return json($data, 405);
     }
 
     /**
