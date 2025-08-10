@@ -46,7 +46,7 @@ class Role extends BaseModel
      */
     public function admins(): BelongsToMany
     {
-        return $this->belongsToMany(Admin::class, 'sys_admin_role', 'admin_id', 'role_id');
+        return $this->belongsToMany(Admin::class, 'sys_admin_role', 'role_id', 'admin_id');
     }
 
     /**
@@ -55,7 +55,7 @@ class Role extends BaseModel
      */
     public function permissions(): BelongsToMany
     {
-        return $this->belongsToMany(Permission::class, 'sys_role_permission', 'permission_id', 'role_id');
+        return $this->belongsToMany(Permission::class, 'sys_role_permission', 'role_id', 'permission_id');
     }
 
     /**
@@ -64,7 +64,7 @@ class Role extends BaseModel
      */
     public function menus(): BelongsToMany
     {
-        return $this->belongsToMany(Menu::class, 'sys_role_menu', 'menu_id', 'role_id');
+        return $this->belongsToMany(Menu::class, 'sys_role_menu', 'role_id', 'menu_id');
     }
 
     /**
@@ -230,6 +230,168 @@ class Role extends BaseModel
         }
         
         return false;
+    }
+
+    /**
+     * 检查是否有指定菜单权限
+     * @param int $menuId 菜单ID
+     * @return bool
+     */
+    public function hasMenu(int $menuId): bool
+    {
+        $menus = $this->menus;
+        
+        foreach ($menus as $menu) {
+            if ($menu->id === $menuId) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * 验证角色状态
+     * @return bool
+     */
+    public function isActive(): bool
+    {
+        return $this->status == 1 && !$this->deleted;
+    }
+
+    /**
+     * 验证角色代码格式
+     * @param string $code 角色代码
+     * @return bool
+     */
+    public static function validateCode(string $code): bool
+    {
+        // 角色代码只能包含字母、数字、下划线，长度3-50
+        return preg_match('/^[a-zA-Z][a-zA-Z0-9_]{2,49}$/', $code);
+    }
+
+    /**
+     * 验证角色名称格式
+     * @param string $name 角色名称
+     * @return bool
+     */
+    public static function validateName(string $name): bool
+    {
+        // 角色名称长度2-100，不能为空
+        return !empty(trim($name)) && mb_strlen(trim($name)) >= 2 && mb_strlen(trim($name)) <= 100;
+    }
+
+    /**
+     * 获取角色的所有权限（包括继承的权限）
+     * @return array
+     */
+    public function getAllPermissions(): array
+    {
+        $permissions = [];
+        
+        // 获取直接分配的权限
+        $directPermissions = $this->permissions;
+        foreach ($directPermissions as $permission) {
+            $permissions[$permission->code] = $permission;
+        }
+        
+        // 这里可以扩展权限继承逻辑，比如从父角色继承权限
+        // 目前的设计中没有角色层级，所以暂时只返回直接权限
+        
+        return array_values($permissions);
+    }
+
+    /**
+     * 获取角色的所有菜单（包括继承的菜单）
+     * @return array
+     */
+    public function getAllMenus(): array
+    {
+        $menus = [];
+        
+        // 获取直接分配的菜单
+        $directMenus = $this->menus;
+        foreach ($directMenus as $menu) {
+            $menus[$menu->id] = $menu;
+        }
+        
+        // 这里可以扩展菜单继承逻辑
+        // 目前的设计中没有角色层级，所以暂时只返回直接菜单
+        
+        return array_values($menus);
+    }
+
+    /**
+     * 检查角色权限是否足够执行指定操作
+     * @param string $resource 资源类型
+     * @param string $action 操作类型
+     * @return bool
+     */
+    public function canPerform(string $resource, string $action): bool
+    {
+        $permissions = $this->getAllPermissions();
+        
+        foreach ($permissions as $permission) {
+            if ($permission->resource === $resource && $permission->action === $action) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * 获取角色统计信息
+     * @return array
+     */
+    public function getStats(): array
+    {
+        return [
+            'admin_count' => $this->admins()->count(),
+            'permission_count' => $this->permissions()->count(),
+            'menu_count' => $this->menus()->count(),
+            'is_active' => $this->isActive()
+        ];
+    }
+
+    /**
+     * 复制角色权限到另一个角色
+     * @param int $targetRoleId 目标角色ID
+     * @return bool
+     * @throws DbException
+     */
+    public function copyPermissionsTo(int $targetRoleId): bool
+    {
+        $targetRole = self::find($targetRoleId);
+        if (!$targetRole) {
+            return false;
+        }
+        
+        // 获取当前角色的权限ID
+        $permissionIds = $this->permissions()->column('id');
+        
+        // 复制权限到目标角色
+        return $targetRole->assignPermissions($permissionIds);
+    }
+
+    /**
+     * 复制角色菜单到另一个角色
+     * @param int $targetRoleId 目标角色ID
+     * @return bool
+     * @throws DbException
+     */
+    public function copyMenusTo(int $targetRoleId): bool
+    {
+        $targetRole = self::find($targetRoleId);
+        if (!$targetRole) {
+            return false;
+        }
+        
+        // 获取当前角色的菜单ID
+        $menuIds = $this->menus()->column('id');
+        
+        // 复制菜单到目标角色
+        return $targetRole->assignMenus($menuIds);
     }
 
     /**
