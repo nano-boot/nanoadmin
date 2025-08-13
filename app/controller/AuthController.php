@@ -131,8 +131,9 @@ class AuthController
     public function permissions(Request $request)
     {
         try {
+
             $token = $this->getTokenFromRequest($request);
-            
+
             if (empty($token)) {
                 $response = ApiResponse::error(ErrorCode::TOKEN_MISSING, '未提供访问令牌');
                 return new Response(401, ['Content-Type' => 'application/json'], json_encode($response));

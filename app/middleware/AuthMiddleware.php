@@ -49,7 +49,6 @@ class AuthMiddleware implements MiddlewareInterface
 
             // 验证Token
             $payload = JwtUtil::verifyToken($token);
-            
             // 检查Token类型
             if (!JwtUtil::isAccessToken($payload)) {
                 throw new ApiException(ErrorCode::TOKEN_INVALID, '无效的Token类型');
@@ -60,13 +59,11 @@ class AuthMiddleware implements MiddlewareInterface
             if (empty($userId)) {
                 throw new ApiException(ErrorCode::TOKEN_INVALID, 'Token中缺少用户信息');
             }
-
             // 查询用户
             $adminModel = ModelFactory::admin();
             $admin = $adminModel->where('id', $userId)
                               ->where('status', 1)
-                              ->where('deleted', 0)
-                              ->first();
+                              ->find();
 
             if (!$admin) {
                 throw new ApiException(ErrorCode::ACCOUNT_NOT_FOUND, '用户不存在或已被禁用');
@@ -83,6 +80,7 @@ class AuthMiddleware implements MiddlewareInterface
         } catch (ApiException $e) {
             return $this->unauthorizedResponse($e->getMessage(), $e->getErrorCode());
         } catch (\Exception $e) {
+            var_dump('认证失败' . $e->getMessage() );
             return $this->unauthorizedResponse('认证失败', ErrorCode::UNAUTHORIZED->value);
         }
     }

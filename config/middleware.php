@@ -1,12 +1,13 @@
 <?php
 
 use plugin\theadmin\app\middleware\AuthMiddleware;
+use plugin\theadmin\app\middleware\CorsMiddleware;
 use plugin\theadmin\app\middleware\PermissionMiddleware;
 
 return [
-
-    // 路由组中间件示例
-    'theadmin' => [
+    // 全局中间件
+    '' => [
+        CorsMiddleware::class,
         AuthMiddleware::class,
         PermissionMiddleware::class,
     ],

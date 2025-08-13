@@ -38,7 +38,7 @@ class AuthService
         $adminModel = ModelFactory::admin();
 
         $admin = $adminModel->where('username', $username)->find();
-var_dump($admin);
+
         if (!$admin) {
             throw new ApiException(ErrorCode::LOGIN_FAILED, '用户名或密码错误');
         }
