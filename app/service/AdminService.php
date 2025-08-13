@@ -30,8 +30,7 @@ class AdminService
             $where['status'] = (bool)$params['status'];
         }
         
-        // 排除已删除的记录
-        $where['deleted'] = false;
+        // 软删除会自动排除已删除的记录，无需手动设置条件
         
         // 分页参数
         $page = $params['page'] ?? 1;
@@ -61,7 +60,7 @@ class AdminService
     public function getAdminById(int $id): Admin
     {
         $adminModel = ModelFactory::admin();
-        $admin = $adminModel->with('roles')->where('deleted', false)->find($id);
+        $admin = $adminModel->with('roles')->find($id);
         
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
@@ -84,20 +83,20 @@ class AdminService
         $adminModel = ModelFactory::admin();
         
         // 检查用户名是否已存在
-        if ($adminModel->where('username', $data['username'])->where('deleted', false)->find()) {
+        if ($adminModel->where('username', $data['username'])->find()) {
             throw new ApiException(ErrorCode::DUPLICATE_NAME, '用户名已存在');
         }
         
         // 检查手机号是否已存在（如果提供了手机号）
         if (!empty($data['phone'])) {
-            if ($adminModel->where('phone', $data['phone'])->where('deleted', false)->find()) {
+            if ($adminModel->where('phone', $data['phone'])->find()) {
                 throw new ApiException(ErrorCode::DUPLICATE_NAME, '手机号已存在');
             }
         }
         
         // 检查邮箱是否已存在（如果提供了邮箱）
         if (!empty($data['email'])) {
-            if ($adminModel->where('email', $data['email'])->where('deleted', false)->find()) {
+            if ($adminModel->where('email', $data['email'])->find()) {
                 throw new ApiException(ErrorCode::DUPLICATE_NAME, '邮箱已存在');
             }
         }
@@ -133,7 +132,7 @@ class AdminService
         $adminModel = ModelFactory::admin();
         
         // 检查管理员是否存在
-        $admin = $adminModel->where('deleted', false)->find($id);
+        $admin = $adminModel->find($id);
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
         }
@@ -141,7 +140,6 @@ class AdminService
         // 检查用户名是否已被其他管理员使用
         if (!empty($data['username'])) {
             $existingAdmin = $adminModel->where('username', $data['username'])
-                ->where('deleted', false)
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingAdmin) {
@@ -152,7 +150,6 @@ class AdminService
         // 检查手机号是否已被其他管理员使用
         if (!empty($data['phone'])) {
             $existingAdmin = $adminModel->where('phone', $data['phone'])
-                ->where('deleted', false)
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingAdmin) {
@@ -163,7 +160,6 @@ class AdminService
         // 检查邮箱是否已被其他管理员使用
         if (!empty($data['email'])) {
             $existingAdmin = $adminModel->where('email', $data['email'])
-                ->where('deleted', false)
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingAdmin) {
@@ -195,16 +191,13 @@ class AdminService
         $adminModel = ModelFactory::admin();
         
         // 检查管理员是否存在
-        $admin = $adminModel->where('deleted', false)->find($id);
+        $admin = $adminModel->find($id);
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
         }
         
         // 软删除
-        $result = $adminModel->where('id', $id)->update([
-            'deleted' => true,
-            'updated_at' => date('Y-m-d H:i:s')
-        ]);
+        $result = $adminModel->destroy($id);
         
         if ($result === false) {
             throw new ApiException(ErrorCode::SYSTEM_ERROR, '删除管理员失败');
@@ -225,7 +218,7 @@ class AdminService
         $adminModel = ModelFactory::admin();
         
         // 检查管理员是否存在
-        $admin = $adminModel->where('deleted', false)->find($id);
+        $admin = $adminModel->find($id);
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
         }
@@ -255,7 +248,7 @@ class AdminService
         $adminModel = ModelFactory::admin();
         
         // 检查管理员是否存在
-        $admin = $adminModel->where('deleted', false)->find($adminId);
+        $admin = $adminModel->find($adminId);
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
         }
@@ -292,7 +285,7 @@ class AdminService
         $adminModel = ModelFactory::admin();
         
         // 检查管理员是否存在
-        $admin = $adminModel->where('deleted', false)->find($adminId);
+        $admin = $adminModel->find($adminId);
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
         }
@@ -311,7 +304,7 @@ class AdminService
         $adminModel = ModelFactory::admin();
         
         // 检查管理员是否存在
-        $admin = $adminModel->where('deleted', false)->find($adminId);
+        $admin = $adminModel->find($adminId);
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
         }
@@ -329,7 +322,7 @@ class AdminService
     {
         try {
             $adminModel = ModelFactory::admin();
-            $admin = $adminModel->where('deleted', false)->find($adminId);
+            $admin = $adminModel->find($adminId);
             
             if (!$admin) {
                 return false;
@@ -376,7 +369,7 @@ class AdminService
         $adminModel = ModelFactory::admin();
         
         // 检查管理员是否存在
-        $admin = $adminModel->where('deleted', false)->find($adminId);
+        $admin = $adminModel->find($adminId);
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
         }
@@ -478,7 +471,7 @@ class AdminService
         $adminModel = ModelFactory::admin();
         
         // 检查管理员是否存在
-        $existingAdmins = $adminModel->whereIn('id', $ids)->where('deleted', false)->column('id');
+        $existingAdmins = $adminModel->whereIn('id', $ids)->column('id');
         $invalidIds = array_diff($ids, $existingAdmins);
         
         if (!empty($invalidIds)) {
@@ -486,10 +479,7 @@ class AdminService
         }
         
         // 批量软删除
-        $result = $adminModel->whereIn('id', $ids)->update([
-            'deleted' => true,
-            'updated_at' => date('Y-m-d H:i:s')
-        ]);
+        $result = $adminModel->destroy($ids);
         
         if ($result === false) {
             throw new ApiException(ErrorCode::SYSTEM_ERROR, '批量删除管理员失败');

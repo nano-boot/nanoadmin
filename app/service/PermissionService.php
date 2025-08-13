@@ -64,7 +64,7 @@ class PermissionService
     public function getPermissionById(int $id): Permission
     {
         $permissionModel = ModelFactory::permission();
-        $permission = $permissionModel->with('roles')->where('deleted', false)->find($id);
+        $permission = $permissionModel->with('roles')->find($id);
         
         if (!$permission) {
             throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在');
@@ -87,7 +87,7 @@ class PermissionService
         $permissionModel = ModelFactory::permission();
         
         // 检查权限代码是否已存在
-        if ($permissionModel->where('code', $data['code'])->where('deleted', false)->find()) {
+        if ($permissionModel->where('code', $data['code'])->find()) {
             throw new ApiException(ErrorCode::DUPLICATE_NAME, '权限代码已存在');
         }
         
@@ -127,7 +127,7 @@ class PermissionService
         $permissionModel = ModelFactory::permission();
         
         // 检查权限是否存在
-        $permission = $permissionModel->where('deleted', false)->find($id);
+        $permission = $permissionModel->find($id);
         if (!$permission) {
             throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在');
         }
@@ -135,7 +135,7 @@ class PermissionService
         // 检查权限代码是否已被其他权限使用
         if (!empty($data['code'])) {
             $existingPermission = $permissionModel->where('code', $data['code'])
-                ->where('deleted', false)
+                
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingPermission) {
@@ -167,7 +167,7 @@ class PermissionService
         $permissionModel = ModelFactory::permission();
         
         // 检查权限是否存在
-        $permission = $permissionModel->where('deleted', false)->find($id);
+        $permission = $permissionModel->find($id);
         if (!$permission) {
             throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在');
         }
@@ -178,10 +178,7 @@ class PermissionService
         }
         
         // 软删除
-        $result = $permissionModel->where('id', $id)->update([
-            'deleted' => true,
-            'updated_at' => date('Y-m-d H:i:s')
-        ]);
+        $result = $permissionModel->destroy($id);
         
         if ($result === false) {
             throw new ApiException(ErrorCode::SYSTEM_ERROR, '删除权限失败');
@@ -202,7 +199,7 @@ class PermissionService
         $permissionModel = ModelFactory::permission();
         
         // 检查权限是否存在
-        $permission = $permissionModel->where('deleted', false)->find($id);
+        $permission = $permissionModel->find($id);
         if (!$permission) {
             throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在');
         }
@@ -410,7 +407,7 @@ class PermissionService
         $permissionModel = ModelFactory::permission();
         
         // 检查权限是否存在
-        $permission = $permissionModel->where('deleted', false)->find($permissionId);
+        $permission = $permissionModel->find($permissionId);
         if (!$permission) {
             throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在');
         }
@@ -448,7 +445,7 @@ class PermissionService
         $permissionModel = ModelFactory::permission();
         
         // 检查权限是否存在
-        $existingPermissions = $permissionModel->whereIn('id', $ids)->where('deleted', false)->select();
+        $existingPermissions = $permissionModel->whereIn('id', $ids)->select();
         $existingIds = $existingPermissions->column('id');
         $invalidIds = array_diff($ids, $existingIds);
         
@@ -464,10 +461,7 @@ class PermissionService
         }
         
         // 批量软删除
-        $result = $permissionModel->whereIn('id', $ids)->update([
-            'deleted' => true,
-            'updated_at' => date('Y-m-d H:i:s')
-        ]);
+        $result = $permissionModel->destroy($ids);
         
         if ($result === false) {
             throw new ApiException(ErrorCode::SYSTEM_ERROR, '批量删除权限失败');
@@ -550,7 +544,7 @@ class PermissionService
     private function getNextSort(): int
     {
         $permissionModel = ModelFactory::permission();
-        $maxSort = $permissionModel->where('deleted', false)->max('sort');
+        $maxSort = $permissionModel->max('sort');
         return ($maxSort ?? 0) + 1;
     }
 }

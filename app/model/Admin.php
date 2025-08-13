@@ -164,9 +164,9 @@ class Admin extends BaseModel
     public function updateLastLogin(string $ip = ''): bool
     {
         return $this->save([
-            'last_login_ip' => $ip,
-            'last_login_time' => date('Y-m-d H:i:s')
-        ]);
+                'last_login_ip' => $ip,
+                'last_login_time' => date('Y-m-d H:i:s')
+            ]);
     }
 
     /**
@@ -198,7 +198,16 @@ class Admin extends BaseModel
      */
     public function getListWithRoles(array $where = [], int $page = 1, int $limit = 15): Paginator
     {
-        $query = $this->with('roles')->where($where);
+        $query = $this->with('roles');
+        
+        // 添加其他查询条件
+        if (!empty($where)) {
+            foreach ($where as $key => $value) {
+                if (!in_array($key, ['username', 'nickname', 'phone']) && $value !== '') {
+                    $query->where($key, $value);
+                }
+            }
+        }
         
         // 支持用户名搜索
         if (!empty($where['username'])) {

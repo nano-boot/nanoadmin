@@ -19,41 +19,15 @@ abstract class BaseModel extends Model
 {
     use SoftDelete;
 
-    /**
-     * 软删除字段
-     * @var string
-     */
-    protected string $deleteTime = 'deleted';
-
-    /**
-     * 软删除字段默认值
-     * @var mixed
-     */
-    protected mixed $defaultSoftDelete = false;
-
-    /**
-     * 自动时间戳
-     * @var bool|string
-     */
-    protected bool|string $autoWriteTimestamp = true;
-
-    /**
-     * 创建时间字段
-     * @var string
-     */
-    protected string $createTime = 'created_at';
-
-    /**
-     * 更新时间字段
-     * @var string
-     */
-    protected string $updateTime = 'updated_at';
-
-    /**
-     * 时间字段取出后的默认时间格式
-     * @var string
-     */
-    protected string $dateFormat = 'Y-m-d H:i:s';
+    protected function getOptions(): array
+    {
+        return [
+            'createTime'    =>    'created_at',
+            'updateTime'    =>    'updated_at',
+            'deleteTime'    =>    'deleted',
+            'defaultSoftDelete' => 0,
+        ];
+    }
 
     /**
      * 全局查询范围 - 排除软删除
@@ -61,7 +35,7 @@ abstract class BaseModel extends Model
      */
     public function scopeActive(Query $query): void
     {
-        $query->where($this->deleteTime, '=', $this->defaultSoftDelete);
+        $query->withTrashed();
     }
 
     /**
@@ -105,11 +79,11 @@ abstract class BaseModel extends Model
     public function getList(array $where = [], int $page = 1, int $limit = 15, string $order = 'id desc'): Paginator
     {
         $query = $this->where($where);
-        
+
         if ($order) {
             $query->order($order);
         }
-        
+
         return $query->paginate([
             'list_rows' => $limit,
             'page' => $page
@@ -129,11 +103,11 @@ abstract class BaseModel extends Model
     public function getAll(array $where = [], string $order = 'id desc', string $field = '*'): Collection
     {
         $query = $this->field($field)->where($where);
-        
+
         if ($order) {
             $query->order($order);
         }
-        
+
         return $query->select();
     }
 
@@ -187,7 +161,7 @@ abstract class BaseModel extends Model
             $where = ['id' => $data['id']];
             unset($data['id']);
         }
-        
+
         return $this->where($where)->update($data) != false;
     }
 
@@ -201,7 +175,7 @@ abstract class BaseModel extends Model
         if (is_array($id)) {
             return $this->where($id)->delete() !== false;
         }
-        
+
         return $this->destroy($id) !== false;
     }
 
@@ -215,7 +189,7 @@ abstract class BaseModel extends Model
         if (is_array($id)) {
             return $this->where($id)->force()->delete() !== false;
         }
-        
+
         return $this->destroy($id, true) !== false;
     }
 
@@ -234,7 +208,7 @@ abstract class BaseModel extends Model
         if (!$model) {
             return false;
         }
-        
+
         $model->$field = $model->$field ? 0 : 1;
         return $model->save();
     }
@@ -249,7 +223,7 @@ abstract class BaseModel extends Model
         if (empty($data)) {
             return false;
         }
-        
+
         $this->startTrans();
         try {
             foreach ($data as $item) {
@@ -285,11 +259,11 @@ abstract class BaseModel extends Model
     public function checkExists(array $where, int $excludeId = 0): bool
     {
         $query = $this->where($where);
-        
+
         if ($excludeId > 0) {
             $query->where('id', '<>', $excludeId);
         }
-        
+
         return $query->count() > 0;
     }
 }

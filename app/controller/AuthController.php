@@ -27,18 +27,12 @@ class AuthController
      * @param Request $request
      * @return Response
      */
-    public function login(Request $request)
+    public function login(Request $request): Response
     {
         try {
             $username = $request->post('username', '');
             $password = $request->post('password', '');
             $ip = $request->getRealIp();
-
-            // 参数验证
-            if (empty($username) || empty($password)) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '用户名和密码不能为空');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-            }
 
             // 执行登录
             $result = $this->authService->login($username, $password, $ip);

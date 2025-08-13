@@ -241,6 +241,9 @@ class Menu extends BaseModel
      * @param int $id 菜单ID
      * @param array $data 更新数据
      * @return bool
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
     public function updateMenu(int $id, array $data): bool
     {

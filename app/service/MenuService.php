@@ -75,7 +75,7 @@ class MenuService
     public function getMenuById(int $id): Menu
     {
         $menuModel = ModelFactory::menu();
-        $menu = $menuModel->with(['parent', 'children', 'roles'])->where('deleted', false)->find($id);
+        $menu = $menuModel->with(['parent', 'children', 'roles'])->find($id);
         
         if (!$menu) {
             throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
@@ -99,7 +99,7 @@ class MenuService
         
         // 验证父菜单是否存在
         if (!empty($data['parent_id']) && $data['parent_id'] > 0) {
-            $parent = $menuModel->where('deleted', false)->find($data['parent_id']);
+            $parent = $menuModel->find($data['parent_id']);
             if (!$parent) {
                 throw new ApiException(ErrorCode::MENU_NOT_FOUND, '父菜单不存在');
             }
@@ -141,7 +141,7 @@ class MenuService
         $menuModel = ModelFactory::menu();
         
         // 检查菜单是否存在
-        $menu = $menuModel->where('deleted', false)->find($id);
+        $menu = $menuModel->find($id);
         if (!$menu) {
             throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -155,7 +155,7 @@ class MenuService
                 }
                 
                 // 检查父菜单是否存在
-                $parent = $menuModel->where('deleted', false)->find($data['parent_id']);
+                $parent = $menuModel->find($data['parent_id']);
                 if (!$parent) {
                     throw new ApiException(ErrorCode::MENU_NOT_FOUND, '父菜单不存在');
                 }
@@ -191,7 +191,7 @@ class MenuService
         $menuModel = ModelFactory::menu();
         
         // 检查菜单是否存在
-        $menu = $menuModel->where('deleted', false)->find($id);
+        $menu = $menuModel->find($id);
         if (!$menu) {
             throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -207,10 +207,7 @@ class MenuService
         }
         
         // 软删除
-        $result = $menuModel->where('id', $id)->update([
-            'deleted' => true,
-            'updated_at' => date('Y-m-d H:i:s')
-        ]);
+        $result = $menuModel->destroy($id);
         
         if ($result === false) {
             throw new ApiException(ErrorCode::SYSTEM_ERROR, '删除菜单失败');
@@ -231,7 +228,7 @@ class MenuService
         $menuModel = ModelFactory::menu();
         
         // 检查菜单是否存在
-        $menu = $menuModel->where('deleted', false)->find($id);
+        $menu = $menuModel->find($id);
         if (!$menu) {
             throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -310,7 +307,7 @@ class MenuService
         $menuModel = ModelFactory::menu();
         
         // 检查菜单是否存在
-        $menu = $menuModel->where('deleted', false)->find($menuId);
+        $menu = $menuModel->find($menuId);
         if (!$menu) {
             throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -329,7 +326,7 @@ class MenuService
         $menuModel = ModelFactory::menu();
         
         // 检查菜单是否存在
-        $menu = $menuModel->where('deleted', false)->find($menuId);
+        $menu = $menuModel->find($menuId);
         if (!$menu) {
             throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -375,7 +372,7 @@ class MenuService
         $menuModel = ModelFactory::menu();
         
         // 检查菜单是否存在
-        $menu = $menuModel->where('deleted', false)->find($menuId);
+        $menu = $menuModel->find($menuId);
         if (!$menu) {
             throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -395,7 +392,7 @@ class MenuService
         $menuModel = ModelFactory::menu();
         
         // 检查菜单是否存在
-        $menu = $menuModel->where('deleted', false)->find($menuId);
+        $menu = $menuModel->find($menuId);
         if (!$menu) {
             throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -477,7 +474,7 @@ class MenuService
         $menuModel = ModelFactory::menu();
         
         // 检查菜单是否存在
-        $menu = $menuModel->where('deleted', false)->find($menuId);
+        $menu = $menuModel->find($menuId);
         if (!$menu) {
             throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -490,7 +487,7 @@ class MenuService
             }
             
             // 检查父菜单是否存在
-            $parent = $menuModel->where('deleted', false)->find($parentId);
+            $parent = $menuModel->find($parentId);
             if (!$parent) {
                 throw new ApiException(ErrorCode::MENU_NOT_FOUND, '父菜单不存在');
             }
@@ -648,7 +645,7 @@ class MenuService
     private function getNextSort(int $parentId = 0): int
     {
         $menuModel = ModelFactory::menu();
-        $maxSort = $menuModel->where('parent_id', $parentId)->where('deleted', false)->max('sort');
+        $maxSort = $menuModel->where('parent_id', $parentId)->max('sort');
         return ($maxSort ?? 0) + 1;
     }
 }

@@ -14,12 +14,8 @@ Route::group('/sys/auth', function () {
     Route::get('/menus', [plugin\theadmin\app\controller\AuthController::class, 'menus']);
     Route::post('/refresh', [plugin\theadmin\app\controller\AuthController::class, 'refresh']);
     Route::post('/check', [plugin\theadmin\app\controller\AuthController::class, 'check']);
-})->middleware([
-    plugin\theadmin\app\middleware\AuthMiddleware::class
-]);
+});
 
-// 登录接口单独配置（不需要认证中间件）
-Route::post('/sys/auth/login', [plugin\theadmin\app\controller\AuthController::class, 'login']);
 
 // 管理员管理相关路由（需要认证）
 Route::group('/sys/admins', function () {
@@ -27,10 +23,13 @@ Route::group('/sys/admins', function () {
     Route::post('', [plugin\theadmin\app\controller\AdminController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'update']);
+
+    // 将批量删除路由放在单个删除路由之前
+    Route::delete('/batch', [plugin\theadmin\app\controller\AdminController::class, 'batchDestroy']);
     Route::delete('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'destroy']);
+
     Route::post('/{id}/roles', [plugin\theadmin\app\controller\AdminController::class, 'assignRoles']);
     Route::get('/{id}/roles', [plugin\theadmin\app\controller\AdminController::class, 'getRoles']);
-    Route::delete('/batch', [plugin\theadmin\app\controller\AdminController::class, 'batchDestroy']);
 })->middleware([
     plugin\theadmin\app\middleware\AuthMiddleware::class
 ]);
@@ -41,12 +40,13 @@ Route::group('/sys/roles', function () {
     Route::post('', [plugin\theadmin\app\controller\RoleController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'update']);
+    Route::delete('/batch', [plugin\theadmin\app\controller\RoleController::class, 'batchDestroy']);
     Route::delete('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'destroy']);
     Route::post('/{id}/permissions', [plugin\theadmin\app\controller\RoleController::class, 'assignPermissions']);
     Route::get('/{id}/permissions', [plugin\theadmin\app\controller\RoleController::class, 'getPermissions']);
     Route::post('/{id}/menus', [plugin\theadmin\app\controller\RoleController::class, 'assignMenus']);
     Route::get('/{id}/menus', [plugin\theadmin\app\controller\RoleController::class, 'getMenus']);
-    Route::delete('/batch', [plugin\theadmin\app\controller\RoleController::class, 'batchDestroy']);
+
 })->middleware([
     plugin\theadmin\app\middleware\AuthMiddleware::class
 ]);
@@ -57,8 +57,9 @@ Route::group('/sys/permissions', function () {
     Route::post('', [plugin\theadmin\app\controller\PermissionController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\PermissionController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\PermissionController::class, 'update']);
-    Route::delete('/{id}', [plugin\theadmin\app\controller\PermissionController::class, 'destroy']);
     Route::delete('/batch', [plugin\theadmin\app\controller\PermissionController::class, 'batchDestroy']);
+    Route::delete('/{id}', [plugin\theadmin\app\controller\PermissionController::class, 'destroy']);
+
 })->middleware([
     plugin\theadmin\app\middleware\AuthMiddleware::class
 ]);
@@ -69,9 +70,10 @@ Route::group('/sys/menus', function () {
     Route::post('', [plugin\theadmin\app\controller\MenuController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'update']);
+    Route::delete('/batch', [plugin\theadmin\app\controller\MenuController::class, 'batchDestroy']);
     Route::delete('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'destroy']);
     Route::post('/sort', [plugin\theadmin\app\controller\MenuController::class, 'sort']);
-    Route::delete('/batch', [plugin\theadmin\app\controller\MenuController::class, 'batchDestroy']);
+
 })->middleware([
     plugin\theadmin\app\middleware\AuthMiddleware::class
 ]);

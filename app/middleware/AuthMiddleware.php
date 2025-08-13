@@ -22,9 +22,9 @@ class AuthMiddleware implements MiddlewareInterface
      * @var array
      */
     protected array $excludeRoutes = [
-        '/api/auth/login',
-        '/api/auth/refresh',
-        '/api/install',
+        '/sys/auth/login',
+        '/sys/auth/refresh',
+        '/sys/install',
     ];
 
     /**

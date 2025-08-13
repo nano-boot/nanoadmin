@@ -58,7 +58,7 @@ class RoleService
     public function getRoleById(int $id): Role
     {
         $roleModel = ModelFactory::role();
-        $role = $roleModel->with(['permissions', 'menus'])->where('deleted', false)->find($id);
+        $role = $roleModel->with(['permissions', 'menus'])->find($id);
         
         if (!$role) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
@@ -81,12 +81,12 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色代码是否已存在
-        if ($roleModel->where('code', $data['code'])->where('deleted', false)->find()) {
+        if ($roleModel->where('code', $data['code'])->find()) {
             throw new ApiException(ErrorCode::DUPLICATE_NAME, '角色代码已存在');
         }
         
         // 检查角色名称是否已存在
-        if ($roleModel->where('name', $data['name'])->where('deleted', false)->find()) {
+        if ($roleModel->where('name', $data['name'])->find()) {
             throw new ApiException(ErrorCode::DUPLICATE_NAME, '角色名称已存在');
         }
         
@@ -126,7 +126,7 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $role = $roleModel->where('deleted', false)->find($id);
+        $role = $roleModel->find($id);
         if (!$role) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -134,7 +134,7 @@ class RoleService
         // 检查角色代码是否已被其他角色使用
         if (!empty($data['code'])) {
             $existingRole = $roleModel->where('code', $data['code'])
-                ->where('deleted', false)
+                
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingRole) {
@@ -145,7 +145,7 @@ class RoleService
         // 检查角色名称是否已被其他角色使用
         if (!empty($data['name'])) {
             $existingRole = $roleModel->where('name', $data['name'])
-                ->where('deleted', false)
+                
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingRole) {
@@ -177,7 +177,7 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $role = $roleModel->where('deleted', false)->find($id);
+        $role = $roleModel->find($id);
         if (!$role) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -188,10 +188,7 @@ class RoleService
         }
         
         // 软删除
-        $result = $roleModel->where('id', $id)->update([
-            'deleted' => true,
-            'updated_at' => date('Y-m-d H:i:s')
-        ]);
+        $result = $roleModel->destroy($id);
         
         if ($result === false) {
             throw new ApiException(ErrorCode::SYSTEM_ERROR, '删除角色失败');
@@ -212,7 +209,7 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $role = $roleModel->where('deleted', false)->find($id);
+        $role = $roleModel->find($id);
         if (!$role) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -242,7 +239,7 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $role = $roleModel->where('deleted', false)->find($roleId);
+        $role = $roleModel->find($roleId);
         if (!$role) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -280,7 +277,7 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $role = $roleModel->where('deleted', false)->find($roleId);
+        $role = $roleModel->find($roleId);
         if (!$role) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -317,7 +314,7 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $role = $roleModel->where('deleted', false)->find($roleId);
+        $role = $roleModel->find($roleId);
         if (!$role) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -336,7 +333,7 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $role = $roleModel->where('deleted', false)->find($roleId);
+        $role = $roleModel->find($roleId);
         if (!$role) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -354,7 +351,7 @@ class RoleService
     {
         try {
             $roleModel = ModelFactory::role();
-            $role = $roleModel->where('deleted', false)->find($roleId);
+            $role = $roleModel->find($roleId);
             
             if (!$role) {
                 return false;
@@ -376,7 +373,7 @@ class RoleService
     {
         try {
             $roleModel = ModelFactory::role();
-            $role = $roleModel->where('deleted', false)->find($roleId);
+            $role = $roleModel->find($roleId);
             
             if (!$role) {
                 return false;
@@ -400,13 +397,13 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查源角色是否存在
-        $sourceRole = $roleModel->where('deleted', false)->find($sourceRoleId);
+        $sourceRole = $roleModel->find($sourceRoleId);
         if (!$sourceRole) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '源角色不存在');
         }
         
         // 检查目标角色是否存在
-        $targetRole = $roleModel->where('deleted', false)->find($targetRoleId);
+        $targetRole = $roleModel->find($targetRoleId);
         if (!$targetRole) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '目标角色不存在');
         }
@@ -433,13 +430,13 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查源角色是否存在
-        $sourceRole = $roleModel->where('deleted', false)->find($sourceRoleId);
+        $sourceRole = $roleModel->find($sourceRoleId);
         if (!$sourceRole) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '源角色不存在');
         }
         
         // 检查目标角色是否存在
-        $targetRole = $roleModel->where('deleted', false)->find($targetRoleId);
+        $targetRole = $roleModel->find($targetRoleId);
         if (!$targetRole) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '目标角色不存在');
         }
@@ -465,7 +462,7 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $role = $roleModel->where('deleted', false)->find($roleId);
+        $role = $roleModel->find($roleId);
         if (!$role) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -508,7 +505,7 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $role = $roleModel->where('deleted', false)->find($roleId);
+        $role = $roleModel->find($roleId);
         if (!$role) {
             throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -546,7 +543,7 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $existingRoles = $roleModel->whereIn('id', $ids)->where('deleted', false)->select();
+        $existingRoles = $roleModel->whereIn('id', $ids)->select();
         $existingIds = $existingRoles->column('id');
         $invalidIds = array_diff($ids, $existingIds);
         
@@ -562,10 +559,7 @@ class RoleService
         }
         
         // 批量软删除
-        $result = $roleModel->whereIn('id', $ids)->update([
-            'deleted' => true,
-            'updated_at' => date('Y-m-d H:i:s')
-        ]);
+        $result = $roleModel->destroy($ids);
         
         if ($result === false) {
             throw new ApiException(ErrorCode::SYSTEM_ERROR, '批量删除角色失败');
@@ -628,7 +622,7 @@ class RoleService
     private function getNextSort(): int
     {
         $roleModel = ModelFactory::role();
-        $maxSort = $roleModel->where('deleted', false)->max('sort');
+        $maxSort = $roleModel->max('sort');
         return ($maxSort ?? 0) + 1;
     }
 }

@@ -7,6 +7,9 @@ use plugin\theadmin\app\common\ErrorCode;
 use plugin\theadmin\app\common\JwtUtil;
 use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Admin;
+use think\db\exception\DataNotFoundException;
+use think\db\exception\DbException;
+use think\db\exception\ModelNotFoundException;
 
 /**
  * 认证服务类
@@ -20,6 +23,9 @@ class AuthService
      * @param string $ip 登录IP
      * @return array
      * @throws ApiException
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
     public function login(string $username, string $password, string $ip = ''): array
     {
@@ -30,8 +36,9 @@ class AuthService
 
         // 查找管理员
         $adminModel = ModelFactory::admin();
-        $admin = $adminModel->where('username', $username)->find();
 
+        $admin = $adminModel->where('username', $username)->find();
+var_dump($admin);
         if (!$admin) {
             throw new ApiException(ErrorCode::LOGIN_FAILED, '用户名或密码错误');
         }
