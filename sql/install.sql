@@ -93,58 +93,94 @@ CREATE TABLE IF NOT EXISTS th_sys_permission (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';
 
 -- 4. 菜单表
+
 CREATE TABLE IF NOT EXISTS th_sys_menu (
+    -- 基础字段
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '菜单ID',
     parent_id BIGINT DEFAULT 0 COMMENT '父菜单ID，0为顶级菜单',
-    name VARCHAR(50) NOT NULL COMMENT '菜单名称',
-    title VARCHAR(50) NOT NULL COMMENT '菜单标题',
-    icon VARCHAR(50) DEFAULT '' COMMENT '菜单图标',
+    
+    -- 路由基础信息
+    name VARCHAR(100) NOT NULL COMMENT '路由名称（对应前端name字段）',
     path VARCHAR(200) DEFAULT '' COMMENT '路由路径',
     component VARCHAR(200) DEFAULT '' COMMENT '组件路径',
     redirect VARCHAR(200) DEFAULT '' COMMENT '重定向路径',
-    menu_type TINYINT(1) DEFAULT 1 COMMENT '菜单类型（1目录 2菜单 3按钮）',
+    
+    -- 菜单显示信息
+    title VARCHAR(100) NOT NULL COMMENT '菜单标题（对应meta.title）',
+    icon VARCHAR(100) DEFAULT '' COMMENT '菜单图标（对应meta.icon）',
+    
+    -- 菜单类型和权限
+    type CHAR(1) DEFAULT 'D' COMMENT '菜单类型（D目录 M菜单 B按钮 L外链 I内嵌）',
     permission VARCHAR(100) DEFAULT '' COMMENT '权限标识',
-    is_hidden BOOLEAN DEFAULT FALSE COMMENT '是否隐藏',
-    is_cache BOOLEAN DEFAULT TRUE COMMENT '是否缓存',
-    is_affix BOOLEAN DEFAULT FALSE COMMENT '是否固定在标签页',
-    link_url VARCHAR(500) DEFAULT '' COMMENT '外链地址',
-    `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
-    `sort` int(11) DEFAULT 100 COMMENT '排序',
+    roles JSON DEFAULT NULL COMMENT '角色权限数组（对应meta.roles）',
+    
+    -- 菜单属性配置
+    hidden BOOLEAN DEFAULT FALSE COMMENT '是否隐藏（对应meta.isHide）',
+    cacheable BOOLEAN DEFAULT TRUE COMMENT '是否缓存（对应meta.keepAlive）',
+    affix BOOLEAN DEFAULT FALSE COMMENT '是否固定标签（对应meta.fixedTab）',
+    full_page BOOLEAN DEFAULT FALSE COMMENT '是否全屏显示（对应meta.isFullPage）',
+    
+    -- 外链配置
+    link_url VARCHAR(500) DEFAULT '' COMMENT '外链地址（对应meta.link）',
+    iframe BOOLEAN DEFAULT FALSE COMMENT '是否内嵌（对应meta.isIframe）',
+    
+    -- 徽章配置
+    show_badge BOOLEAN DEFAULT FALSE COMMENT '是否显示徽章（对应meta.showBadge）',
+    badge_text VARCHAR(20) DEFAULT '' COMMENT '徽章文本（对应meta.showTextBadge）',
+    
+    -- 权限按钮列表
+    auth_list JSON DEFAULT NULL COMMENT '权限按钮列表（对应meta.authList）',
+    
+    -- 其他属性
+    active_path VARCHAR(200) DEFAULT '' COMMENT '激活菜单路径（对应meta.activePath）',
+    
+    -- 状态和排序
+    status TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
+    sort INT(11) DEFAULT 100 COMMENT '排序',
+    
+    -- 审计字段
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
     
+    -- 索引
     INDEX idx_parent_id (parent_id),
     INDEX idx_path (path),
+    INDEX idx_name (name),
     INDEX idx_permission (permission),
+    INDEX idx_type (type),
     INDEX idx_sort (sort),
+    INDEX idx_status (status),
     INDEX idx_deleted (deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='菜单表';
 
+
 -- 5. 用户角色关联表
 CREATE TABLE IF NOT EXISTS th_sys_admin_role (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     admin_id BIGINT NOT NULL COMMENT '管理员ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
-    PRIMARY KEY (admin_id, role_id),
+    UNIQUE KEY `uk_admin_role` (admin_id, role_id),
     INDEX idx_admin_id (admin_id),
     INDEX idx_role_id (role_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员角色关联表';
 
 -- 6. 角色权限关联表
 CREATE TABLE IF NOT EXISTS th_sys_role_permission (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     permission_id BIGINT NOT NULL COMMENT '权限ID',
-    PRIMARY KEY (role_id, permission_id),
+    UNIQUE KEY `uk_role_permission` (role_id, permission_id),
     INDEX idx_role_id (role_id),
     INDEX idx_permission_id (permission_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限关联表';
 
 -- 7. 角色菜单关联表
 CREATE TABLE IF NOT EXISTS th_sys_role_menu (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     menu_id BIGINT NOT NULL COMMENT '菜单ID',
-    
-    PRIMARY KEY (role_id, menu_id),
+    UNIQUE KEY `uk_role_menu` (role_id, menu_id),
     INDEX idx_role_id (role_id),
     INDEX idx_menu_id (menu_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色菜单关联表';

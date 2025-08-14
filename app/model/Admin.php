@@ -5,6 +5,7 @@ namespace plugin\theadmin\app\model;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
+use think\facade\Db;
 use think\model\Pivot;
 use think\model\relation\BelongsToMany;
 use think\Paginator;
@@ -48,12 +49,34 @@ class Admin extends BaseModel
     ];
 
     /**
-     * 关联角色
+     * 关联角色（保留用于 detach/attach 操作）
      * @return BelongsToMany
      */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'sys_admin_role', 'role_id', 'admin_id');
+        return $this->belongsToMany(Role::class, AdminRole::class, 'role_id', 'admin_id');
+    }
+
+    /**
+     * 获取角色列表（使用原生查询避免关联问题）
+     * @return \think\Collection
+     */
+    public function getRoles()
+    {
+        try {
+            $roleIds = Db::table('sys_admin_role')
+                ->where('admin_id', $this->id)
+                ->column('role_id');
+            
+            if (empty($roleIds)) {
+                return new \think\Collection();
+            }
+            
+            return Role::whereIn('id', $roleIds)->select();
+        } catch (\Exception $e) {
+            // 如果查询失败，返回空集合
+            return new \think\Collection();
+        }
     }
 
     /**
@@ -66,7 +89,6 @@ class Admin extends BaseModel
         
         // 通过角色获取权限
         $roles = $this->roles;
-        
         foreach ($roles as $role) {
             $rolePermissions = $role->permissions;
             foreach ($rolePermissions as $permission) {

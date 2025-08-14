@@ -66,7 +66,7 @@ class AuthService
         $this->recordLoginLog($admin->id, $ip, true);
 
         return [
-            'admin' => [
+            'user' => [
                 'id' => $admin->id,
                 'username' => $admin->username,
                 'nickname' => $admin->nickname,
@@ -209,12 +209,15 @@ class AuthService
      * 获取管理员权限列表
      * @param int $adminId 管理员ID
      * @return array
+     * @throws ApiException
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
     public function getAdminPermissions(int $adminId): array
     {
         $adminModel = ModelFactory::admin();
         $admin = $adminModel->find($adminId);
-
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
         }
@@ -226,6 +229,10 @@ class AuthService
      * 获取管理员菜单列表
      * @param int $adminId 管理员ID
      * @return array
+     * @throws ApiException
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
     public function getAdminMenus(int $adminId): array
     {

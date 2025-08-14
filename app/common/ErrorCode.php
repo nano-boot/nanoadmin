@@ -37,8 +37,9 @@ enum ErrorCode: int
     case HAS_CHILDREN = 40901;           // 存在子项，无法删除
     case DATA_IN_USE = 40902;            // 数据正在使用中，无法删除
     case INVALID_SORT_ORDER = 40903;     // 排序值无效
-
-
+    case MENU_TRANSFORM_ERROR = 40904;   // 菜单数据转换错误
+    case INVALID_JSON_FORMAT = 40905;    // JSON格式错误
+    case INVALID_MENU_DATA = 40906;      // 菜单数据格式错误
 
     // 文件相关错误 (413xx)
     case FILE_UPLOAD_FAILED = 41300;     // 文件上传失败
@@ -77,6 +78,9 @@ enum ErrorCode: int
             self::HAS_CHILDREN => '存在子项，无法删除',
             self::DATA_IN_USE => '数据正在使用中，无法删除',
             self::INVALID_SORT_ORDER => '排序值无效',
+            self::MENU_TRANSFORM_ERROR => '菜单数据转换错误',
+            self::INVALID_JSON_FORMAT => 'JSON格式错误',
+            self::INVALID_MENU_DATA => '菜单数据格式错误',
 
             // 业务资源不存在
             self::MENU_NOT_FOUND => '菜单不存在',
@@ -114,7 +118,10 @@ enum ErrorCode: int
             self::DUPLICATE_NAME,
             self::HAS_CHILDREN,
             self::DATA_IN_USE,
-            self::INVALID_SORT_ORDER => 400,
+            self::INVALID_SORT_ORDER,
+            self::MENU_TRANSFORM_ERROR,
+            self::INVALID_JSON_FORMAT,
+            self::INVALID_MENU_DATA => 400,
 
             // 401未授权
             self::UNAUTHORIZED,

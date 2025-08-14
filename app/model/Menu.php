@@ -16,9 +16,31 @@ use think\Paginator;
  * @property mixed $roles
  * @property mixed $parent
  * @property mixed $children
+ * @property array $roles_array 角色权限数组
+ * @property array $auth_list_array 权限按钮列表数组
  */
 class Menu extends BaseModel
 {
+    /**
+     * 菜单类型常量
+     */
+    const TYPE_DIRECTORY = 'D';  // 目录
+    const TYPE_MENU = 'M';       // 菜单页面
+    const TYPE_BUTTON = 'B';     // 权限按钮
+    const TYPE_LINK = 'L';       // 外链
+    const TYPE_IFRAME = 'I';     // 内嵌页面
+
+    /**
+     * 菜单类型映射
+     */
+    const TYPE_MAP = [
+        self::TYPE_DIRECTORY => '目录',
+        self::TYPE_MENU => '菜单',
+        self::TYPE_BUTTON => '按钮',
+        self::TYPE_LINK => '外链',
+        self::TYPE_IFRAME => '内嵌'
+    ];
+
     /**
      * 表名
      * @var string
@@ -32,22 +54,93 @@ class Menu extends BaseModel
     protected $pk = 'id';
 
     /**
+     * JSON字段
+     * @var array
+     */
+    protected array $json = ['roles', 'auth_list'];
+
+    /**
      * 字段类型转换
      * @var array
      */
     protected array $type = [
         'id' => 'integer',
         'parent_id' => 'integer',
-        'menu_type' => 'integer',
-        'is_hidden' => 'boolean',
-        'is_cache' => 'boolean',
-        'is_affix' => 'boolean',
+        'type' => 'string',
+        'hidden' => 'boolean',
+        'cacheable' => 'boolean',
+        'affix' => 'boolean',
+        'full_page' => 'boolean',
+        'iframe' => 'boolean',
+        'show_badge' => 'boolean',
         'status' => 'boolean',
         'sort' => 'integer',
         'deleted' => 'boolean',
+        'roles' => 'json',
+        'auth_list' => 'json',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];
+
+    /**
+     * JSON字段序列化处理
+     * @param mixed $value
+     * @param array $data
+     * @return array|null
+     */
+    public function setRolesAttr($value, array $data): ?array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : null;
+        }
+        return is_array($value) ? $value : null;
+    }
+
+    /**
+     * JSON字段反序列化处理
+     * @param mixed $value
+     * @param array $data
+     * @return array
+     */
+    public function getRolesAttr($value, array $data): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return is_array($value) ? $value : [];
+    }
+
+    /**
+     * 权限按钮列表序列化处理
+     * @param mixed $value
+     * @param array $data
+     * @return array|null
+     */
+    public function setAuthListAttr($value, array $data): ?array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : null;
+        }
+        return is_array($value) ? $value : null;
+    }
+
+    /**
+     * 权限按钮列表反序列化处理
+     * @param mixed $value
+     * @param array $data
+     * @return array
+     */
+    public function getAuthListAttr($value, array $data): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return is_array($value) ? $value : [];
+    }
 
     /**
      * 关联角色
@@ -445,8 +538,8 @@ class Menu extends BaseModel
      */
     public static function validateName(string $name): bool
     {
-        // 菜单名称只能包含字母、数字、下划线、中划线、中文字符，长度2-50
-        return preg_match('/^[a-zA-Z0-9_\-\x{4e00}-\x{9fa5}]{2,50}$/u', $name);
+        // 菜单名称只能包含字母、数字、下划线、中划线、中文字符，长度2-100
+        return preg_match('/^[a-zA-Z0-9_\-\x{4e00}-\x{9fa5}]{2,100}$/u', $name);
     }
 
     /**
@@ -456,8 +549,8 @@ class Menu extends BaseModel
      */
     public static function validateTitle(string $title): bool
     {
-        // 菜单标题长度2-50，不能为空
-        return !empty(trim($title)) && mb_strlen(trim($title)) >= 2 && mb_strlen(trim($title)) <= 50;
+        // 菜单标题长度2-100，不能为空
+        return !empty(trim($title)) && mb_strlen(trim($title)) >= 2 && mb_strlen(trim($title)) <= 100;
     }
 
     /**
@@ -471,8 +564,119 @@ class Menu extends BaseModel
             return true; // 路径可以为空
         }
         
-        // 路径必须以/开头，只能包含字母、数字、下划线、中划线、斜杠
-        return preg_match('/^\/[a-zA-Z0-9_\-\/]*$/', $path);
+        // 路径必须以/开头，只能包含字母、数字、下划线、中划线、斜杠，长度不超过200
+        return preg_match('/^\/[a-zA-Z0-9_\-\/]*$/', $path) && strlen($path) <= 200;
+    }
+
+    /**
+     * 验证组件路径格式
+     * @param string $component 组件路径
+     * @return bool
+     */
+    public static function validateComponent(string $component): bool
+    {
+        if (empty($component)) {
+            return true; // 组件路径可以为空
+        }
+        
+        // 组件路径只能包含字母、数字、下划线、中划线、斜杠、点号，长度不超过200
+        return preg_match('/^[a-zA-Z0-9_\-\/\.]*$/', $component) && strlen($component) <= 200;
+    }
+
+    /**
+     * 验证权限标识格式
+     * @param string $permission 权限标识
+     * @return bool
+     */
+    public static function validatePermission(string $permission): bool
+    {
+        if (empty($permission)) {
+            return true; // 权限标识可以为空
+        }
+        
+        // 权限标识只能包含字母、数字、下划线、中划线、冒号，长度不超过100
+        return preg_match('/^[a-zA-Z0-9_\-:]*$/', $permission) && strlen($permission) <= 100;
+    }
+
+    /**
+     * 验证外链URL格式
+     * @param string $url 外链URL
+     * @return bool
+     */
+    public static function validateUrl(string $url): bool
+    {
+        if (empty($url)) {
+            return true; // URL可以为空
+        }
+        
+        // 验证URL格式并检查长度
+        return filter_var($url, FILTER_VALIDATE_URL) !== false && strlen($url) <= 500;
+    }
+
+    /**
+     * 验证菜单类型
+     * @param string $type 菜单类型
+     * @return bool
+     */
+    public static function validateMenuType(string $type): bool
+    {
+        return in_array($type, [
+            self::TYPE_DIRECTORY, 
+            self::TYPE_MENU, 
+            self::TYPE_BUTTON, 
+            self::TYPE_LINK, 
+            self::TYPE_IFRAME
+        ]);
+    }
+
+    /**
+     * 验证角色权限数组格式
+     * @param array $roles 角色权限数组
+     * @return bool
+     */
+    public static function validateRoles(array $roles): bool
+    {
+        if (empty($roles)) {
+            return true; // 角色数组可以为空
+        }
+        
+        // 检查是否为字符串数组
+        foreach ($roles as $role) {
+            if (!is_string($role) || empty($role)) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * 验证权限按钮列表格式
+     * @param array $authList 权限按钮列表
+     * @return bool
+     */
+    public static function validateAuthList(array $authList): bool
+    {
+        if (empty($authList)) {
+            return true; // 权限列表可以为空
+        }
+        
+        // 检查每个权限按钮的格式
+        foreach ($authList as $auth) {
+            if (!is_array($auth) || !isset($auth['title']) || !isset($auth['authMark'])) {
+                return false;
+            }
+            
+            if (!is_string($auth['title']) || !is_string($auth['authMark'])) {
+                return false;
+            }
+            
+            if (empty($auth['title']) || empty($auth['authMark'])) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     /**
@@ -490,13 +694,7 @@ class Menu extends BaseModel
      */
     public function getMenuTypeText(): string
     {
-        $types = [
-            1 => '目录',
-            2 => '菜单',
-            3 => '按钮'
-        ];
-        
-        return $types[$this->menu_type] ?? '未知';
+        return self::TYPE_MAP[$this->type] ?? '未知';
     }
 
     /**
@@ -618,7 +816,7 @@ class Menu extends BaseModel
         $routes = [];
         
         foreach ($tree as $menu) {
-            if ($menu['menu_type'] == 3) { // 跳过按钮类型
+            if ($menu['type'] == self::TYPE_BUTTON) { // 跳过按钮类型
                 continue;
             }
             
@@ -626,18 +824,57 @@ class Menu extends BaseModel
                 'id' => $menu['id'],
                 'name' => $menu['name'],
                 'path' => $menu['path'],
-                'component' => $menu['component'],
-                'redirect' => $menu['redirect'],
+                'component' => $menu['component'] ?: 'Layout',
                 'meta' => [
                     'title' => $menu['title'],
                     'icon' => $menu['icon'],
-                    'hidden' => $menu['is_hidden'],
-                    'cache' => $menu['is_cache'],
-                    'affix' => $menu['is_affix'],
+                    'keepAlive' => $menu['cacheable'],
+                    'isHide' => $menu['hidden'],
+                    'fixedTab' => $menu['affix'],
+                    'isFullPage' => $menu['full_page'],
+                    'showBadge' => $menu['show_badge'],
                     'permission' => $menu['permission']
                 ]
             ];
             
+            // 添加重定向路径
+            if (!empty($menu['redirect'])) {
+                $route['redirect'] = $menu['redirect'];
+            }
+            
+            // 处理角色权限
+            if (!empty($menu['roles'])) {
+                $roles = is_string($menu['roles']) ? json_decode($menu['roles'], true) : $menu['roles'];
+                if (is_array($roles)) {
+                    $route['meta']['roles'] = $roles;
+                }
+            }
+            
+            // 处理外链配置
+            if (!empty($menu['link_url'])) {
+                $route['meta']['link'] = $menu['link_url'];
+                $route['meta']['isIframe'] = $menu['iframe'];
+            }
+            
+            // 处理徽章文本
+            if (!empty($menu['badge_text'])) {
+                $route['meta']['showTextBadge'] = $menu['badge_text'];
+            }
+            
+            // 处理权限按钮列表
+            if (!empty($menu['auth_list'])) {
+                $authList = is_string($menu['auth_list']) ? json_decode($menu['auth_list'], true) : $menu['auth_list'];
+                if (is_array($authList)) {
+                    $route['meta']['authList'] = $authList;
+                }
+            }
+            
+            // 处理激活路径
+            if (!empty($menu['active_path'])) {
+                $route['meta']['activePath'] = $menu['active_path'];
+            }
+            
+            // 处理子菜单
             if (!empty($menu['children'])) {
                 $route['children'] = $this->convertToRouteConfig($menu['children']);
             }
@@ -646,5 +883,244 @@ class Menu extends BaseModel
         }
         
         return $routes;
+    }
+
+    /**
+     * 数据库数据转换为前端表单数据
+     * @param array $menu 菜单数据
+     * @return array
+     */
+    public function toFormData(array $menu): array
+    {
+        $formData = [
+            'id' => $menu['id'] ?? 0,
+            'parent_id' => $menu['parent_id'] ?? 0,
+            'name' => $menu['name'] ?? '',
+            'path' => $menu['path'] ?? '',
+            'component' => $menu['component'] ?? '',
+            'redirect' => $menu['redirect'] ?? '',
+            'title' => $menu['title'] ?? '',
+            'icon' => $menu['icon'] ?? '',
+            'type' => $menu['type'] ?? self::TYPE_DIRECTORY,
+            'permission' => $menu['permission'] ?? '',
+            'hidden' => $menu['hidden'] ?? false,
+            'cacheable' => $menu['cacheable'] ?? true,
+            'affix' => $menu['affix'] ?? false,
+            'full_page' => $menu['full_page'] ?? false,
+            'link_url' => $menu['link_url'] ?? '',
+            'iframe' => $menu['iframe'] ?? false,
+            'show_badge' => $menu['show_badge'] ?? false,
+            'badge_text' => $menu['badge_text'] ?? '',
+            'active_path' => $menu['active_path'] ?? '',
+            'status' => $menu['status'] ?? 1,
+            'sort' => $menu['sort'] ?? 100
+        ];
+
+        // 处理JSON字段
+        if (isset($menu['roles'])) {
+            $formData['roles'] = is_string($menu['roles']) ? json_decode($menu['roles'], true) : $menu['roles'];
+        } else {
+            $formData['roles'] = [];
+        }
+
+        if (isset($menu['auth_list'])) {
+            $formData['auth_list'] = is_string($menu['auth_list']) ? json_decode($menu['auth_list'], true) : $menu['auth_list'];
+        } else {
+            $formData['auth_list'] = [];
+        }
+
+        return $formData;
+    }
+
+    /**
+     * 前端表单数据转换为数据库格式
+     * @param array $formData 表单数据
+     * @return array
+     */
+    public function fromFormData(array $formData): array
+    {
+        $dbData = [
+            'parent_id' => $formData['parent_id'] ?? 0,
+            'name' => $formData['name'] ?? '',
+            'path' => $formData['path'] ?? '',
+            'component' => $formData['component'] ?? '',
+            'redirect' => $formData['redirect'] ?? '',
+            'title' => $formData['title'] ?? '',
+            'icon' => $formData['icon'] ?? '',
+            'type' => $formData['type'] ?? self::TYPE_DIRECTORY,
+            'permission' => $formData['permission'] ?? '',
+            'hidden' => $formData['hidden'] ?? false,
+            'cacheable' => $formData['cacheable'] ?? true,
+            'affix' => $formData['affix'] ?? false,
+            'full_page' => $formData['full_page'] ?? false,
+            'link_url' => $formData['link_url'] ?? '',
+            'iframe' => $formData['iframe'] ?? false,
+            'show_badge' => $formData['show_badge'] ?? false,
+            'badge_text' => $formData['badge_text'] ?? '',
+            'active_path' => $formData['active_path'] ?? '',
+            'status' => $formData['status'] ?? 1,
+            'sort' => $formData['sort'] ?? 100
+        ];
+
+        // 处理JSON字段
+        if (isset($formData['roles']) && is_array($formData['roles'])) {
+            $dbData['roles'] = $formData['roles'];
+        }
+
+        if (isset($formData['auth_list']) && is_array($formData['auth_list'])) {
+            $dbData['auth_list'] = $formData['auth_list'];
+        }
+
+        return $dbData;
+    }
+
+    /**
+     * 验证菜单数据完整性
+     * @param array $data 菜单数据
+     * @return array 验证结果 ['valid' => bool, 'errors' => array]
+     */
+    public function validateMenuData(array $data): array
+    {
+        $errors = [];
+
+        // 验证必填字段
+        if (empty($data['name'])) {
+            $errors[] = '菜单名称不能为空';
+        } elseif (!self::validateName($data['name'])) {
+            $errors[] = '菜单名称格式不正确';
+        }
+
+        if (empty($data['title'])) {
+            $errors[] = '菜单标题不能为空';
+        } elseif (!self::validateTitle($data['title'])) {
+            $errors[] = '菜单标题格式不正确';
+        }
+
+        // 验证菜单类型
+        if (!self::validateMenuType($data['type'] ?? '')) {
+            $errors[] = '菜单类型不正确';
+        }
+
+        // 验证路径格式
+        if (!empty($data['path']) && !self::validatePath($data['path'])) {
+            $errors[] = '路由路径格式不正确';
+        }
+
+        // 验证组件路径格式
+        if (!empty($data['component']) && !self::validateComponent($data['component'])) {
+            $errors[] = '组件路径格式不正确';
+        }
+
+        // 验证权限标识格式
+        if (!empty($data['permission']) && !self::validatePermission($data['permission'])) {
+            $errors[] = '权限标识格式不正确';
+        }
+
+        // 验证外链URL格式
+        if (!empty($data['link_url']) && !self::validateUrl($data['link_url'])) {
+            $errors[] = '外链地址格式不正确';
+        }
+
+        // 验证角色权限数组
+        if (isset($data['roles']) && is_array($data['roles']) && !self::validateRoles($data['roles'])) {
+            $errors[] = '角色权限数组格式不正确';
+        }
+
+        // 验证权限按钮列表
+        if (isset($data['auth_list']) && is_array($data['auth_list']) && !self::validateAuthList($data['auth_list'])) {
+            $errors[] = '权限按钮列表格式不正确';
+        }
+
+        return [
+            'valid' => empty($errors),
+            'errors' => $errors
+        ];
+    }
+
+    /**
+     * 获取菜单类型选项列表
+     * @return array
+     */
+    public static function getMenuTypeOptions(): array
+    {
+        return [
+            ['value' => self::TYPE_DIRECTORY, 'label' => self::TYPE_MAP[self::TYPE_DIRECTORY]],
+            ['value' => self::TYPE_MENU, 'label' => self::TYPE_MAP[self::TYPE_MENU]],
+            ['value' => self::TYPE_BUTTON, 'label' => self::TYPE_MAP[self::TYPE_BUTTON]],
+            ['value' => self::TYPE_LINK, 'label' => self::TYPE_MAP[self::TYPE_LINK]],
+            ['value' => self::TYPE_IFRAME, 'label' => self::TYPE_MAP[self::TYPE_IFRAME]]
+        ];
+    }
+
+    /**
+     * 检查菜单是否为外链菜单
+     * @return bool
+     */
+    public function isExternalLink(): bool
+    {
+        return $this->type === self::TYPE_LINK || !empty($this->link_url);
+    }
+
+    /**
+     * 检查菜单是否为内嵌菜单
+     * @return bool
+     */
+    public function isIframe(): bool
+    {
+        return $this->type === self::TYPE_IFRAME || ($this->isExternalLink() && $this->iframe);
+    }
+
+    /**
+     * 检查菜单是否为目录类型
+     * @return bool
+     */
+    public function isDirectory(): bool
+    {
+        return $this->type === self::TYPE_DIRECTORY;
+    }
+
+    /**
+     * 检查菜单是否为菜单页面类型
+     * @return bool
+     */
+    public function isMenuPage(): bool
+    {
+        return $this->type === self::TYPE_MENU;
+    }
+
+    /**
+     * 检查菜单是否为按钮类型
+     * @return bool
+     */
+    public function isButton(): bool
+    {
+        return $this->type === self::TYPE_BUTTON;
+    }
+
+    /**
+     * 检查菜单是否显示徽章
+     * @return bool
+     */
+    public function hasBadge(): bool
+    {
+        return $this->show_badge || !empty($this->badge_text);
+    }
+
+    /**
+     * 获取菜单的完整配置信息
+     * @return array
+     */
+    public function getFullConfig(): array
+    {
+        $config = $this->toArray();
+        
+        // 添加计算属性
+        $config['type_text'] = $this->getMenuTypeText();
+        $config['is_external_link'] = $this->isExternalLink();
+        $config['is_iframe_menu'] = $this->isIframe();
+        $config['has_badge'] = $this->hasBadge();
+        $config['is_active'] = $this->isActive();
+        
+        return $config;
     }
 }
