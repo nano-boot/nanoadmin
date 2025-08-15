@@ -173,17 +173,22 @@ class Menu extends BaseModel
      * 获取菜单树形结构
      * @param int $parentId 父菜单ID
      * @param bool $onlyEnabled 是否只获取启用的菜单
+     * @param bool $includeDeleted 是否包含已删除的菜单
      * @return array
      * @throws DataNotFoundException
      * @throws DbException
      * @throws ModelNotFoundException
      */
-    public function getTree(int $parentId = 0, bool $onlyEnabled = true): array
+    public function getTree(int $parentId = 0, bool $onlyEnabled = true, bool $includeDeleted = false): array
     {
         $query = $this->where('parent_id', $parentId);
         
         if ($onlyEnabled) {
-            $query->enabled();
+            $query->where('status', 1);
+        }
+        
+        if (!$includeDeleted) {
+            $query->where('deleted', false);
         }
         
         $menus = $query->order('sort asc, id asc')->select();
@@ -191,7 +196,7 @@ class Menu extends BaseModel
         
         foreach ($menus as $menu) {
             $item = $menu->toArray();
-            $item['children'] = $this->getTree($menu->id, $onlyEnabled);
+            $item['children'] = $this->getTree($menu->id, $onlyEnabled, $includeDeleted);
             $tree[] = $item;
         }
         
@@ -714,14 +719,19 @@ class Menu extends BaseModel
     /**
      * 获取所有顶级菜单
      * @param bool $onlyEnabled 是否只获取启用的菜单
+     * @param bool $includeDeleted 是否包含已删除的菜单
      * @return Collection
      */
-    public function getTopLevelMenus(bool $onlyEnabled = true): Collection
+    public function getTopLevelMenus(bool $onlyEnabled = true, bool $includeDeleted = false): Collection
     {
         $query = $this->where('parent_id', 0);
         
         if ($onlyEnabled) {
-            $query->enabled();
+            $query->where('status', 1);
+        }
+        
+        if (!$includeDeleted) {
+            $query->where('deleted', false);
         }
         
         return $query->order('sort asc, id asc')->select();
@@ -784,7 +794,10 @@ class Menu extends BaseModel
      */
     public function getEnabledList(): Collection
     {
-        return $this->enabled()->order('sort asc, id asc')->select();
+        return $this->where('status', 1)
+                   ->where('deleted', false)
+                   ->order('sort asc, id asc')
+                   ->select();
     }
 
     /**
@@ -1122,5 +1135,532 @@ class Menu extends BaseModel
         $config['is_active'] = $this->isActive();
         
         return $config;
+    }
+
+    // ==================== 菜单排序和状态管理方法 ====================
+
+    /**
+     * 获取下一个排序值
+     * @param array $where 查询条件
+     * @return int
+     */
+    public function getNextSort(array $where = []): int
+    {
+        $maxSort = $this->where($where)->max('sort');
+        return $maxSort ? $maxSort + 10 : 100;
+    }
+
+    /**
+     * 更新菜单排序
+     * @param int $id 菜单ID
+     * @param int $sort 新的排序值
+     * @return bool
+     */
+    public function updateSort(int $id, int $sort): bool
+    {
+        return $this->where('id', $id)->update(['sort' => $sort]) !== false;
+    }
+
+    /**
+     * 交换两个菜单的排序
+     * @param int $id1 菜单1的ID
+     * @param int $id2 菜单2的ID
+     * @return bool
+     */
+    public function swapSort(int $id1, int $id2): bool
+    {
+        $menu1 = $this->find($id1);
+        $menu2 = $this->find($id2);
+        
+        if (!$menu1 || !$menu2) {
+            return false;
+        }
+        
+        $this->startTrans();
+        try {
+            $this->where('id', $id1)->update(['sort' => $menu2->sort]);
+            $this->where('id', $id2)->update(['sort' => $menu1->sort]);
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            return false;
+        }
+    }
+
+    /**
+     * 移动菜单到指定位置
+     * @param int $id 菜单ID
+     * @param int $targetId 目标菜单ID（移动到此菜单之前）
+     * @param int $parentId 新的父菜单ID（可选）
+     * @return bool
+     */
+    public function moveMenu(int $id, int $targetId = 0, int $parentId = null): bool
+    {
+        $menu = $this->find($id);
+        if (!$menu) {
+            return false;
+        }
+        
+        // 如果指定了新的父菜单ID，验证父菜单是否存在
+        if ($parentId !== null) {
+            if ($parentId > 0) {
+                $parent = $this->find($parentId);
+                if (!$parent) {
+                    return false;
+                }
+                
+                // 检查是否会形成循环引用
+                if ($this->wouldCreateCircularReference($id, $parentId)) {
+                    return false;
+                }
+            }
+        } else {
+            $parentId = $menu->parent_id;
+        }
+        
+        $this->startTrans();
+        try {
+            // 获取目标位置的排序值
+            $newSort = 100;
+            if ($targetId > 0) {
+                $targetMenu = $this->find($targetId);
+                if ($targetMenu) {
+                    $newSort = $targetMenu->sort;
+                    
+                    // 将目标菜单及其后面的菜单排序值都增加10
+                    $this->where('parent_id', $parentId)
+                         ->where('sort', '>=', $newSort)
+                         ->where('id', '<>', $id)
+                         ->inc('sort', 10);
+                }
+            } else {
+                // 移动到最后
+                $newSort = $this->getNextSort(['parent_id' => $parentId]);
+            }
+            
+            // 更新菜单的父ID和排序
+            $this->where('id', $id)->update([
+                'parent_id' => $parentId,
+                'sort' => $newSort
+            ]);
+            
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            return false;
+        }
+    }
+
+    /**
+     * 重新排序同级菜单
+     * @param int $parentId 父菜单ID
+     * @param array $menuIds 菜单ID数组（按新的排序）
+     * @return bool
+     */
+    public function reorderSiblings(int $parentId, array $menuIds): bool
+    {
+        if (empty($menuIds)) {
+            return false;
+        }
+        
+        $this->startTrans();
+        try {
+            $sort = 100;
+            foreach ($menuIds as $menuId) {
+                $this->where('id', $menuId)
+                     ->where('parent_id', $parentId)
+                     ->update(['sort' => $sort]);
+                $sort += 10;
+            }
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            return false;
+        }
+    }
+
+    /**
+     * 启用菜单
+     * @param int $id 菜单ID
+     * @return bool
+     */
+    public function enableMenu(int $id): bool
+    {
+        return $this->where('id', $id)->update(['status' => 1]) !== false;
+    }
+
+    /**
+     * 禁用菜单
+     * @param int $id 菜单ID
+     * @return bool
+     */
+    public function disableMenu(int $id): bool
+    {
+        return $this->where('id', $id)->update(['status' => 0]) !== false;
+    }
+
+    /**
+     * 切换菜单状态
+     * @param int $id 菜单ID
+     * @return bool
+     */
+    public function toggleStatus(int $id): bool
+    {
+        $menu = $this->find($id);
+        if (!$menu) {
+            return false;
+        }
+        
+        $newStatus = $menu->status ? 0 : 1;
+        return $this->where('id', $id)->update(['status' => $newStatus]) !== false;
+    }
+
+    /**
+     * 批量启用菜单
+     * @param array $ids 菜单ID数组
+     * @return bool
+     */
+    public function batchEnable(array $ids): bool
+    {
+        if (empty($ids)) {
+            return false;
+        }
+        
+        return $this->whereIn('id', $ids)->update(['status' => 1]) !== false;
+    }
+
+    /**
+     * 批量禁用菜单
+     * @param array $ids 菜单ID数组
+     * @return bool
+     */
+    public function batchDisable(array $ids): bool
+    {
+        if (empty($ids)) {
+            return false;
+        }
+        
+        return $this->whereIn('id', $ids)->update(['status' => 0]) !== false;
+    }
+
+    /**
+     * 显示菜单（取消隐藏）
+     * @param int $id 菜单ID
+     * @return bool
+     */
+    public function showMenu(int $id): bool
+    {
+        return $this->where('id', $id)->update(['hidden' => false]) !== false;
+    }
+
+    /**
+     * 隐藏菜单
+     * @param int $id 菜单ID
+     * @return bool
+     */
+    public function hideMenu(int $id): bool
+    {
+        return $this->where('id', $id)->update(['hidden' => true]) !== false;
+    }
+
+    /**
+     * 切换菜单显示状态
+     * @param int $id 菜单ID
+     * @return bool
+     */
+    public function toggleVisibility(int $id): bool
+    {
+        $menu = $this->find($id);
+        if (!$menu) {
+            return false;
+        }
+        
+        $newHidden = !$menu->hidden;
+        return $this->where('id', $id)->update(['hidden' => $newHidden]) !== false;
+    }
+
+    /**
+     * 软删除菜单
+     * @param int $id 菜单ID
+     * @return bool
+     */
+    public function softDeleteMenu(int $id): bool
+    {
+        // 检查是否有子菜单
+        if ($this->hasChildren($id)) {
+            return false;
+        }
+        
+        return $this->where('id', $id)->update(['deleted' => true]) !== false;
+    }
+
+    /**
+     * 恢复已删除的菜单
+     * @param int $id 菜单ID
+     * @return bool
+     */
+    public function restoreMenu(int $id): bool
+    {
+        return $this->where('id', $id)->update(['deleted' => false]) !== false;
+    }
+
+    /**
+     * 批量软删除菜单
+     * @param array $ids 菜单ID数组
+     * @return bool
+     */
+    public function batchSoftDelete(array $ids): bool
+    {
+        if (empty($ids)) {
+            return false;
+        }
+        
+        // 检查是否有子菜单
+        foreach ($ids as $id) {
+            if ($this->hasChildren($id)) {
+                return false;
+            }
+        }
+        
+        return $this->whereIn('id', $ids)->update(['deleted' => true]) !== false;
+    }
+
+    /**
+     * 批量恢复菜单
+     * @param array $ids 菜单ID数组
+     * @return bool
+     */
+    public function batchRestore(array $ids): bool
+    {
+        if (empty($ids)) {
+            return false;
+        }
+        
+        return $this->whereIn('id', $ids)->update(['deleted' => false]) !== false;
+    }
+
+    /**
+     * 永久删除菜单（物理删除）
+     * @param int $id 菜单ID
+     * @return bool
+     */
+    public function forceDeleteMenu(int $id): bool
+    {
+        // 检查是否有子菜单
+        if ($this->hasChildren($id)) {
+            return false;
+        }
+        
+        // 检查是否被角色使用
+        if ($this->isUsed($id)) {
+            return false;
+        }
+        
+        return $this->where('id', $id)->delete() !== false;
+    }
+
+    /**
+     * 获取已删除的菜单列表
+     * @param int $page 页码
+     * @param int $limit 每页数量
+     * @return Paginator
+     * @throws DbException
+     */
+    public function getDeletedMenus(int $page = 1, int $limit = 15): Paginator
+    {
+        return $this->where('deleted', true)
+                   ->order('updated_at desc')
+                   ->paginate([
+                       'list_rows' => $limit,
+                       'page' => $page
+                   ]);
+    }
+
+    /**
+     * 处理拖拽排序数据
+     * @param array $dragData 拖拽数据 [['id' => 1, 'parent_id' => 0, 'index' => 0], ...]
+     * @return bool
+     */
+    public function handleDragSort(array $dragData): bool
+    {
+        if (empty($dragData)) {
+            return false;
+        }
+        
+        $this->startTrans();
+        try {
+            // 按父菜单分组处理
+            $groupedData = [];
+            foreach ($dragData as $item) {
+                $parentId = $item['parent_id'] ?? 0;
+                if (!isset($groupedData[$parentId])) {
+                    $groupedData[$parentId] = [];
+                }
+                $groupedData[$parentId][] = $item;
+            }
+            
+            // 为每个分组重新排序
+            foreach ($groupedData as $parentId => $items) {
+                // 按index排序
+                usort($items, function($a, $b) {
+                    return ($a['index'] ?? 0) - ($b['index'] ?? 0);
+                });
+                
+                // 更新排序和父菜单
+                $sort = 100;
+                foreach ($items as $item) {
+                    if (isset($item['id'])) {
+                        $updateData = [
+                            'sort' => $sort,
+                            'parent_id' => $parentId
+                        ];
+                        
+                        // 检查是否会形成循环引用
+                        if ($parentId > 0 && !$this->wouldCreateCircularReference($item['id'], $parentId)) {
+                            $this->where('id', $item['id'])->update($updateData);
+                        } elseif ($parentId == 0) {
+                            $this->where('id', $item['id'])->update($updateData);
+                        }
+                        
+                        $sort += 10;
+                    }
+                }
+            }
+            
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            return false;
+        }
+    }
+
+    /**
+     * 获取菜单排序统计信息
+     * @param int $parentId 父菜单ID
+     * @return array
+     */
+    public function getSortStats(int $parentId = 0): array
+    {
+        $menus = $this->where('parent_id', $parentId)
+                     ->where('deleted', false)
+                     ->order('sort asc')
+                     ->select();
+        
+        $stats = [
+            'total' => $menus->count(),
+            'min_sort' => 0,
+            'max_sort' => 0,
+            'gaps' => [],
+            'duplicates' => []
+        ];
+        
+        if ($menus->count() > 0) {
+            $sorts = $menus->column('sort');
+            $stats['min_sort'] = min($sorts);
+            $stats['max_sort'] = max($sorts);
+            
+            // 检查重复的排序值
+            $sortCounts = array_count_values($sorts);
+            foreach ($sortCounts as $sort => $count) {
+                if ($count > 1) {
+                    $stats['duplicates'][] = $sort;
+                }
+            }
+            
+            // 检查排序间隙
+            sort($sorts);
+            for ($i = 1; $i < count($sorts); $i++) {
+                $gap = $sorts[$i] - $sorts[$i-1];
+                if ($gap > 10) {
+                    $stats['gaps'][] = [
+                        'from' => $sorts[$i-1],
+                        'to' => $sorts[$i],
+                        'gap' => $gap
+                    ];
+                }
+            }
+        }
+        
+        return $stats;
+    }
+
+    /**
+     * 修复菜单排序（重新分配排序值）
+     * @param int $parentId 父菜单ID
+     * @return bool
+     */
+    public function fixSort(int $parentId = 0): bool
+    {
+        $menus = $this->where('parent_id', $parentId)
+                     ->where('deleted', false)
+                     ->order('sort asc, id asc')
+                     ->select();
+        
+        if ($menus->count() == 0) {
+            return true;
+        }
+        
+        $this->startTrans();
+        try {
+            $sort = 100;
+            foreach ($menus as $menu) {
+                $this->where('id', $menu->id)->update(['sort' => $sort]);
+                $sort += 10;
+            }
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            return false;
+        }
+    }
+
+    /**
+     * 检查菜单是否可以移动到指定位置
+     * @param int $menuId 菜单ID
+     * @param int $targetParentId 目标父菜单ID
+     * @return array 检查结果 ['can_move' => bool, 'reason' => string]
+     */
+    public function canMoveTo(int $menuId, int $targetParentId): array
+    {
+        // 不能移动到自己
+        if ($menuId == $targetParentId) {
+            return ['can_move' => false, 'reason' => '不能将菜单移动到自己'];
+        }
+        
+        // 检查目标父菜单是否存在
+        if ($targetParentId > 0) {
+            $targetParent = $this->find($targetParentId);
+            if (!$targetParent) {
+                return ['can_move' => false, 'reason' => '目标父菜单不存在'];
+            }
+        }
+        
+        // 检查是否会形成循环引用
+        if ($this->wouldCreateCircularReference($menuId, $targetParentId)) {
+            return ['can_move' => false, 'reason' => '移动会形成循环引用'];
+        }
+        
+        return ['can_move' => true, 'reason' => ''];
+    }
+
+    /**
+     * 获取菜单状态统计
+     * @return array
+     */
+    public function getStatusStats(): array
+    {
+        return [
+            'total' => $this->where('deleted', false)->count(),
+            'enabled' => $this->where('deleted', false)->where('status', 1)->count(),
+            'disabled' => $this->where('deleted', false)->where('status', 0)->count(),
+            'hidden' => $this->where('deleted', false)->where('hidden', true)->count(),
+            'visible' => $this->where('deleted', false)->where('hidden', false)->count(),
+            'deleted' => $this->where('deleted', true)->count()
+        ];
     }
 }

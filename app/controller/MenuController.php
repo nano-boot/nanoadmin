@@ -9,6 +9,7 @@ use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\ErrorCode;
 use plugin\theadmin\app\model\Menu;
 use plugin\theadmin\app\service\MenuTransformService;
+use plugin\theadmin\app\service\MenuSearchService;
 
 /**
  * 菜单管理控制器
@@ -29,12 +30,19 @@ class MenuController
     private MenuTransformService $transformService;
 
     /**
+     * 菜单搜索服务
+     * @var MenuSearchService
+     */
+    private MenuSearchService $searchService;
+
+    /**
      * 构造函数
      */
     public function __construct()
     {
         $this->menuModel = new Menu();
         $this->transformService = new MenuTransformService();
+        $this->searchService = new MenuSearchService();
     }
 
     /**
@@ -120,12 +128,20 @@ class MenuController
             $onlyEnabled = $request->get('only_enabled', 'true') === 'true';
             $keyword = trim($request->get('keyword', ''));
 
-            // 获取菜单树
-            $tree = $this->menuModel->getTree($parentId, $onlyEnabled);
-
-            // 如果有搜索关键词，进行过滤
             if (!empty($keyword)) {
-                $tree = $this->filterTreeByKeyword($tree, $keyword);
+                // 使用搜索服务进行搜索
+                $options = [
+                    'search_fields' => ['name', 'title', 'path'],
+                    'include_disabled' => !$onlyEnabled,
+                    'include_hidden' => true,
+                    'maintain_hierarchy' => true,
+                    'parent_id' => $parentId > 0 ? $parentId : null
+                ];
+                
+                $tree = $this->searchService->searchMenus($keyword, $options);
+            } else {
+                // 获取菜单树
+                $tree = $this->menuModel->getTree($parentId, $onlyEnabled);
             }
 
             // 格式化数据
@@ -570,6 +586,1053 @@ class MenuController
         $response = ApiResponse::error($code, $message);
         $httpCode = $this->getHttpCodeByErrorCode($code);
         return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
+    }
+
+    /**
+     * 搜索菜单
+     * GET /api/menus/search
+     * @param Request $request
+     * @return Response
+     */
+    public function search(Request $request): Response
+    {
+        try {
+            $keyword = trim($request->get('keyword', ''));
+            
+            // 搜索选项
+            $options = [
+                'search_fields' => $request->get('search_fields', ['name', 'title', 'path']),
+                'include_disabled' => $request->get('include_disabled', 'false') === 'true',
+                'include_hidden' => $request->get('include_hidden', 'false') === 'true',
+                'menu_types' => $request->get('menu_types', []),
+                'maintain_hierarchy' => $request->get('maintain_hierarchy', 'true') === 'true',
+                'parent_id' => $request->get('parent_id') !== null ? (int)$request->get('parent_id') : null
+            ];
+
+            // 执行搜索
+            $results = $this->searchService->searchMenus($keyword, $options);
+
+            // 格式化结果
+            $formattedResults = [];
+            foreach ($results as $menu) {
+                $formattedResults[] = $this->transformService->formatForApi($menu);
+            }
+
+            return $this->success([
+                'results' => $formattedResults,
+                'keyword' => $keyword,
+                'options' => $options,
+                'total' => count($formattedResults)
+            ], '菜单搜索成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '菜单搜索失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 高级搜索菜单
+     * POST /api/menus/advanced-search
+     * @param Request $request
+     * @return Response
+     */
+    public function advancedSearch(Request $request): Response
+    {
+        try {
+            // 获取搜索参数
+            $searchParams = [
+                'keyword' => trim($request->post('keyword', '')),
+                'search_fields' => $request->post('search_fields', ['name', 'title', 'path']),
+                'menu_types' => $request->post('menu_types', []),
+                'status' => $request->post('status'),
+                'hidden' => $request->post('hidden'),
+                'parent_id' => $request->post('parent_id'),
+                'permission' => trim($request->post('permission', '')),
+                'path' => trim($request->post('path', '')),
+                'component' => trim($request->post('component', '')),
+                'sort_min' => $request->post('sort_min'),
+                'sort_max' => $request->post('sort_max'),
+                'created_start' => $request->post('created_start'),
+                'created_end' => $request->post('created_end'),
+                'maintain_hierarchy' => $request->post('maintain_hierarchy', 'true') === 'true'
+            ];
+
+            // 执行高级搜索
+            $results = $this->searchService->advancedSearch($searchParams);
+
+            // 格式化结果
+            $formattedResults = [];
+            foreach ($results as $menu) {
+                $formattedResults[] = $this->transformService->formatForApi($menu);
+            }
+
+            return $this->success([
+                'results' => $formattedResults,
+                'search_params' => $searchParams,
+                'total' => count($formattedResults)
+            ], '高级搜索成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '高级搜索失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 过滤菜单
+     * GET /api/menus/filter
+     * @param Request $request
+     * @return Response
+     */
+    public function filter(Request $request): Response
+    {
+        try {
+            // 过滤条件
+            $filters = [
+                'status' => $request->get('status') !== null ? (bool)$request->get('status') : null,
+                'hidden' => $request->get('hidden') !== null ? (bool)$request->get('hidden') : null,
+                'menu_types' => $request->get('menu_types', []),
+                'parent_id' => $request->get('parent_id') !== null ? (int)$request->get('parent_id') : null,
+                'has_children' => $request->get('has_children') !== null ? (bool)$request->get('has_children') : null,
+                'has_permission' => $request->get('has_permission') !== null ? (bool)$request->get('has_permission') : null,
+                'is_external' => $request->get('is_external') !== null ? (bool)$request->get('is_external') : null,
+                'maintain_hierarchy' => $request->get('maintain_hierarchy', 'true') === 'true'
+            ];
+
+            // 执行过滤
+            $results = $this->searchService->filterMenus($filters);
+
+            // 格式化结果
+            $formattedResults = [];
+            foreach ($results as $menu) {
+                $formattedResults[] = $this->transformService->formatForApi($menu);
+            }
+
+            return $this->success([
+                'results' => $formattedResults,
+                'filters' => $filters,
+                'total' => count($formattedResults)
+            ], '菜单过滤成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '菜单过滤失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 递归搜索菜单
+     * GET /api/menus/recursive-search
+     * @param Request $request
+     * @return Response
+     */
+    public function recursiveSearch(Request $request): Response
+    {
+        try {
+            $keyword = trim($request->get('keyword', ''));
+            $parentId = (int)$request->get('parent_id', 0);
+            
+            // 搜索选项
+            $options = [
+                'search_fields' => $request->get('search_fields', ['name', 'title', 'path']),
+                'include_disabled' => $request->get('include_disabled', 'false') === 'true',
+                'include_hidden' => $request->get('include_hidden', 'false') === 'true',
+                'menu_types' => $request->get('menu_types', [])
+            ];
+
+            // 执行递归搜索
+            $results = $this->searchService->recursiveSearch($keyword, $parentId, $options);
+
+            // 格式化结果
+            $formattedResults = [];
+            foreach ($results as $menu) {
+                $formattedResults[] = $this->transformService->formatForApi($menu);
+            }
+
+            return $this->success([
+                'results' => $formattedResults,
+                'keyword' => $keyword,
+                'parent_id' => $parentId,
+                'options' => $options,
+                'total' => count($formattedResults)
+            ], '递归搜索成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '递归搜索失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 搜索菜单并返回统计信息
+     * GET /api/menus/search-with-stats
+     * @param Request $request
+     * @return Response
+     */
+    public function searchWithStats(Request $request): Response
+    {
+        try {
+            $keyword = trim($request->get('keyword', ''));
+            
+            // 搜索选项
+            $options = [
+                'search_fields' => $request->get('search_fields', ['name', 'title', 'path']),
+                'include_disabled' => $request->get('include_disabled', 'false') === 'true',
+                'include_hidden' => $request->get('include_hidden', 'false') === 'true',
+                'menu_types' => $request->get('menu_types', []),
+                'maintain_hierarchy' => $request->get('maintain_hierarchy', 'true') === 'true',
+                'parent_id' => $request->get('parent_id') !== null ? (int)$request->get('parent_id') : null
+            ];
+
+            // 执行搜索并获取统计信息
+            $result = $this->searchService->searchWithStats($keyword, $options);
+
+            // 格式化结果
+            $formattedResults = [];
+            foreach ($result['results'] as $menu) {
+                $formattedResults[] = $this->transformService->formatForApi($menu);
+            }
+
+            return $this->success([
+                'results' => $formattedResults,
+                'stats' => $result['stats'],
+                'keyword' => $result['keyword'],
+                'options' => $result['options']
+            ], '搜索统计成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '搜索统计失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取搜索建议
+     * GET /api/menus/search-suggestions
+     * @param Request $request
+     * @return Response
+     */
+    public function searchSuggestions(Request $request): Response
+    {
+        try {
+            $keyword = trim($request->get('keyword', ''));
+            $limit = (int)$request->get('limit', 10);
+
+            // 获取搜索建议
+            $suggestions = $this->searchService->getSearchSuggestions($keyword, $limit);
+
+            return $this->success([
+                'suggestions' => $suggestions,
+                'keyword' => $keyword,
+                'limit' => $limit
+            ], '获取搜索建议成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '获取搜索建议失败：' . $e->getMessage());
+        }
+    }
+
+    // ==================== 菜单排序和状态管理接口 ====================
+
+    /**
+     * 更新菜单排序
+     * PUT /api/menus/{id}/sort
+     * @param Request $request
+     * @return Response
+     */
+    public function updateSort(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            $sort = (int)$request->post('sort', 0);
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+            
+            if ($sort < 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '排序值必须为非负整数');
+            }
+
+            // 检查菜单是否存在
+            $menu = $this->menuModel->find($id);
+            if (!$menu) {
+                return $this->error(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            }
+
+            // 更新排序
+            $result = $this->menuModel->updateSort($id, $sort);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '更新排序失败');
+            }
+
+            return $this->success(null, '更新排序成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '更新排序失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 交换两个菜单的排序
+     * POST /api/menus/swap-sort
+     * @param Request $request
+     * @return Response
+     */
+    public function swapSort(Request $request): Response
+    {
+        try {
+            $id1 = (int)$request->post('id1', 0);
+            $id2 = (int)$request->post('id2', 0);
+            
+            if ($id1 <= 0 || $id2 <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+            
+            if ($id1 == $id2) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '不能交换相同的菜单');
+            }
+
+            // 检查菜单是否存在
+            $menu1 = $this->menuModel->find($id1);
+            $menu2 = $this->menuModel->find($id2);
+            
+            if (!$menu1 || !$menu2) {
+                return $this->error(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            }
+
+            // 交换排序
+            $result = $this->menuModel->swapSort($id1, $id2);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '交换排序失败');
+            }
+
+            return $this->success(null, '交换排序成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '交换排序失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 移动菜单到指定位置
+     * POST /api/menus/{id}/move
+     * @param Request $request
+     * @return Response
+     */
+    public function moveMenu(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            $targetId = (int)$request->post('target_id', 0);
+            $parentId = $request->post('parent_id') !== null ? (int)$request->post('parent_id') : null;
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+
+            // 检查菜单是否存在
+            $menu = $this->menuModel->find($id);
+            if (!$menu) {
+                return $this->error(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            }
+
+            // 检查是否可以移动
+            if ($parentId !== null) {
+                $canMove = $this->menuModel->canMoveTo($id, $parentId);
+                if (!$canMove['can_move']) {
+                    return $this->error(ErrorCode::PARAMETER_ERROR, $canMove['reason']);
+                }
+            }
+
+            // 移动菜单
+            $result = $this->menuModel->moveMenu($id, $targetId, $parentId);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '移动菜单失败');
+            }
+
+            return $this->success(null, '移动菜单成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '移动菜单失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 重新排序同级菜单
+     * POST /api/menus/reorder-siblings
+     * @param Request $request
+     * @return Response
+     */
+    public function reorderSiblings(Request $request): Response
+    {
+        try {
+            $parentId = (int)$request->post('parent_id', 0);
+            $menuIds = $request->post('menu_ids', []);
+            
+            if (!is_array($menuIds) || empty($menuIds)) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID列表不能为空');
+            }
+
+            // 验证菜单ID格式
+            foreach ($menuIds as $menuId) {
+                if (!is_numeric($menuId) || $menuId <= 0) {
+                    return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID必须为正整数');
+                }
+            }
+
+            // 重新排序
+            $result = $this->menuModel->reorderSiblings($parentId, $menuIds);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '重新排序失败');
+            }
+
+            return $this->success(null, '重新排序成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '重新排序失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 处理拖拽排序
+     * POST /api/menus/drag-sort
+     * @param Request $request
+     * @return Response
+     */
+    public function dragSort(Request $request): Response
+    {
+        try {
+            $dragData = $request->post('drag_data', []);
+            
+            if (!is_array($dragData) || empty($dragData)) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '拖拽数据不能为空');
+            }
+
+            // 验证拖拽数据格式
+            foreach ($dragData as $item) {
+                if (!is_array($item) || !isset($item['id'])) {
+                    return $this->error(ErrorCode::PARAMETER_ERROR, '拖拽数据格式错误');
+                }
+
+                if (!is_numeric($item['id']) || $item['id'] <= 0) {
+                    return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID必须为正整数');
+                }
+
+                if (isset($item['parent_id']) && (!is_numeric($item['parent_id']) || $item['parent_id'] < 0)) {
+                    return $this->error(ErrorCode::PARAMETER_ERROR, '父菜单ID必须为非负整数');
+                }
+
+                if (isset($item['index']) && (!is_numeric($item['index']) || $item['index'] < 0)) {
+                    return $this->error(ErrorCode::PARAMETER_ERROR, '索引必须为非负整数');
+                }
+            }
+
+            // 处理拖拽排序
+            $result = $this->menuModel->handleDragSort($dragData);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '拖拽排序失败');
+            }
+
+            return $this->success(null, '拖拽排序成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '拖拽排序失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 启用菜单
+     * PUT /api/menus/{id}/enable
+     * @param Request $request
+     * @return Response
+     */
+    public function enable(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+
+            // 检查菜单是否存在
+            $menu = $this->menuModel->find($id);
+            if (!$menu) {
+                return $this->error(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            }
+
+            // 启用菜单
+            $result = $this->menuModel->enableMenu($id);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '启用菜单失败');
+            }
+
+            return $this->success(null, '启用菜单成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '启用菜单失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 禁用菜单
+     * PUT /api/menus/{id}/disable
+     * @param Request $request
+     * @return Response
+     */
+    public function disable(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+
+            // 检查菜单是否存在
+            $menu = $this->menuModel->find($id);
+            if (!$menu) {
+                return $this->error(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            }
+
+            // 禁用菜单
+            $result = $this->menuModel->disableMenu($id);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '禁用菜单失败');
+            }
+
+            return $this->success(null, '禁用菜单成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '禁用菜单失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 切换菜单状态
+     * PUT /api/menus/{id}/toggle-status
+     * @param Request $request
+     * @return Response
+     */
+    public function toggleStatus(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+
+            // 检查菜单是否存在
+            $menu = $this->menuModel->find($id);
+            if (!$menu) {
+                return $this->error(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            }
+
+            // 切换状态
+            $result = $this->menuModel->toggleStatus($id);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '切换状态失败');
+            }
+
+            // 获取新状态
+            $updatedMenu = $this->menuModel->find($id);
+            $newStatus = $updatedMenu->status ? '启用' : '禁用';
+
+            return $this->success(['status' => $updatedMenu->status], "菜单已{$newStatus}");
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '切换状态失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 批量启用菜单
+     * PUT /api/menus/batch-enable
+     * @param Request $request
+     * @return Response
+     */
+    public function batchEnable(Request $request): Response
+    {
+        try {
+            $ids = $request->post('ids', []);
+            
+            if (!is_array($ids) || empty($ids)) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID列表不能为空');
+            }
+
+            // 验证ID格式
+            foreach ($ids as $id) {
+                if (!is_numeric($id) || $id <= 0) {
+                    return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID必须为正整数');
+                }
+            }
+
+            // 批量启用
+            $result = $this->menuModel->batchEnable($ids);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '批量启用失败');
+            }
+
+            return $this->success(null, '批量启用成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '批量启用失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 批量禁用菜单
+     * PUT /api/menus/batch-disable
+     * @param Request $request
+     * @return Response
+     */
+    public function batchDisable(Request $request): Response
+    {
+        try {
+            $ids = $request->post('ids', []);
+            
+            if (!is_array($ids) || empty($ids)) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID列表不能为空');
+            }
+
+            // 验证ID格式
+            foreach ($ids as $id) {
+                if (!is_numeric($id) || $id <= 0) {
+                    return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID必须为正整数');
+                }
+            }
+
+            // 批量禁用
+            $result = $this->menuModel->batchDisable($ids);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '批量禁用失败');
+            }
+
+            return $this->success(null, '批量禁用成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '批量禁用失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 显示菜单（取消隐藏）
+     * PUT /api/menus/{id}/show
+     * @param Request $request
+     * @return Response
+     */
+    public function show_menu(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+
+            // 检查菜单是否存在
+            $menu = $this->menuModel->find($id);
+            if (!$menu) {
+                return $this->error(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            }
+
+            // 显示菜单
+            $result = $this->menuModel->showMenu($id);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '显示菜单失败');
+            }
+
+            return $this->success(null, '显示菜单成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '显示菜单失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 隐藏菜单
+     * PUT /api/menus/{id}/hide
+     * @param Request $request
+     * @return Response
+     */
+    public function hideMenu(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+
+            // 检查菜单是否存在
+            $menu = $this->menuModel->find($id);
+            if (!$menu) {
+                return $this->error(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            }
+
+            // 隐藏菜单
+            $result = $this->menuModel->hideMenu($id);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '隐藏菜单失败');
+            }
+
+            return $this->success(null, '隐藏菜单成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '隐藏菜单失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 切换菜单显示状态
+     * PUT /api/menus/{id}/toggle-visibility
+     * @param Request $request
+     * @return Response
+     */
+    public function toggleVisibility(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+
+            // 检查菜单是否存在
+            $menu = $this->menuModel->find($id);
+            if (!$menu) {
+                return $this->error(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            }
+
+            // 切换显示状态
+            $result = $this->menuModel->toggleVisibility($id);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '切换显示状态失败');
+            }
+
+            // 获取新状态
+            $updatedMenu = $this->menuModel->find($id);
+            $newVisibility = $updatedMenu->hidden ? '隐藏' : '显示';
+
+            return $this->success(['hidden' => $updatedMenu->hidden], "菜单已{$newVisibility}");
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '切换显示状态失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 软删除菜单
+     * DELETE /api/menus/{id}/soft
+     * @param Request $request
+     * @return Response
+     */
+    public function softDelete(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+
+            // 检查菜单是否存在
+            $menu = $this->menuModel->find($id);
+            if (!$menu) {
+                return $this->error(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            }
+
+            // 软删除菜单
+            $result = $this->menuModel->softDeleteMenu($id);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '删除菜单失败');
+            }
+
+            return $this->success(null, '删除菜单成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '删除菜单失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 恢复已删除的菜单
+     * PUT /api/menus/{id}/restore
+     * @param Request $request
+     * @return Response
+     */
+    public function restore(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+
+            // 恢复菜单
+            $result = $this->menuModel->restoreMenu($id);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '恢复菜单失败');
+            }
+
+            return $this->success(null, '恢复菜单成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '恢复菜单失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 批量软删除菜单
+     * DELETE /api/menus/batch-soft-delete
+     * @param Request $request
+     * @return Response
+     */
+    public function batchSoftDelete(Request $request): Response
+    {
+        try {
+            $ids = $request->post('ids', []);
+            
+            if (!is_array($ids) || empty($ids)) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID列表不能为空');
+            }
+
+            // 验证ID格式
+            foreach ($ids as $id) {
+                if (!is_numeric($id) || $id <= 0) {
+                    return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID必须为正整数');
+                }
+            }
+
+            // 批量软删除
+            $result = $this->menuModel->batchSoftDelete($ids);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '批量删除失败');
+            }
+
+            return $this->success(null, '批量删除成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '批量删除失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 批量恢复菜单
+     * PUT /api/menus/batch-restore
+     * @param Request $request
+     * @return Response
+     */
+    public function batchRestore(Request $request): Response
+    {
+        try {
+            $ids = $request->post('ids', []);
+            
+            if (!is_array($ids) || empty($ids)) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID列表不能为空');
+            }
+
+            // 验证ID格式
+            foreach ($ids as $id) {
+                if (!is_numeric($id) || $id <= 0) {
+                    return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID必须为正整数');
+                }
+            }
+
+            // 批量恢复
+            $result = $this->menuModel->batchRestore($ids);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '批量恢复失败');
+            }
+
+            return $this->success(null, '批量恢复成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '批量恢复失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 永久删除菜单
+     * DELETE /api/menus/{id}/force
+     * @param Request $request
+     * @return Response
+     */
+    public function forceDelete(Request $request): Response
+    {
+        try {
+            $id = (int)$request->get('id', 0);
+            
+            if ($id <= 0) {
+                return $this->error(ErrorCode::PARAMETER_ERROR, '菜单ID无效');
+            }
+
+            // 永久删除菜单
+            $result = $this->menuModel->forceDeleteMenu($id);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '永久删除菜单失败');
+            }
+
+            return $this->success(null, '永久删除菜单成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '永久删除菜单失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取已删除的菜单列表
+     * GET /api/menus/deleted
+     * @param Request $request
+     * @return Response
+     */
+    public function deletedMenus(Request $request): Response
+    {
+        try {
+            $page = (int)$request->get('page', 1);
+            $limit = (int)$request->get('limit', 15);
+
+            // 获取已删除的菜单
+            $paginator = $this->menuModel->getDeletedMenus($page, $limit);
+            
+            // 格式化数据
+            $list = [];
+            foreach ($paginator->items() as $menu) {
+                $list[] = $this->transformService->formatForApi($menu->toArray());
+            }
+
+            $result = [
+                'list' => $list,
+                'total' => $paginator->total(),
+                'page' => $paginator->currentPage(),
+                'limit' => $paginator->listRows(),
+                'pages' => $paginator->lastPage()
+            ];
+
+            return $this->success($result, '获取已删除菜单列表成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '获取已删除菜单列表失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取菜单排序统计信息
+     * GET /api/menus/sort-stats
+     * @param Request $request
+     * @return Response
+     */
+    public function sortStats(Request $request): Response
+    {
+        try {
+            $parentId = (int)$request->get('parent_id', 0);
+
+            // 获取排序统计信息
+            $stats = $this->menuModel->getSortStats($parentId);
+
+            return $this->success($stats, '获取排序统计信息成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '获取排序统计信息失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 修复菜单排序
+     * POST /api/menus/fix-sort
+     * @param Request $request
+     * @return Response
+     */
+    public function fixSort(Request $request): Response
+    {
+        try {
+            $parentId = (int)$request->post('parent_id', 0);
+
+            // 修复排序
+            $result = $this->menuModel->fixSort($parentId);
+            if (!$result) {
+                return $this->error(ErrorCode::SYSTEM_ERROR, '修复排序失败');
+            }
+
+            return $this->success(null, '修复排序成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '修复排序失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取菜单状态统计
+     * GET /api/menus/status-stats
+     * @param Request $request
+     * @return Response
+     */
+    public function statusStats(Request $request): Response
+    {
+        try {
+            // 获取状态统计信息
+            $stats = $this->menuModel->getStatusStats();
+
+            return $this->success($stats, '获取状态统计信息成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '获取状态统计信息失败：' . $e->getMessage());
+        }
     }
 
     /**
