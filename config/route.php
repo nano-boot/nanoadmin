@@ -70,7 +70,7 @@ Route::group('/sys/menus', function () {
     Route::post('', [plugin\theadmin\app\controller\MenuController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'update']);
-    Route::delete('/batch', [plugin\theadmin\app\controller\MenuController::class, 'batchDestroy']);
+//    Route::delete('/batch', [plugin\theadmin\app\controller\MenuController::class, 'batchDestroy']);
     Route::delete('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'destroy']);
     Route::post('/sort', [plugin\theadmin\app\controller\MenuController::class, 'sort']);
 
