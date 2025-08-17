@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\service;
 
+use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Menu;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\ErrorCode;
@@ -19,11 +20,100 @@ class MenuTransformService
     private Menu $menuModel;
 
     /**
+     * 缓存配置
+     * @var array
+     */
+    private array $cacheConfig;
+
+    /**
+     * 缓存实例
+     * @var mixed
+     */
+    private $cache;
+
+    /**
      * 构造函数
      */
     public function __construct()
     {
-        $this->menuModel = new Menu();
+        $this->menuModel = ModelFactory::menu();
+        $this->loadCacheConfig();
+        $this->initializeCache();
+    }
+
+    /**
+     * 加载缓存配置
+     */
+    private function loadCacheConfig(): void
+    {
+        $configFile = base_path() . '/plugin/theadmin/config/cache.php';
+        
+        if (file_exists($configFile)) {
+            $this->cacheConfig = require $configFile;
+        } else {
+            // 默认配置
+            $this->cacheConfig = [
+                'type' => 'file',
+                'menu' => [
+                    'ttl' => 3600,
+                    'prefix' => 'menu:',
+                    'enabled' => true,
+                ],
+                'redis' => [
+                    'host' => '127.0.0.1',
+                    'port' => 6379,
+                    'database' => 1,
+                    'prefix' => 'theadmin_cache:',
+                ],
+                'file' => [
+                    'path' => runtime_path() . '/cache/theadmin/',
+                    'prefix' => 'theadmin_cache_',
+                ],
+            ];
+        }
+    }
+
+    /**
+     * 初始化缓存
+     */
+    private function initializeCache(): void
+    {
+        if (!($this->cacheConfig['menu']['enabled'] ?? true)) {
+            $this->cache = null;
+            return;
+        }
+
+        try {
+            $cacheType = $this->cacheConfig['type'] ?? 'file';
+            
+            if ($cacheType === 'redis' && class_exists('\Redis')) {
+                $redisConfig = $this->cacheConfig['redis'] ?? [];
+                $this->cache = new \Redis();
+                
+                $host = $redisConfig['host'] ?? '127.0.0.1';
+                $port = $redisConfig['port'] ?? 6379;
+                $timeout = $redisConfig['timeout'] ?? 2;
+                
+                if ($this->cache->connect($host, $port, $timeout)) {
+                    // 设置密码（如果有）
+                    if (!empty($redisConfig['password'])) {
+                        $this->cache->auth($redisConfig['password']);
+                    }
+                    
+                    // 选择数据库
+                    $database = $redisConfig['database'] ?? 1;
+                    $this->cache->select($database);
+                } else {
+                    throw new \Exception('Redis连接失败');
+                }
+            } else {
+                // 使用文件缓存
+                $this->cache = null;
+            }
+        } catch (\Exception $e) {
+            // 缓存初始化失败，使用文件缓存
+            $this->cache = null;
+        }
     }
 
     /**
@@ -644,6 +734,572 @@ class MenuTransformService
             if (!empty($menu['children'])) {
                 $this->calculateStatistics($menu['children'], $stats, $depth + 1);
             }
+        }
+    }
+
+    // ==================== 缓存相关方法 ====================
+
+    /**
+     * 获取缓存键前缀
+     * @return string
+     */
+    private function getCachePrefix(): string
+    {
+        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'theadmin_cache:';
+        $menuPrefix = $this->cacheConfig['menu']['prefix'] ?? 'menu:';
+        return $redisPrefix . $menuPrefix;
+    }
+
+    /**
+     * 获取缓存TTL
+     * @param string $strategy 缓存策略名称
+     * @return int
+     */
+    private function getCacheTTL(string $strategy = 'default'): int
+    {
+        $strategies = $this->cacheConfig['menu']['strategies'] ?? [];
+        
+        if (isset($strategies[$strategy]['ttl'])) {
+            return $strategies[$strategy]['ttl'];
+        }
+        
+        return $this->cacheConfig['menu']['ttl'] ?? 3600;
+    }
+
+    /**
+     * 检查缓存策略是否启用
+     * @param string $strategy 缓存策略名称
+     * @return bool
+     */
+    private function isCacheStrategyEnabled(string $strategy): bool
+    {
+        if (!($this->cacheConfig['menu']['enabled'] ?? true)) {
+            return false;
+        }
+        
+        $strategies = $this->cacheConfig['menu']['strategies'] ?? [];
+        return $strategies[$strategy]['enabled'] ?? true;
+    }
+
+    /**
+     * 获取缓存数据
+     * @param string $key 缓存键
+     * @return mixed|null 缓存数据，不存在返回null
+     */
+    public function getCache(string $key)
+    {
+        try {
+            $cacheKey = $this->getCachePrefix() . $key;
+            
+            if ($this->cache instanceof \Redis) {
+                $data = $this->cache->get($cacheKey);
+                if ($data === false) {
+                    return null;
+                }
+                return json_decode($data, true);
+            } else {
+                // 使用文件缓存
+                return $this->getFileCache($cacheKey);
+            }
+        } catch (\Exception $e) {
+            // 缓存获取失败，返回null
+            return null;
+        }
+    }
+
+    /**
+     * 设置缓存数据
+     * @param string $key 缓存键
+     * @param mixed $data 缓存数据
+     * @param int|null $ttl 过期时间（秒），null使用默认值
+     * @return bool 是否设置成功
+     */
+    public function setCache(string $key, $data, ?int $ttl = null): bool
+    {
+        try {
+            $cacheKey = $this->getCachePrefix() . $key;
+            $ttl = $ttl ?? $this->getCacheTTL();
+            
+            if ($this->cache instanceof \Redis) {
+                $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE);
+                return $this->cache->setex($cacheKey, $ttl, $jsonData);
+            } else {
+                // 使用文件缓存
+                return $this->setFileCache($cacheKey, $data, $ttl);
+            }
+        } catch (\Exception $e) {
+            // 缓存设置失败
+            return false;
+        }
+    }
+
+    /**
+     * 删除缓存数据
+     * @param string $key 缓存键
+     * @return bool 是否删除成功
+     */
+    public function deleteCache(string $key): bool
+    {
+        try {
+            $cacheKey = $this->getCachePrefix() . $key;
+            
+            if ($this->cache instanceof \Redis) {
+                return $this->cache->del($cacheKey) > 0;
+            } else {
+                // 删除文件缓存
+                return $this->deleteFileCache($cacheKey);
+            }
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 清空所有菜单缓存
+     * @return bool 是否清空成功
+     */
+    public function clearAllCache(): bool
+    {
+        try {
+            if ($this->cache instanceof \Redis) {
+                $pattern = $this->getCachePrefix() . '*';
+                $keys = $this->cache->keys($pattern);
+                if (!empty($keys)) {
+                    return $this->cache->del($keys) > 0;
+                }
+                return true;
+            } else {
+                // 清空文件缓存
+                return $this->clearAllFileCache();
+            }
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 获取文件缓存
+     * @param string $key 缓存键
+     * @return mixed|null
+     */
+    private function getFileCache(string $key)
+    {
+        $cacheFile = $this->getCacheFilePath($key);
+        
+        if (!file_exists($cacheFile)) {
+            return null;
+        }
+
+        $cacheData = file_get_contents($cacheFile);
+        if ($cacheData === false) {
+            return null;
+        }
+
+        $cache = json_decode($cacheData, true);
+        if (!$cache || !isset($cache['expire_time'], $cache['data'])) {
+            return null;
+        }
+
+        // 检查是否过期
+        if (time() > $cache['expire_time']) {
+            unlink($cacheFile);
+            return null;
+        }
+
+        return $cache['data'];
+    }
+
+    /**
+     * 设置文件缓存
+     * @param string $key 缓存键
+     * @param mixed $data 缓存数据
+     * @param int $ttl 过期时间
+     * @return bool
+     */
+    private function setFileCache(string $key, $data, int $ttl): bool
+    {
+        $cacheFile = $this->getCacheFilePath($key);
+        $cacheDir = dirname($cacheFile);
+
+        // 确保缓存目录存在
+        if (!is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
+
+        $cacheData = [
+            'expire_time' => time() + $ttl,
+            'data' => $data
+        ];
+
+        return file_put_contents($cacheFile, json_encode($cacheData, JSON_UNESCAPED_UNICODE)) !== false;
+    }
+
+    /**
+     * 删除文件缓存
+     * @param string $key 缓存键
+     * @return bool
+     */
+    private function deleteFileCache(string $key): bool
+    {
+        $cacheFile = $this->getCacheFilePath($key);
+        
+        if (file_exists($cacheFile)) {
+            return unlink($cacheFile);
+        }
+        
+        return true;
+    }
+
+    /**
+     * 清空所有文件缓存
+     * @return bool
+     */
+    private function clearAllFileCache(): bool
+    {
+        $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/theadmin/';
+        $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_cache_';
+        
+        if (!is_dir($cachePath)) {
+            return true;
+        }
+
+        $files = glob($cachePath . $prefix . '*.json');
+        foreach ($files as $file) {
+            if (!unlink($file)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * 获取缓存文件路径
+     * @param string $key 缓存键
+     * @return string
+     */
+    private function getCacheFilePath(string $key): string
+    {
+        $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/theadmin/';
+        $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_cache_';
+        $safeKey = md5($key);
+        return $cachePath . $prefix . $safeKey . '.json';
+    }
+
+    /**
+     * 带缓存的菜单树形结构转换
+     * @param array $menuTree 菜单树数据
+     * @param array $userRoles 用户角色（用于缓存键）
+     * @return array 前端路由配置数组
+     * @throws ApiException
+     */
+    public function toRouteConfigTreeWithCache(array $menuTree, array $userRoles = []): array
+    {
+        // 检查缓存策略是否启用
+        if (!$this->isCacheStrategyEnabled('route_config')) {
+            return $this->toRouteConfigTree($menuTree);
+        }
+
+        // 生成缓存键
+        $cacheKey = 'route_tree:' . md5(json_encode($menuTree) . implode(',', $userRoles));
+        
+        // 尝试从缓存获取
+        $cached = $this->getCache($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        // 缓存未命中，执行转换
+        $routes = $this->toRouteConfigTree($menuTree);
+        
+        // 存储到缓存
+        $ttl = $this->getCacheTTL('route_config');
+        $this->setCache($cacheKey, $routes, $ttl);
+        
+        return $routes;
+    }
+
+    /**
+     * 带缓存的菜单权限过滤
+     * @param array $menuTree 菜单树数据
+     * @param array $userRoles 用户角色
+     * @return array 过滤后的菜单树
+     */
+    public function filterByRolesWithCache(array $menuTree, array $userRoles): array
+    {
+        // 检查缓存策略是否启用
+        if (!$this->isCacheStrategyEnabled('role_filter')) {
+            return $this->filterByRoles($menuTree, $userRoles);
+        }
+
+        // 生成缓存键
+        $cacheKey = 'filtered_menu:' . md5(json_encode($menuTree) . implode(',', $userRoles));
+        
+        // 尝试从缓存获取
+        $cached = $this->getCache($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        // 缓存未命中，执行过滤
+        $filtered = $this->filterByRoles($menuTree, $userRoles);
+        
+        // 存储到缓存
+        $ttl = $this->getCacheTTL('role_filter');
+        $this->setCache($cacheKey, $filtered, $ttl);
+        
+        return $filtered;
+    }
+
+    /**
+     * 带缓存的菜单选择器数据构建
+     * @param array $menuTree 菜单树数据
+     * @param bool $includeButtons 是否包含按钮类型
+     * @return array 选择器数据
+     */
+    public function buildSelectorDataWithCache(array $menuTree, bool $includeButtons = false): array
+    {
+        // 检查缓存策略是否启用
+        if (!$this->isCacheStrategyEnabled('selector_data')) {
+            return $this->buildSelectorData($menuTree, $includeButtons);
+        }
+
+        // 生成缓存键
+        $cacheKey = 'selector_data:' . md5(json_encode($menuTree) . ($includeButtons ? '1' : '0'));
+        
+        // 尝试从缓存获取
+        $cached = $this->getCache($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        // 缓存未命中，执行构建
+        $selectorData = $this->buildSelectorData($menuTree, $includeButtons);
+        
+        // 存储到缓存
+        $ttl = $this->getCacheTTL('selector_data');
+        $this->setCache($cacheKey, $selectorData, $ttl);
+        
+        return $selectorData;
+    }
+
+    /**
+     * 带缓存的权限提取
+     * @param array $menuTree 菜单树数据
+     * @return array 权限标识列表
+     */
+    public function extractPermissionsWithCache(array $menuTree): array
+    {
+        // 检查缓存策略是否启用
+        if (!$this->isCacheStrategyEnabled('permissions')) {
+            return $this->extractPermissions($menuTree);
+        }
+
+        // 生成缓存键
+        $cacheKey = 'permissions:' . md5(json_encode($menuTree));
+        
+        // 尝试从缓存获取
+        $cached = $this->getCache($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        // 缓存未命中，执行提取
+        $permissions = $this->extractPermissions($menuTree);
+        
+        // 存储到缓存
+        $ttl = $this->getCacheTTL('permissions');
+        $this->setCache($cacheKey, $permissions, $ttl);
+        
+        return $permissions;
+    }
+
+    /**
+     * 带缓存的统计信息构建
+     * @param array $menuTree 菜单树数据
+     * @return array 统计信息
+     */
+    public function buildStatisticsWithCache(array $menuTree): array
+    {
+        // 检查缓存策略是否启用
+        if (!$this->isCacheStrategyEnabled('statistics')) {
+            return $this->buildStatistics($menuTree);
+        }
+
+        // 生成缓存键
+        $cacheKey = 'statistics:' . md5(json_encode($menuTree));
+        
+        // 尝试从缓存获取
+        $cached = $this->getCache($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        // 缓存未命中，执行构建
+        $stats = $this->buildStatistics($menuTree);
+        
+        // 存储到缓存
+        $ttl = $this->getCacheTTL('statistics');
+        $this->setCache($cacheKey, $stats, $ttl);
+        
+        return $stats;
+    }
+
+    /**
+     * 菜单数据变更时清理相关缓存
+     * @param int|null $menuId 菜单ID，null表示清理所有缓存
+     * @return bool 是否清理成功
+     */
+    public function invalidateCache(?int $menuId = null): bool
+    {
+        if ($menuId === null) {
+            // 清理所有菜单缓存
+            return $this->clearAllCache();
+        }
+
+        // 清理特定菜单相关的缓存
+        // 由于缓存键包含了菜单数据的哈希，菜单变更后哈希会改变，旧缓存自然失效
+        // 这里可以选择性地清理一些通用缓存
+        $keysToDelete = [
+            'route_tree:*',
+            'filtered_menu:*',
+            'selector_data:*',
+            'permissions:*',
+            'statistics:*'
+        ];
+
+        $success = true;
+        foreach ($keysToDelete as $pattern) {
+            if (!$this->deleteCacheByPattern($pattern)) {
+                $success = false;
+            }
+        }
+
+        return $success;
+    }
+
+    /**
+     * 根据模式删除缓存
+     * @param string $pattern 缓存键模式
+     * @return bool 是否删除成功
+     */
+    private function deleteCacheByPattern(string $pattern): bool
+    {
+        try {
+            if ($this->cache instanceof \Redis) {
+                $fullPattern = self::CACHE_PREFIX . $pattern;
+                $keys = $this->cache->keys($fullPattern);
+                if (!empty($keys)) {
+                    return $this->cache->del($keys) > 0;
+                }
+                return true;
+            } else {
+                // 文件缓存模式下，清理所有缓存
+                return $this->clearAllFileCache();
+            }
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 获取缓存统计信息
+     * @return array 缓存统计信息
+     */
+    public function getCacheStats(): array
+    {
+        $stats = [
+            'cache_type' => $this->cache instanceof \Redis ? 'redis' : 'file',
+            'total_keys' => 0,
+            'cache_size' => 0,
+            'hit_rate' => 0.0
+        ];
+
+        try {
+            if ($this->cache instanceof \Redis) {
+                $pattern = self::CACHE_PREFIX . '*';
+                $keys = $this->cache->keys($pattern);
+                $stats['total_keys'] = count($keys);
+                
+                // 计算缓存大小（近似值）
+                foreach ($keys as $key) {
+                    $stats['cache_size'] += strlen($this->cache->get($key) ?: '');
+                }
+            } else {
+                // 文件缓存统计
+                $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/theadmin/';
+                $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_cache_';
+                
+                if (is_dir($cachePath)) {
+                    $files = glob($cachePath . $prefix . '*.json');
+                    $stats['total_keys'] = count($files);
+                    
+                    foreach ($files as $file) {
+                        $stats['cache_size'] += filesize($file);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // 统计失败，返回默认值
+        }
+
+        return $stats;
+    }
+
+    /**
+     * 预热缓存
+     * @param array $menuTree 菜单树数据
+     * @param array $commonRoles 常用角色列表，为空时使用配置中的角色
+     * @return bool 是否预热成功
+     */
+    public function warmupCache(array $menuTree, array $commonRoles = []): bool
+    {
+        try {
+            // 如果没有提供角色列表，使用配置中的角色
+            if (empty($commonRoles)) {
+                $commonRoles = $this->cacheConfig['menu']['warmup_roles'] ?? [
+                    ['admin'],
+                    ['user'],
+                    ['admin', 'user']
+                ];
+            }
+
+            // 预热路由配置缓存
+            if ($this->isCacheStrategyEnabled('route_config')) {
+                $this->toRouteConfigTreeWithCache($menuTree);
+                
+                // 为常用角色预热路由配置
+                foreach ($commonRoles as $roles) {
+                    $this->toRouteConfigTreeWithCache($menuTree, $roles);
+                }
+            }
+            
+            // 预热选择器数据缓存
+            if ($this->isCacheStrategyEnabled('selector_data')) {
+                $this->buildSelectorDataWithCache($menuTree, false);
+                $this->buildSelectorDataWithCache($menuTree, true);
+            }
+            
+            // 预热权限列表缓存
+            if ($this->isCacheStrategyEnabled('permissions')) {
+                $this->extractPermissionsWithCache($menuTree);
+            }
+            
+            // 预热统计信息缓存
+            if ($this->isCacheStrategyEnabled('statistics')) {
+                $this->buildStatisticsWithCache($menuTree);
+            }
+            
+            // 为常用角色预热过滤缓存
+            if ($this->isCacheStrategyEnabled('role_filter')) {
+                foreach ($commonRoles as $roles) {
+                    $this->filterByRolesWithCache($menuTree, $roles);
+                }
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            return false;
         }
     }
 }
