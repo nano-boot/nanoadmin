@@ -22,7 +22,7 @@ enum ErrorCode: int
     case TOKEN_MISSING = 40005;          // 令牌缺失
     case PASSWORD_ERROR = 40006;         // 密码错误
 
-    case UNAUTHORIZED = 40300;           // 未授权访问
+    case UNAUTHORIZED = 40100;           // 未授权访问
     case FORBIDDEN = 40301;              // 权限不足
     case ACCOUNT_DISABLED = 40302;       // 账户已禁用
     case NOT_FOUND = 40400;              // 资源不存在

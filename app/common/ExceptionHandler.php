@@ -17,6 +17,7 @@ class ExceptionHandler
      */
     public function handle(Request $request, Throwable $exception): Response
     {
+        var_dump('ExceptionHandler', $exception);
         // 处理API异常
         if ($exception instanceof ApiException) {
             return $this->handleApiException($exception);

@@ -577,11 +577,11 @@ class MenuController
 
     /**
      * 错误响应
-     * @param int $code
+     * @param ErrorCode|int $code
      * @param string $message
      * @return Response
      */
-    private function error(int $code, string $message): Response
+    private function error(ErrorCode|int $code, string $message): Response
     {
         $response = ApiResponse::error($code, $message);
         $httpCode = $this->getHttpCodeByErrorCode($code);

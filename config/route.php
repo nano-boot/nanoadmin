@@ -68,6 +68,7 @@ Route::group('/sys/permissions', function () {
 Route::group('/sys/menus', function () {
     Route::get('', [plugin\theadmin\app\controller\MenuController::class, 'index']);
     Route::post('', [plugin\theadmin\app\controller\MenuController::class, 'store']);
+    Route::post('/tree', [plugin\theadmin\app\controller\MenuController::class, 'tree']);
     Route::get('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'update']);
 //    Route::delete('/batch', [plugin\theadmin\app\controller\MenuController::class, 'batchDestroy']);

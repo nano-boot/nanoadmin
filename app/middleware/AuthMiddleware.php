@@ -44,6 +44,7 @@ class AuthMiddleware implements MiddlewareInterface
             // 获取Token
             $token = $this->extractToken($request);
             if (empty($token)) {
+                var_dump('缺少认证Token', $request->path());
                 throw new ApiException(ErrorCode::UNAUTHORIZED, '缺少认证Token');
             }
 
