@@ -10,6 +10,7 @@ use plugin\theadmin\app\common\ErrorCode;
 use plugin\theadmin\app\model\Menu;
 use plugin\theadmin\app\service\MenuTransformService;
 use plugin\theadmin\app\service\MenuSearchService;
+ 
 
 /**
  * 菜单管理控制器
@@ -44,6 +45,40 @@ class MenuController
         $this->transformService = new MenuTransformService();
         $this->searchService = new MenuSearchService();
     }
+
+    /**
+     * 获取当前用户的树状路由
+     * GET /menus/routes
+     * @param Request $request
+     * @return Response
+     */
+    public function routes(Request $request): Response
+    {
+        try {
+            $adminId = $request->adminId ?? 0;
+            if (empty($adminId)) {
+                return $this->error(ErrorCode::UNAUTHORIZED, '未登录');
+            }
+
+            // 获取管理员可访问的菜单树并转换为前端路由格式
+            $menuTree = $this->menuModel->getAdminMenuTree((int)$adminId);
+            $routes = $this->transformService->toRouteConfigTree($menuTree);
+
+            return $this->success(['routes' => $routes], '获取成功');
+
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(ErrorCode::SYSTEM_ERROR, '获取路由失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 从请求中获取Token
+     * @param Request $request
+     * @return string
+     */
+    
 
     /**
      * 获取菜单列表（支持分页和搜索）
@@ -122,6 +157,7 @@ class MenuController
      */
     public function tree(Request $request): Response
     {
+        var_dump('获取菜单树形结构');
         try {
             // 获取查询参数
             $parentId = (int)$request->get('parent_id', 0);
@@ -129,6 +165,7 @@ class MenuController
             $keyword = trim($request->get('keyword', ''));
 
             if (!empty($keyword)) {
+                var_dump('搜索菜单');
                 // 使用搜索服务进行搜索
                 $options = [
                     'search_fields' => ['name', 'title', 'path'],
@@ -140,6 +177,7 @@ class MenuController
                 
                 $tree = $this->searchService->searchMenus($keyword, $options);
             } else {
+                var_dump('获取菜单树');
                 // 获取菜单树
                 $tree = $this->menuModel->getTree($parentId, $onlyEnabled);
             }
@@ -869,7 +907,7 @@ class MenuController
             }
 
             // 更新排序
-            $result = $this->menuModel->updateSort($id, $sort);
+            $result = $this->menuModel->updateSortById($id, $sort);
             if (!$result) {
                 return $this->error(ErrorCode::SYSTEM_ERROR, '更新排序失败');
             }

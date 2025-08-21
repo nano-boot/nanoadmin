@@ -21,46 +21,45 @@
 -- 1. 仪表板模块
 INSERT INTO th_sys_menu (
     id, parent_id, name, path, component, title, icon, type, 
-    roles, hidden, cacheable, affix, status, sort, created_at, updated_at
+     hidden, keep_alive, fixed_tab, status, sort, created_at, updated_at
 ) VALUES 
 -- 仪表板父级菜单
 (1, 0, 'Dashboard', '/dashboard', '/index/index', '仪表板', '&#xe721;', 'D', 
- JSON_ARRAY('R_SUPER', 'R_ADMIN'), FALSE, TRUE, FALSE, 1, 100, NOW(), NOW()),
+FALSE, TRUE, FALSE, 1, 100, NOW(), NOW()),
 
 -- 仪表板子菜单
 (2, 1, 'Console', 'console', '/dashboard/console', '工作台', '', 'M', 
- NULL, FALSE, FALSE, TRUE, 1, 100, NOW(), NOW());
+  FALSE, FALSE, TRUE, 1, 100, NOW(), NOW());
 
 -- 2. 系统管理模块
 INSERT INTO th_sys_menu (
     id, parent_id, name, path, component, title, icon, type, 
-    roles, hidden, cacheable, affix, auth_list, status, sort, created_at, updated_at
+     hidden, keep_alive, fixed_tab, status, sort, created_at, updated_at
 ) VALUES 
 -- 系统管理父级菜单
 (10, 0, 'System', '/system', '/index/index', '系统管理', '&#xe7b9;', 'D', 
- JSON_ARRAY('R_SUPER', 'R_ADMIN'), FALSE, TRUE, FALSE, NULL, 1, 200, NOW(), NOW()),
+  FALSE, TRUE, FALSE, 1, 200, NOW(), NOW()),
 
 -- 用户管理
 (11, 10, 'User', 'user', '/system/user', '用户管理', '', 'M', 
- JSON_ARRAY('R_SUPER', 'R_ADMIN'), FALSE, TRUE, FALSE, NULL, 1, 100, NOW(), NOW()),
+FALSE, TRUE, FALSE,  1, 100, NOW(), NOW()),
 
 -- 角色管理
 (12, 10, 'Role', 'role', '/system/role', '角色管理', '', 'M', 
- JSON_ARRAY('R_SUPER'), FALSE, TRUE, FALSE, NULL, 1, 200, NOW(), NOW()),
+FALSE, TRUE, FALSE, 1, 200, NOW(), NOW()),
 
 -- 用户中心（隐藏菜单）
 (13, 10, 'UserCenter', 'user-center', '/system/user-center', '用户中心', '', 'M', 
- NULL, TRUE, TRUE, FALSE, NULL, 1, 300, NOW(), NOW()),
+ TRUE, TRUE, FALSE, 1, 300, NOW(), NOW()),
 
 -- 菜单管理（包含权限按钮）
 (14, 10, 'Menus', 'menu', '/system/menu', '菜单管理', '', 'M', 
- JSON_ARRAY('R_SUPER'), FALSE, TRUE, FALSE, 
- '[{"title":"新增","authMark":"add"},{"title":"编辑","authMark":"edit"},{"title":"删除","authMark":"delete"}]', 1, 400, NOW(), NOW());
+FALSE, TRUE, FALSE,  1, 400, NOW(), NOW());
 
 -- 3. 结果页面模块
 INSERT INTO th_sys_menu (
     id, parent_id, name, path, component, title, icon, type, 
-    hidden, cacheable, affix, status, sort, created_at, updated_at
+    hidden, keep_alive, fixed_tab, status, sort, created_at, updated_at
 ) VALUES 
 -- 结果页面父级菜单
 (20, 0, 'Result', '/result', '/index/index', '结果页面', '&#xe715;', 'D', 
@@ -77,7 +76,7 @@ INSERT INTO th_sys_menu (
 -- 4. 异常页面模块
 INSERT INTO th_sys_menu (
     id, parent_id, name, path, component, title, icon, type, 
-    hidden, cacheable, affix, status, sort, created_at, updated_at
+    hidden, keep_alive, fixed_tab, status, sort, created_at, updated_at
 ) VALUES 
 -- 异常页面父级菜单
 (30, 0, 'Exception', '/exception', '/index/index', '异常页面', '&#xe820;', 'D', 

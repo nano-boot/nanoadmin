@@ -1156,7 +1156,7 @@ class Menu extends BaseModel
      * @param int $sort 新的排序值
      * @return bool
      */
-    public function updateSort(int $id, int $sort): bool
+    public function updateSortById(int $id, int $sort): bool
     {
         return $this->where('id', $id)->update(['sort' => $sort]) !== false;
     }
@@ -1166,6 +1166,9 @@ class Menu extends BaseModel
      * @param int $id1 菜单1的ID
      * @param int $id2 菜单2的ID
      * @return bool
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
     public function swapSort(int $id1, int $id2): bool
     {
@@ -1304,10 +1307,11 @@ class Menu extends BaseModel
 
     /**
      * 切换菜单状态
-     * @param int $id 菜单ID
+     * @param int $id
+     * @param string $field
      * @return bool
      */
-    public function toggleStatus(int $id): bool
+    public function toggleStatus(int $id, string $field = 'status'): bool
     {
         $menu = $this->find($id);
         if (!$menu) {

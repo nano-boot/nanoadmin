@@ -93,7 +93,6 @@ CREATE TABLE IF NOT EXISTS th_sys_permission (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';
 
 -- 4. 菜单表
-
 CREATE TABLE IF NOT EXISTS th_sys_menu (
     -- 基础字段
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '菜单ID',
@@ -112,25 +111,27 @@ CREATE TABLE IF NOT EXISTS th_sys_menu (
     -- 菜单类型和权限
     type CHAR(1) DEFAULT 'D' COMMENT '菜单类型（D目录 M菜单 B按钮 L外链 I内嵌）',
     permission VARCHAR(100) DEFAULT '' COMMENT '权限标识',
-    roles JSON DEFAULT NULL COMMENT '角色权限数组（对应meta.roles）',
-    
-    -- 菜单属性配置
-    hidden BOOLEAN DEFAULT FALSE COMMENT '是否隐藏（对应meta.isHide）',
-    cacheable BOOLEAN DEFAULT TRUE COMMENT '是否缓存（对应meta.keepAlive）',
-    affix BOOLEAN DEFAULT FALSE COMMENT '是否固定标签（对应meta.fixedTab）',
-    full_page BOOLEAN DEFAULT FALSE COMMENT '是否全屏显示（对应meta.isFullPage）',
+     -- roles JSON DEFAULT NULL COMMENT '角色权限数组（对应meta.roles）',
+    -- auth_list JSON DEFAULT NULL COMMENT '权限按钮列表（对应meta.authList）',
+
+    -- === 显示控制 ===
+    hidden tinyint(1) DEFAULT 0 COMMENT '是否在菜单中隐藏（对应meta.isHide）',
+    hide_tab tinyint(1) DEFAULT 0 COMMENT '是否在标签页中隐藏：1-隐藏，0-显示（对应meta.isHideTab）',
+    full_page tinyint(1) DEFAULT 0 COMMENT '是否全屏显示（对应meta.isFullPage）',
+
+    -- === 缓存和固定 ===
+    keep_alive tinyint(1) DEFAULT 1 COMMENT '是否缓存（对应meta.keepAlive）',
+    fixed_tab tinyint(1) DEFAULT 0 COMMENT '是否固定标签（对应meta.fixedTab）',
+
     
     -- 外链配置
     link_url VARCHAR(500) DEFAULT '' COMMENT '外链地址（对应meta.link）',
-    iframe BOOLEAN DEFAULT FALSE COMMENT '是否内嵌（对应meta.isIframe）',
+    iframe tinyint(1) DEFAULT 0 COMMENT '是否内嵌（对应meta.isIframe）',
     
     -- 徽章配置
-    show_badge BOOLEAN DEFAULT FALSE COMMENT '是否显示徽章（对应meta.showBadge）',
+    show_badge tinyint(1) DEFAULT 0 COMMENT '是否显示徽章（对应meta.showBadge）',
     badge_text VARCHAR(20) DEFAULT '' COMMENT '徽章文本（对应meta.showTextBadge）',
-    
-    -- 权限按钮列表
-    auth_list JSON DEFAULT NULL COMMENT '权限按钮列表（对应meta.authList）',
-    
+
     -- 其他属性
     active_path VARCHAR(200) DEFAULT '' COMMENT '激活菜单路径（对应meta.activePath）',
     

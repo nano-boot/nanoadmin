@@ -65,6 +65,7 @@ class PermissionMiddleware implements MiddlewareInterface
         '/sys/auth/profile',
         '/sys/auth/permissions',
         '/sys/auth/menus',
+        '/sys/menus/routes',
         '/sys/install',
     ];
 
@@ -85,6 +86,7 @@ class PermissionMiddleware implements MiddlewareInterface
         try {
             // 检查是否需要权限验证
             if ($this->shouldSkipPermissionCheck($request)) {
+                var_dump('跳过权限验证');
                 return $handler($request);
             }
 

@@ -30,9 +30,7 @@ Route::group('/sys/admins', function () {
 
     Route::post('/{id}/roles', [plugin\theadmin\app\controller\AdminController::class, 'assignRoles']);
     Route::get('/{id}/roles', [plugin\theadmin\app\controller\AdminController::class, 'getRoles']);
-})->middleware([
-    plugin\theadmin\app\middleware\AuthMiddleware::class
-]);
+});
 
 // 角色管理相关路由（需要认证）
 Route::group('/sys/roles', function () {
@@ -47,9 +45,7 @@ Route::group('/sys/roles', function () {
     Route::post('/{id}/menus', [plugin\theadmin\app\controller\RoleController::class, 'assignMenus']);
     Route::get('/{id}/menus', [plugin\theadmin\app\controller\RoleController::class, 'getMenus']);
 
-})->middleware([
-    plugin\theadmin\app\middleware\AuthMiddleware::class
-]);
+});
 
 // 权限管理相关路由（需要认证）
 Route::group('/sys/permissions', function () {
@@ -60,21 +56,18 @@ Route::group('/sys/permissions', function () {
     Route::delete('/batch', [plugin\theadmin\app\controller\PermissionController::class, 'batchDestroy']);
     Route::delete('/{id}', [plugin\theadmin\app\controller\PermissionController::class, 'destroy']);
 
-})->middleware([
-    plugin\theadmin\app\middleware\AuthMiddleware::class
-]);
+});
 
 // 菜单管理相关路由（需要认证）
 Route::group('/sys/menus', function () {
     Route::get('', [plugin\theadmin\app\controller\MenuController::class, 'index']);
     Route::post('', [plugin\theadmin\app\controller\MenuController::class, 'store']);
     Route::post('/tree', [plugin\theadmin\app\controller\MenuController::class, 'tree']);
+    Route::get('/routes', [plugin\theadmin\app\controller\MenuController::class, 'routes']);
     Route::get('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'update']);
 //    Route::delete('/batch', [plugin\theadmin\app\controller\MenuController::class, 'batchDestroy']);
     Route::delete('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'destroy']);
     Route::post('/sort', [plugin\theadmin\app\controller\MenuController::class, 'sort']);
 
-})->middleware([
-    plugin\theadmin\app\middleware\AuthMiddleware::class
-]);
+});
