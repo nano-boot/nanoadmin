@@ -62,6 +62,7 @@ class MenuController
 
             // 获取管理员可访问的菜单树并转换为前端路由格式
             $menuTree = $this->menuModel->getAdminMenuTree((int)$adminId);
+
             $routes = $this->transformService->toRouteConfigTree($menuTree);
 
             return $this->success(['routes' => $routes], '获取成功');

@@ -218,11 +218,26 @@ class Menu extends BaseModel
             return [];
         }
         
+        // 检查是否为超级管理员
+        $isSuperAdmin = false;
+        $roles = $admin->roles()->select();
+        foreach ($roles as $role) {
+            if ($role->code === 'super_admin') {
+                $isSuperAdmin = true;
+                break;
+            }
+        }
+        
+        // 超级管理员获取所有菜单
+        if ($isSuperAdmin) {
+            return $this->getTree();
+        }
+        
         // 获取管理员的所有菜单ID
         $menuIds = [];
-        $roles = $admin->roles()->with('menus')->select();
+        $rolesWithMenus = $admin->roles()->with('menus')->select();
         
-        foreach ($roles as $role) {
+        foreach ($rolesWithMenus as $role) {
             foreach ($role->menus as $menu) {
                 $menuIds[] = $menu->id;
             }
