@@ -2,14 +2,7 @@
 
 namespace plugin\theadmin\app\model;
 
-use think\Collection;
-use think\db\exception\DataNotFoundException;
-use think\db\exception\DbException;
-use think\db\exception\ModelNotFoundException;
-use think\db\Query;
-use think\Model;
-use think\model\concern\SoftDelete;
-use think\Paginator;
+use support\Model;
 
 /**
  * 基础模型类
@@ -17,54 +10,57 @@ use think\Paginator;
  */
 abstract class BaseModel extends Model
 {
-    use SoftDelete;
-
-    protected function getOptions(): array
-    {
-        return [
-            'createTime'    =>    'created_at',
-            'updateTime'    =>    'updated_at',
-            'deleteTime'    =>    'deleted',
-            'defaultSoftDelete' => 0,
-        ];
-    }
+    /**
+     * 时间戳格式
+     * @var string
+     */
+    protected $dateFormat = 'Y-m-d H:i:s';
+    
+    /**
+     * 需要转换的属性类型
+     * @var array
+     */
+    protected $casts = [
+        'created_at' => 'datetime:Y-m-d H:i:s',
+        'updated_at' => 'datetime:Y-m-d H:i:s',
+    ];
 
     /**
      * 全局查询范围 - 排除软删除
-     * @param Query $query
+     * @param \Illuminate\Database\Eloquent\Builder $query
      */
-    public function scopeActive(Query $query): void
+    public function scopeActive($query): void
     {
         $query->withTrashed();
     }
 
     /**
      * 状态范围查询 - 启用状态
-     * @param Query $query
+     * @param \Illuminate\Database\Eloquent\Builder $query
      */
-    public function scopeEnabled(Query $query): void
+    public function scopeEnabled($query): void
     {
         $query->where('status', '=', 1);
     }
 
     /**
      * 状态范围查询 - 禁用状态
-     * @param Query $query
+     * @param \Illuminate\Database\Eloquent\Builder $query
      */
-    public function scopeDisabled(Query $query): void
+    public function scopeDisabled($query): void
     {
         $query->where('status', '=', 0);
     }
 
     /**
      * 排序范围查询
-     * @param Query $query
+     * @param \Illuminate\Database\Eloquent\Builder $query
      * @param string $field 排序字段
      * @param string $order 排序方向
      */
-    public function scopeSort(Query $query, string $field = 'sort', string $order = 'asc'): void
+    public function scopeSort($query, string $field = 'sort', string $order = 'asc'): void
     {
-        $query->order($field, $order);
+        $query->orderBy($field, $order);
     }
 
     /**
@@ -73,21 +69,29 @@ abstract class BaseModel extends Model
      * @param int $page 页码
      * @param int $limit 每页数量
      * @param string $order 排序
-     * @return Paginator
-     * @throws DbException
+     * @return array
      */
-    public function getList(array $where = [], int $page = 1, int $limit = 15, string $order = 'id desc'): Paginator
+    public function getList(array $where = [], int $page = 1, int $limit = 15, string $order = 'id desc'): array
     {
         $query = $this->where($where);
 
         if ($order) {
-            $query->order($order);
+            $query->orderByRaw($order);
         }
 
-        return $query->paginate([
-            'list_rows' => $limit,
-            'page' => $page
-        ]);
+        $total = $query->count();
+        $list = $query->offset(($page - 1) * $limit)
+            ->limit($limit)
+            ->get()
+            ->toArray();
+
+        return [
+            'list' => $list,
+            'total' => $total,
+            'page' => $page,
+            'limit' => $limit,
+            'pages' => ceil($total / $limit)
+        ];
     }
 
     /**
@@ -95,34 +99,28 @@ abstract class BaseModel extends Model
      * @param array $where 查询条件
      * @param string $order 排序
      * @param string $field 字段
-     * @return Collection
-     * @throws DbException
-     * @throws DataNotFoundException
-     * @throws ModelNotFoundException
+     * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getAll(array $where = [], string $order = 'id desc', string $field = '*'): Collection
+    public function getAll(array $where = [], string $order = 'id desc', string $field = '*'): \Illuminate\Database\Eloquent\Collection
     {
-        $query = $this->field($field)->where($where);
+        $query = $this->select($field)->where($where);
 
         if ($order) {
-            $query->order($order);
+            $query->orderByRaw($order);
         }
 
-        return $query->select();
+        return $query->get();
     }
 
     /**
      * 根据ID获取记录
      * @param int $id
      * @param string $field 字段
-     * @return BaseModel
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
+     * @return BaseModel|null
      */
-    public function getById(int $id, string $field = '*'): BaseModel
+    public function getById(int $id, string $field = '*'): ?BaseModel
     {
-        return $this->field($field)->find($id);
+        return $this->select($field)->find($id);
     }
 
     /**
@@ -130,13 +128,10 @@ abstract class BaseModel extends Model
      * @param array $where 查询条件
      * @param string $field 字段
      * @return static|null
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function getOne(array $where, string $field = '*'): ?BaseModel
     {
-        return $this->field($field)->where($where)->find();
+        return $this->select($field)->where($where)->first();
     }
 
     /**
@@ -144,9 +139,9 @@ abstract class BaseModel extends Model
      * @param array $data 数据
      * @return BaseModel|false
      */
-    public function add(array $data): BaseModel|bool|static
+    public function add(array $data): BaseModel|bool
     {
-        return $this->save($data) ? $this : false;
+        return $this->create($data);
     }
 
     /**
@@ -162,7 +157,7 @@ abstract class BaseModel extends Model
             unset($data['id']);
         }
 
-        return $this->where($where)->update($data) != false;
+        return $this->where($where)->update($data);
     }
 
     /**
@@ -173,10 +168,10 @@ abstract class BaseModel extends Model
     public function remove(int|array $id): bool
     {
         if (is_array($id)) {
-            return $this->where($id)->delete() !== false;
+            return $this->where($id)->delete();
         }
 
-        return $this->destroy($id) !== false;
+        return $this->destroy($id);
     }
 
     /**
@@ -187,10 +182,10 @@ abstract class BaseModel extends Model
     public function forceRemove(int|array $id): bool
     {
         if (is_array($id)) {
-            return $this->where($id)->force()->delete() !== false;
+            return $this->where($id)->forceDelete();
         }
 
-        return $this->destroy($id, true) !== false;
+        return $this->destroy($id, true);
     }
 
     /**
@@ -198,9 +193,6 @@ abstract class BaseModel extends Model
      * @param int $id ID
      * @param string $field 字段名
      * @return bool
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function toggleStatus(int $id, string $field = 'status'): bool
     {
@@ -224,17 +216,17 @@ abstract class BaseModel extends Model
             return false;
         }
 
-        $this->startTrans();
+        \support\Db::beginTransaction();
         try {
             foreach ($data as $item) {
                 if (isset($item['id']) && isset($item['sort'])) {
                     $this->where('id', $item['id'])->update(['sort' => $item['sort']]);
                 }
             }
-            $this->commit();
+            \support\Db::commit();
             return true;
         } catch (\Exception $e) {
-            $this->rollback();
+            \support\Db::rollback();
             return false;
         }
     }
@@ -264,6 +256,6 @@ abstract class BaseModel extends Model
             $query->where('id', '<>', $excludeId);
         }
 
-        return $query->count() > 0;
+        return $query->exists();
     }
 }

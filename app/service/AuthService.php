@@ -5,11 +5,7 @@ namespace plugin\theadmin\app\service;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\ErrorCode;
 use plugin\theadmin\app\common\JwtUtil;
-use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Admin;
-use think\db\exception\DataNotFoundException;
-use think\db\exception\DbException;
-use think\db\exception\ModelNotFoundException;
 
 /**
  * 认证服务类
@@ -23,9 +19,6 @@ class AuthService
      * @param string $ip 登录IP
      * @return array
      * @throws ApiException
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function login(string $username, string $password, string $ip = ''): array
     {
@@ -35,17 +28,13 @@ class AuthService
         }
 
         // 查找管理员
-        $adminModel = ModelFactory::admin();
-
-        $admin = $adminModel->where('username', $username)->find();
+        $admin = Admin::where('username', $username)
+            ->where('status', 1)
+            ->with('roles')
+            ->first();
 
         if (!$admin) {
             throw new ApiException(ErrorCode::LOGIN_FAILED, '用户名或密码错误');
-        }
-
-        // 检查账户状态
-        if (!$admin->status) {
-            throw new ApiException(ErrorCode::ACCOUNT_DISABLED, '账户已被禁用');
         }
 
         // 验证密码
@@ -151,8 +140,7 @@ class AuthService
         }
 
         // 验证管理员是否存在且状态正常
-        $adminModel = ModelFactory::admin();
-        $admin = $adminModel->find($adminId);
+        $admin = Admin::find($adminId);
 
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
@@ -191,8 +179,7 @@ class AuthService
         }
 
         // 获取管理员信息
-        $adminModel = ModelFactory::admin();
-        $admin = $adminModel->find($adminId);
+        $admin = Admin::find($adminId);
 
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
@@ -210,14 +197,10 @@ class AuthService
      * @param int $adminId 管理员ID
      * @return array
      * @throws ApiException
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function getAdminPermissions(int $adminId): array
     {
-        $adminModel = ModelFactory::admin();
-        $admin = $adminModel->find($adminId);
+        $admin = Admin::find($adminId);
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
         }
@@ -230,14 +213,10 @@ class AuthService
      * @param int $adminId 管理员ID
      * @return array
      * @throws ApiException
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function getAdminMenus(int $adminId): array
     {
-        $adminModel = ModelFactory::admin();
-        $admin = $adminModel->find($adminId);
+        $admin = Admin::find($adminId);
 
         if (!$admin) {
             throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
@@ -254,8 +233,7 @@ class AuthService
      */
     public function checkPermission(int $adminId, string $permission): bool
     {
-        $adminModel = ModelFactory::admin();
-        $admin = $adminModel->find($adminId);
+        $admin = Admin::find($adminId);
 
         if (!$admin) {
             return false;

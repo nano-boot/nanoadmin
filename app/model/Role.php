@@ -2,16 +2,10 @@
 
 namespace plugin\theadmin\app\model;
 
-use think\Collection;
-use think\db\exception\DbException;
-use think\model\Pivot;
-use think\model\relation\BelongsToMany;
-use think\Paginator;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * 角色模型
- * @property mixed $permissions
- * @property mixed $menus
  */
 class Role extends BaseModel
 {
@@ -19,19 +13,27 @@ class Role extends BaseModel
      * 表名
      * @var string
      */
-    protected $name = 'sys_role';
+    protected $table = 'sys_role';
 
     /**
      * 主键
      * @var string
      */
-    protected $pk = 'id';
+    protected $primaryKey = 'id';
+
+    /**
+     * 可批量赋值的属性
+     * @var array
+     */
+    protected $fillable = [
+        'name', 'code', 'description', 'status', 'sort'
+    ];
 
     /**
      * 字段类型转换
      * @var array
      */
-    protected array $type = [
+    protected $casts = [
         'id' => 'integer',
         'status' => 'boolean',
         'sort' => 'integer',
@@ -72,10 +74,9 @@ class Role extends BaseModel
      * @param array $where 查询条件
      * @param int $page 页码
      * @param int $limit 每页数量
-     * @return Paginator
-     * @throws DbException
+     * @return array
      */
-    public function getListWithCounts(array $where = [], int $page = 1, int $limit = 15): Paginator
+    public function getListWithCounts(array $where = [], int $page = 1, int $limit = 15): array
     {
         $query = $this->where($where);
         
@@ -89,10 +90,21 @@ class Role extends BaseModel
             $query->where('code', 'like', '%' . $where['code'] . '%');
         }
         
-        return $query->order('sort asc, id desc')->paginate([
-            'list_rows' => $limit,
-            'page' => $page
-        ]);
+        $total = $query->count();
+        $list = $query->orderBy('sort', 'asc')
+            ->orderBy('id', 'desc')
+            ->offset(($page - 1) * $limit)
+            ->limit($limit)
+            ->get()
+            ->toArray();
+        
+        return [
+            'list' => $list,
+            'total' => $total,
+            'page' => $page,
+            'limit' => $limit,
+            'pages' => ceil($total / $limit)
+        ];
     }
 
     /**
@@ -100,10 +112,10 @@ class Role extends BaseModel
      * @param array $data 角色数据
      * @return static|false
      */
-    public function createRole(array $data): Role|bool|static
+    public function createRole(array $data): Role|bool
     {
         // 检查角色代码是否已存在
-        if ($this->checkExists(['code' => $data['code']])) {
+        if ($this->where('code', $data['code'])->exists()) {
             return false;
         }
         
@@ -112,7 +124,7 @@ class Role extends BaseModel
             $data['sort'] = $this->getNextSort();
         }
         
-        return $this->save($data) ? $this : false;
+        return $this->create($data);
     }
 
     /**
@@ -124,27 +136,26 @@ class Role extends BaseModel
     public function updateRole(int $id, array $data): bool
     {
         // 检查角色代码是否已存在（排除自己）
-        if (isset($data['code']) && $this->checkExists(['code' => $data['code']], $id)) {
+        if (isset($data['code']) && $this->where('code', $data['code'])->where('id', '!=', $id)->exists()) {
             return false;
         }
         
-        return $this->where('id', $id)->update($data) != false;
+        return $this->where('id', $id)->update($data);
     }
 
     /**
      * 分配权限
      * @param array $permissionIds 权限ID数组
-     * @return array|bool|Pivot
-     * @throws DbException
+     * @return bool
      */
-    public function assignPermissions(array $permissionIds): bool|array|Pivot
+    public function assignPermissions(array $permissionIds): bool
     {
         // 先删除现有权限关联
         $this->permissions()->detach();
         
         // 添加新的权限关联
         if (!empty($permissionIds)) {
-            return $this->permissions()->attach($permissionIds);
+            $this->permissions()->attach($permissionIds);
         }
         
         return true;
@@ -153,17 +164,16 @@ class Role extends BaseModel
     /**
      * 分配菜单
      * @param array $menuIds 菜单ID数组
-     * @return array|bool|Pivot
-     * @throws DbException
+     * @return bool
      */
-    public function assignMenus(array $menuIds): bool|array|Pivot
+    public function assignMenus(array $menuIds): bool
     {
         // 先删除现有菜单关联
         $this->menus()->detach();
         
         // 添加新的菜单关联
         if (!empty($menuIds)) {
-            return $this->menus()->attach($menuIds);
+            $this->menus()->attach($menuIds);
         }
         
         return true;
@@ -188,7 +198,7 @@ class Role extends BaseModel
      */
     public function getPermissionCodes(): array
     {
-        $permissions = $this->permissions;
+        $permissions = $this->permissions()->get();
         $codes = [];
         
         foreach ($permissions as $permission) {
@@ -204,7 +214,7 @@ class Role extends BaseModel
      */
     public function getMenuIds(): array
     {
-        $menus = $this->menus;
+        $menus = $this->menus()->get();
         $ids = [];
         
         foreach ($menus as $menu) {
@@ -221,7 +231,7 @@ class Role extends BaseModel
      */
     public function hasPermission(string $permission): bool
     {
-        $permissions = $this->permissions;
+        $permissions = $this->permissions()->get();
         
         foreach ($permissions as $perm) {
             if ($perm->code === $permission) {
@@ -239,7 +249,7 @@ class Role extends BaseModel
      */
     public function hasMenu(int $menuId): bool
     {
-        $menus = $this->menus;
+        $menus = $this->menus()->get();
         
         foreach ($menus as $menu) {
             if ($menu->id === $menuId) {
@@ -290,7 +300,7 @@ class Role extends BaseModel
         $permissions = [];
         
         // 获取直接分配的权限
-        $directPermissions = $this->permissions;
+        $directPermissions = $this->permissions()->get();
         foreach ($directPermissions as $permission) {
             $permissions[$permission->code] = $permission;
         }
@@ -310,7 +320,7 @@ class Role extends BaseModel
         $menus = [];
         
         // 获取直接分配的菜单
-        $directMenus = $this->menus;
+        $directMenus = $this->menus()->get();
         foreach ($directMenus as $menu) {
             $menus[$menu->id] = $menu;
         }
@@ -358,7 +368,6 @@ class Role extends BaseModel
      * 复制角色权限到另一个角色
      * @param int $targetRoleId 目标角色ID
      * @return bool
-     * @throws DbException
      */
     public function copyPermissionsTo(int $targetRoleId): bool
     {
@@ -368,7 +377,7 @@ class Role extends BaseModel
         }
         
         // 获取当前角色的权限ID
-        $permissionIds = $this->permissions()->column('id');
+        $permissionIds = $this->permissions()->pluck('id')->toArray();
         
         // 复制权限到目标角色
         return $targetRole->assignPermissions($permissionIds);
@@ -378,7 +387,6 @@ class Role extends BaseModel
      * 复制角色菜单到另一个角色
      * @param int $targetRoleId 目标角色ID
      * @return bool
-     * @throws DbException
      */
     public function copyMenusTo(int $targetRoleId): bool
     {
@@ -388,7 +396,7 @@ class Role extends BaseModel
         }
         
         // 获取当前角色的菜单ID
-        $menuIds = $this->menus()->column('id');
+        $menuIds = $this->menus()->pluck('id')->toArray();
         
         // 复制菜单到目标角色
         return $targetRole->assignMenus($menuIds);
@@ -396,10 +404,21 @@ class Role extends BaseModel
 
     /**
      * 获取启用的角色列表（用于下拉选择）
-     * @return Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getEnabledList(): Collection
+    public function getEnabledList()
     {
-        return $this->enabled()->order('sort asc, id desc')->select();
+        return $this->where('status', 1)->orderBy('sort', 'asc')->orderBy('id', 'desc')->get();
+    }
+
+    /**
+     * 获取下一个排序值
+     * @param array $where 查询条件
+     * @return int
+     */
+    public function getNextSort(array $where = []): int
+    {
+        $maxSort = $this->where($where)->max('sort');
+        return $maxSort ? $maxSort + 10 : 100;
     }
 }

@@ -34,6 +34,12 @@ class AuthController
             $password = $request->post('password', '');
             $ip = $request->getRealIp();
 
+            // 验证必填参数
+            if (empty($username) || empty($password)) {
+                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '用户名或密码不能为空');
+                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+            }
+
             // 执行登录
             $result = $this->authService->login($username, $password, $ip);
             $response = ApiResponse::success($result, '登录成功');
@@ -131,7 +137,6 @@ class AuthController
     public function permissions(Request $request)
     {
         try {
-
             $token = $this->getTokenFromRequest($request);
 
             if (empty($token)) {
@@ -140,19 +145,16 @@ class AuthController
             }
 
             $admin = $this->authService->getAdminByToken($token);
-            var_dump($admin->id);
             $permissions = $this->authService->getAdminPermissions($admin->id);
-var_dump($permissions);
+
             $response = ApiResponse::success($permissions, '获取权限列表成功');
             return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
 
         } catch (ApiException $e) {
-            var_dump('ApiException');
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
             $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            var_dump('Exception');
             $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取权限列表失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }

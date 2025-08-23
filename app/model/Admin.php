@@ -2,18 +2,10 @@
 
 namespace plugin\theadmin\app\model;
 
-use think\db\exception\DataNotFoundException;
-use think\db\exception\DbException;
-use think\db\exception\ModelNotFoundException;
-use think\facade\Db;
-use think\model\Pivot;
-use think\model\relation\BelongsToMany;
-use think\Paginator;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * 管理员模型
- * @property mixed $roles 关联角色
- * @property string $password 密码
  */
 class Admin extends BaseModel
 {
@@ -21,25 +13,33 @@ class Admin extends BaseModel
      * 表名
      * @var string
      */
-    protected $name = 'sys_admin';
+    protected $table = 'sys_admin';
 
     /**
      * 主键
      * @var string
      */
-    protected $pk = 'id';
+    protected $primaryKey = 'id';
+
+    /**
+     * 可批量赋值的属性
+     * @var array
+     */
+    protected $fillable = [
+        'username', 'password', 'nickname', 'phone', 'email', 'avatar', 'status'
+    ];
 
     /**
      * 隐藏字段
      * @var array
      */
-    protected array $hidden = ['password'];
+    protected $hidden = ['password'];
 
     /**
      * 字段类型转换
      * @var array
      */
-    protected array $type = [
+    protected $casts = [
         'id' => 'integer',
         'status' => 'boolean',
         'deleted' => 'boolean',
@@ -49,34 +49,21 @@ class Admin extends BaseModel
     ];
 
     /**
-     * 关联角色（保留用于 detach/attach 操作）
+     * 关联角色
      * @return BelongsToMany
      */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, AdminRole::class, 'role_id', 'admin_id');
+        return $this->belongsToMany(Role::class, 'sys_admin_role', 'admin_id', 'role_id');
     }
 
     /**
-     * 获取角色列表（使用原生查询避免关联问题）
-     * @return \think\Collection
+     * 获取角色列表
+     * @return \Illuminate\Database\Eloquent\Collection
      */
     public function getRoles()
     {
-        try {
-            $roleIds = Db::table('sys_admin_role')
-                ->where('admin_id', $this->id)
-                ->column('role_id');
-            
-            if (empty($roleIds)) {
-                return new \think\Collection();
-            }
-            
-            return Role::whereIn('id', $roleIds)->select();
-        } catch (\Exception $e) {
-            // 如果查询失败，返回空集合
-            return new \think\Collection();
-        }
+        return $this->roles()->get();
     }
 
     /**
@@ -88,11 +75,12 @@ class Admin extends BaseModel
         $permissions = [];
         
         // 通过角色获取权限
-        $roles = $this->roles;
+        $roles = $this->roles()->with('permissions')->get();
         foreach ($roles as $role) {
-            $rolePermissions = $role->permissions;
-            foreach ($rolePermissions as $permission) {
-                $permissions[$permission->code] = $permission;
+            if (isset($role->permissions)) {
+                foreach ($role->permissions as $permission) {
+                    $permissions[$permission->code] = $permission;
+                }
             }
         }
         
@@ -102,20 +90,19 @@ class Admin extends BaseModel
     /**
      * 获取管理员菜单
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function getMenus(): array
     {
         $menus = [];
         
         // 通过角色获取菜单
-        $roles = $this->roles()->with('menus')->select();
+        $roles = $this->roles()->with('menus')->get();
         
         foreach ($roles as $role) {
-            foreach ($role->menus as $menu) {
-                $menus[$menu->id] = $menu;
+            if (isset($role->menus)) {
+                foreach ($role->menus as $menu) {
+                    $menus[$menu->id] = $menu;
+                }
             }
         }
         
@@ -147,7 +134,7 @@ class Admin extends BaseModel
      */
     public function hasRole(string $roleCode): bool
     {
-        $roles = $this->roles;
+        $roles = $this->roles()->get();
         
         foreach ($roles as $role) {
             if ($role->code === $roleCode) {
@@ -185,26 +172,25 @@ class Admin extends BaseModel
      */
     public function updateLastLogin(string $ip = ''): bool
     {
-        return $this->save([
-                'last_login_ip' => $ip,
-                'last_login_time' => date('Y-m-d H:i:s')
-            ]);
+        return $this->update([
+            'last_login_ip' => $ip,
+            'last_login_time' => date('Y-m-d H:i:s')
+        ]);
     }
 
     /**
      * 分配角色
      * @param array $roleIds 角色ID数组
-     * @return array|bool|Pivot
-     * @throws DbException
+     * @return bool
      */
-    public function assignRoles(array $roleIds): bool|array|Pivot
+    public function assignRoles(array $roleIds): bool
     {
         // 先删除现有角色关联
         $this->roles()->detach();
         
         // 添加新的角色关联
         if (!empty($roleIds)) {
-            return $this->roles()->attach($roleIds);
+            $this->roles()->attach($roleIds);
         }
         
         return true;
@@ -215,10 +201,9 @@ class Admin extends BaseModel
      * @param array $where 查询条件
      * @param int $page 页码
      * @param int $limit 每页数量
-     * @return Paginator
-     * @throws DbException
+     * @return array
      */
-    public function getListWithRoles(array $where = [], int $page = 1, int $limit = 15): Paginator
+    public function getListWithRoles(array $where = [], int $page = 1, int $limit = 15): array
     {
         $query = $this->with('roles');
         
@@ -246,10 +231,20 @@ class Admin extends BaseModel
             $query->where('phone', 'like', '%' . $where['phone'] . '%');
         }
         
-        return $query->order('id desc')->paginate([
-            'list_rows' => $limit,
-            'page' => $page
-        ]);
+        $total = $query->count();
+        $list = $query->orderBy('id', 'desc')
+            ->offset(($page - 1) * $limit)
+            ->limit($limit)
+            ->get()
+            ->toArray();
+        
+        return [
+            'list' => $list,
+            'total' => $total,
+            'page' => $page,
+            'limit' => $limit,
+            'pages' => ceil($total / $limit)
+        ];
     }
 
     /**
@@ -257,10 +252,10 @@ class Admin extends BaseModel
      * @param array $data 管理员数据
      * @return static|false
      */
-    public function createAdmin(array $data): Admin|bool|static
+    public function createAdmin(array $data): Admin|bool
     {
         // 检查用户名是否已存在
-        if ($this->checkExists(['username' => $data['username']])) {
+        if ($this->where('username', $data['username'])->exists()) {
             return false;
         }
         
@@ -269,7 +264,7 @@ class Admin extends BaseModel
             $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
         }
         
-        return $this->save($data) ? $this : false;
+        return $this->create($data);
     }
 
     /**
@@ -281,7 +276,7 @@ class Admin extends BaseModel
     public function updateAdmin(int $id, array $data): bool
     {
         // 检查用户名是否已存在（排除自己）
-        if (isset($data['username']) && $this->checkExists(['username' => $data['username']], $id)) {
+        if (isset($data['username']) && $this->where('username', $data['username'])->where('id', '!=', $id)->exists()) {
             return false;
         }
         
@@ -293,6 +288,6 @@ class Admin extends BaseModel
             unset($data['password']);
         }
         
-        return $this->where('id', $id)->update($data) !== false;
+        return $this->where('id', $id)->update($data);
     }
 }
