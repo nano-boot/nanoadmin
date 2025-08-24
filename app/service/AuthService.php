@@ -3,7 +3,7 @@
 namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\common\JwtUtil;
 use plugin\theadmin\app\model\Admin;
 
@@ -24,7 +24,7 @@ class AuthService
     {
         // 参数验证
         if (empty($username) || empty($password)) {
-            throw new ApiException(ErrorCode::PARAMETER_ERROR, '用户名和密码不能为空');
+            throw new ApiException(Code::PARAMETER_ERROR, '用户名和密码不能为空');
         }
 
         // 查找管理员
@@ -34,12 +34,12 @@ class AuthService
             ->first();
 
         if (!$admin) {
-            throw new ApiException(ErrorCode::LOGIN_FAILED, '用户名或密码错误');
+            throw new ApiException(Code::LOGIN_FAILED, '用户名或密码错误');
         }
 
         // 验证密码
         if (!$admin->verifyPassword($password)) {
-            throw new ApiException(ErrorCode::LOGIN_FAILED, '用户名或密码错误');
+            throw new ApiException(Code::LOGIN_FAILED, '用户名或密码错误');
         }
 
         // 更新最后登录信息
@@ -55,7 +55,7 @@ class AuthService
         $this->recordLoginLog($admin->id, $ip, true);
 
         return [
-            'user' => [
+            'info' => [
                 'id' => $admin->id,
                 'username' => $admin->username,
                 'nickname' => $admin->nickname,
@@ -63,6 +63,7 @@ class AuthService
                 'email' => $admin->email,
                 'avatar' => $admin->avatar,
                 'status' => $admin->status,
+                'roles' => $admin->roles->pluck('code')->toArray(),
             ],
             'token' => $tokenData,
         ];
@@ -70,28 +71,16 @@ class AuthService
 
     /**
      * 管理员退出登录
-     * @param string $token 访问Token
+     * @param Admin $admin
      * @return bool
      */
-    public function logout(string $token): bool
+    public function logout(Admin $admin): bool
     {
-        try {
-            // 验证Token并获取用户信息
-            $payload = JwtUtil::verifyToken($token);
-            $adminId = $payload['user_id'] ?? 0;
-
-            if ($adminId) {
-                // 记录退出日志
-                $this->recordLoginLog($adminId, '', false, '主动退出');
-            }
-
-            // 注意：JWT是无状态的，这里只是记录日志
-            // 实际的Token失效需要通过过期时间或者黑名单机制实现
-            return true;
-        } catch (ApiException $e) {
-            // Token无效也算退出成功
-            return true;
-        }
+        // 记录退出日志
+        $this->recordLoginLog($admin->id, '', false, '主动退出');
+        // 注意：JWT是无状态的，这里只是记录日志
+        // 实际的Token失效需要通过过期时间或者黑名单机制实现
+        return true;
     }
 
     /**
@@ -131,23 +120,23 @@ class AuthService
 
         // 检查是否为刷新Token
         if (!JwtUtil::isRefreshToken($payload)) {
-            throw new ApiException(ErrorCode::TOKEN_INVALID, '无效的刷新Token');
+            throw new ApiException(Code::TOKEN_INVALID, '无效的刷新Token');
         }
 
         $adminId = $payload['user_id'] ?? 0;
         if (!$adminId) {
-            throw new ApiException(ErrorCode::TOKEN_INVALID, 'Token中缺少用户信息');
+            throw new ApiException(Code::TOKEN_INVALID, 'Token中缺少用户信息');
         }
 
         // 验证管理员是否存在且状态正常
         $admin = Admin::find($adminId);
 
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
 
         if (!$admin->status) {
-            throw new ApiException(ErrorCode::ACCOUNT_DISABLED, '账户已被禁用');
+            throw new ApiException(Code::ACCOUNT_DISABLED, '账户已被禁用');
         }
 
         // 生成新的Token对
@@ -170,23 +159,23 @@ class AuthService
 
         // 检查是否为访问Token
         if (!JwtUtil::isAccessToken($payload)) {
-            throw new ApiException(ErrorCode::TOKEN_INVALID, '无效的访问Token');
+            throw new ApiException(Code::TOKEN_INVALID, '无效的访问Token');
         }
 
         $adminId = $payload['user_id'] ?? 0;
         if (!$adminId) {
-            throw new ApiException(ErrorCode::TOKEN_INVALID, 'Token中缺少用户信息');
+            throw new ApiException(Code::TOKEN_INVALID, 'Token中缺少用户信息');
         }
 
         // 获取管理员信息
         $admin = Admin::find($adminId);
 
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
 
         if (!$admin->status) {
-            throw new ApiException(ErrorCode::ACCOUNT_DISABLED, '账户已被禁用');
+            throw new ApiException(Code::ACCOUNT_DISABLED, '账户已被禁用');
         }
 
         return $admin;
@@ -202,7 +191,7 @@ class AuthService
     {
         $admin = Admin::find($adminId);
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
 
         return $admin->getPermissions();
@@ -219,7 +208,7 @@ class AuthService
         $admin = Admin::find($adminId);
 
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
 
         return $admin->getMenus();

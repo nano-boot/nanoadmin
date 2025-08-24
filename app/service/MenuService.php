@@ -3,7 +3,7 @@
 namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Menu;
 use think\Paginator;
@@ -78,7 +78,7 @@ class MenuService
         $menu = $menuModel->with(['parent', 'children', 'roles'])->find($id);
         
         if (!$menu) {
-            throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
         return $menu;
@@ -101,7 +101,7 @@ class MenuService
         if (!empty($data['parent_id']) && $data['parent_id'] > 0) {
             $parent = $menuModel->find($data['parent_id']);
             if (!$parent) {
-                throw new ApiException(ErrorCode::MENU_NOT_FOUND, '父菜单不存在');
+                throw new ApiException(Code::MENU_NOT_FOUND, '父菜单不存在');
             }
         }
         
@@ -120,7 +120,7 @@ class MenuService
         $menu = $menuModel->createMenu($data);
         
         if (!$menu) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '创建菜单失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '创建菜单失败');
         }
         
         return $menu;
@@ -143,7 +143,7 @@ class MenuService
         // 检查菜单是否存在
         $menu = $menuModel->find($id);
         if (!$menu) {
-            throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
         // 验证父菜单
@@ -151,18 +151,18 @@ class MenuService
             if ($data['parent_id'] > 0) {
                 // 不能将自己设为父菜单
                 if ($data['parent_id'] == $id) {
-                    throw new ApiException(ErrorCode::PARAMETER_ERROR, '不能将自己设为父菜单');
+                    throw new ApiException(Code::PARAMETER_ERROR, '不能将自己设为父菜单');
                 }
                 
                 // 检查父菜单是否存在
                 $parent = $menuModel->find($data['parent_id']);
                 if (!$parent) {
-                    throw new ApiException(ErrorCode::MENU_NOT_FOUND, '父菜单不存在');
+                    throw new ApiException(Code::MENU_NOT_FOUND, '父菜单不存在');
                 }
                 
                 // 检查是否会形成循环引用
                 if ($this->wouldCreateCircularReference($id, $data['parent_id'])) {
-                    throw new ApiException(ErrorCode::PARAMETER_ERROR, '不能形成循环引用');
+                    throw new ApiException(Code::PARAMETER_ERROR, '不能形成循环引用');
                 }
             }
         }
@@ -174,7 +174,7 @@ class MenuService
         $result = $menuModel->updateMenu($id, $data);
         
         if (!$result) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '更新菜单失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '更新菜单失败');
         }
         
         return true;
@@ -193,24 +193,24 @@ class MenuService
         // 检查菜单是否存在
         $menu = $menuModel->find($id);
         if (!$menu) {
-            throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
         // 检查是否有子菜单
         if ($menu->hasChildren($id)) {
-            throw new ApiException(ErrorCode::HAS_CHILDREN, '存在子菜单，无法删除');
+            throw new ApiException(Code::HAS_CHILDREN, '存在子菜单，无法删除');
         }
         
         // 检查是否被角色使用
         if ($menu->isUsed($id)) {
-            throw new ApiException(ErrorCode::DATA_IN_USE, '菜单正在使用中，无法删除');
+            throw new ApiException(Code::DATA_IN_USE, '菜单正在使用中，无法删除');
         }
         
         // 软删除
         $result = $menuModel->destroy($id);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '删除菜单失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '删除菜单失败');
         }
         
         return true;
@@ -230,7 +230,7 @@ class MenuService
         // 检查菜单是否存在
         $menu = $menuModel->find($id);
         if (!$menu) {
-            throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
         // 更新状态
@@ -240,7 +240,7 @@ class MenuService
         ]);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '更新菜单状态失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '更新菜单状态失败');
         }
         
         return true;
@@ -266,7 +266,7 @@ class MenuService
     public function batchUpdateSort(array $sortData): bool
     {
         if (empty($sortData)) {
-            throw new ApiException(ErrorCode::PARAMETER_ERROR, '排序数据不能为空');
+            throw new ApiException(Code::PARAMETER_ERROR, '排序数据不能为空');
         }
         
         $menuModel = ModelFactory::menu();
@@ -274,15 +274,15 @@ class MenuService
         // 验证数据格式
         foreach ($sortData as $item) {
             if (!isset($item['id']) || !is_numeric($item['id'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '菜单ID格式不正确');
+                throw new ApiException(Code::PARAMETER_ERROR, '菜单ID格式不正确');
             }
             
             if (isset($item['sort']) && (!is_numeric($item['sort']) || $item['sort'] < 0)) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '排序值必须为非负整数');
+                throw new ApiException(Code::PARAMETER_ERROR, '排序值必须为非负整数');
             }
             
             if (isset($item['parent_id']) && (!is_numeric($item['parent_id']) || $item['parent_id'] < 0)) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '父菜单ID必须为非负整数');
+                throw new ApiException(Code::PARAMETER_ERROR, '父菜单ID必须为非负整数');
             }
         }
         
@@ -290,7 +290,7 @@ class MenuService
         $result = $menuModel->batchUpdateSort($sortData);
         
         if (!$result) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '批量更新排序失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '批量更新排序失败');
         }
         
         return true;
@@ -309,7 +309,7 @@ class MenuService
         // 检查菜单是否存在
         $menu = $menuModel->find($menuId);
         if (!$menu) {
-            throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
         return $menuModel->getMenuPath($menuId);
@@ -328,7 +328,7 @@ class MenuService
         // 检查菜单是否存在
         $menu = $menuModel->find($menuId);
         if (!$menu) {
-            throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
         return $menuModel->getMenuDepth($menuId);
@@ -374,7 +374,7 @@ class MenuService
         // 检查菜单是否存在
         $menu = $menuModel->find($menuId);
         if (!$menu) {
-            throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
         return $menuModel->getDescendantIds($menuId);
@@ -394,7 +394,7 @@ class MenuService
         // 检查菜单是否存在
         $menu = $menuModel->find($menuId);
         if (!$menu) {
-            throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
         return $menuModel->getFullPath($menuId, $separator);
@@ -476,25 +476,25 @@ class MenuService
         // 检查菜单是否存在
         $menu = $menuModel->find($menuId);
         if (!$menu) {
-            throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在');
+            throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
         // 验证父菜单
         if ($parentId > 0) {
             // 不能将自己设为父菜单
             if ($parentId == $menuId) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '不能将自己设为父菜单');
+                throw new ApiException(Code::PARAMETER_ERROR, '不能将自己设为父菜单');
             }
             
             // 检查父菜单是否存在
             $parent = $menuModel->find($parentId);
             if (!$parent) {
-                throw new ApiException(ErrorCode::MENU_NOT_FOUND, '父菜单不存在');
+                throw new ApiException(Code::MENU_NOT_FOUND, '父菜单不存在');
             }
             
             // 检查是否会形成循环引用
             if ($this->wouldCreateCircularReference($menuId, $parentId)) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '不能形成循环引用');
+                throw new ApiException(Code::PARAMETER_ERROR, '不能形成循环引用');
             }
         }
         
@@ -511,7 +511,7 @@ class MenuService
         ]);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '调整菜单层级失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '调整菜单层级失败');
         }
         
         return true;
@@ -528,76 +528,76 @@ class MenuService
         // 创建时必须提供菜单名称和标题
         if ($isCreate) {
             if (empty($data['name'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '菜单名称不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '菜单名称不能为空');
             }
             if (empty($data['title'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '菜单标题不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '菜单标题不能为空');
             }
             if (!isset($data['menu_type'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '菜单类型不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '菜单类型不能为空');
             }
         }
         
         // 菜单名称格式验证
         if (!empty($data['name'])) {
             if (!Menu::validateName($data['name'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '菜单名称格式不正确，只能包含字母、数字、下划线、中划线、中文字符，长度2-50个字符');
+                throw new ApiException(Code::PARAMETER_ERROR, '菜单名称格式不正确，只能包含字母、数字、下划线、中划线、中文字符，长度2-50个字符');
             }
         }
         
         // 菜单标题格式验证
         if (!empty($data['title'])) {
             if (!Menu::validateTitle($data['title'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '菜单标题长度必须在2-50个字符之间');
+                throw new ApiException(Code::PARAMETER_ERROR, '菜单标题长度必须在2-50个字符之间');
             }
         }
         
         // 路由路径格式验证
         if (isset($data['path'])) {
             if (!Menu::validatePath($data['path'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '路由路径格式不正确，必须以/开头，只能包含字母、数字、下划线、中划线、斜杠');
+                throw new ApiException(Code::PARAMETER_ERROR, '路由路径格式不正确，必须以/开头，只能包含字母、数字、下划线、中划线、斜杠');
             }
         }
         
         // 菜单类型验证
         if (isset($data['menu_type'])) {
             if (!in_array($data['menu_type'], [1, 2, 3])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '菜单类型必须为1（目录）、2（菜单）或3（按钮）');
+                throw new ApiException(Code::PARAMETER_ERROR, '菜单类型必须为1（目录）、2（菜单）或3（按钮）');
             }
         }
         
         // 父菜单ID验证
         if (isset($data['parent_id'])) {
             if (!is_numeric($data['parent_id']) || $data['parent_id'] < 0) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '父菜单ID必须为非负整数');
+                throw new ApiException(Code::PARAMETER_ERROR, '父菜单ID必须为非负整数');
             }
         }
         
         // 排序值验证
         if (isset($data['sort'])) {
             if (!is_numeric($data['sort']) || $data['sort'] < 0) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '排序值必须为非负整数');
+                throw new ApiException(Code::PARAMETER_ERROR, '排序值必须为非负整数');
             }
         }
         
         // 组件路径长度验证
         if (!empty($data['component'])) {
             if (mb_strlen($data['component']) > 200) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '组件路径长度不能超过200个字符');
+                throw new ApiException(Code::PARAMETER_ERROR, '组件路径长度不能超过200个字符');
             }
         }
         
         // 图标长度验证
         if (!empty($data['icon'])) {
             if (mb_strlen($data['icon']) > 100) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '图标长度不能超过100个字符');
+                throw new ApiException(Code::PARAMETER_ERROR, '图标长度不能超过100个字符');
             }
         }
         
         // 权限标识长度验证
         if (!empty($data['permission'])) {
             if (mb_strlen($data['permission']) > 100) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '权限标识长度不能超过100个字符');
+                throw new ApiException(Code::PARAMETER_ERROR, '权限标识长度不能超过100个字符');
             }
         }
     }

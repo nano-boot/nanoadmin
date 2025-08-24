@@ -3,13 +3,12 @@
 namespace plugin\theadmin\app\common;
 
 /**
- * 错误码枚举类
- * 使用类似HTTP状态码的格式：
+ * 状态码枚举类
  * - 20000: 成功
  * - 40xxx: 业务错误
  * - 50xxx: 服务器错误
  */
-enum ErrorCode: int
+enum Code: int
 {
     // 成功
     case SUCCESS = 20000;
@@ -17,10 +16,13 @@ enum ErrorCode: int
     case BAD_REQUEST = 40000;            // 客户端请求错误
     case PARAMETER_ERROR = 40001;        // 参数错误
     case LOGIN_FAILED = 40002;           // 登录失败
-    case TOKEN_EXPIRED = 40003;          // 令牌已过期
-    case TOKEN_INVALID = 40004;          // 令牌无效
-    case TOKEN_MISSING = 40005;          // 令牌缺失
-    case PASSWORD_ERROR = 40006;         // 密码错误
+    case TOKEN_EXPIRED = 40103;          // 令牌已过期
+    case TOKEN_INVALID = 40104;          // 令牌无效
+    case TOKEN_MISSING = 40105;          // 令牌缺失
+    case PASSWORD_ERROR = 40106;         // 密码错误
+    case REFRESH_TOKEN_ERROR = 40107;   // 刷新令牌错误
+    case REFRESH_TOKEN_MISSING = 40108; // 未提供刷新令
+        
 
     case UNAUTHORIZED = 40100;           // 未授权访问
     case FORBIDDEN = 40301;              // 权限不足

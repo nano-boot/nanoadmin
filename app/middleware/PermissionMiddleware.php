@@ -6,7 +6,7 @@ use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
 use plugin\theadmin\app\common\ApiResponse;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\common\ApiException;
 
 /**
@@ -92,7 +92,7 @@ class PermissionMiddleware implements MiddlewareInterface
 
             // 检查用户是否已认证
             if (!isset($request->admin)) {
-                throw new ApiException(ErrorCode::UNAUTHORIZED, '用户未认证');
+                throw new ApiException(Code::UNAUTHORIZED, '用户未认证');
             }
 
             $admin = $request->admin;
@@ -112,7 +112,7 @@ class PermissionMiddleware implements MiddlewareInterface
 
             // 检查用户是否有权限
             if (!$this->hasPermission($admin, $requiredPermission)) {
-                throw new ApiException(ErrorCode::FORBIDDEN, '权限不足，无法访问该资源');
+                throw new ApiException(Code::FORBIDDEN, '权限不足，无法访问该资源');
             }
 
             // 权限验证通过，继续处理请求
@@ -121,7 +121,7 @@ class PermissionMiddleware implements MiddlewareInterface
         } catch (ApiException $e) {
             return $this->forbiddenResponse($e->getMessage(), $e->getErrorCode());
         } catch (\Exception $e) {
-            return $this->forbiddenResponse('权限验证失败', ErrorCode::FORBIDDEN->value);
+            return $this->forbiddenResponse('权限验证失败', Code::FORBIDDEN->value);
         }
     }
 

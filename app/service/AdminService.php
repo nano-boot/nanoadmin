@@ -3,7 +3,7 @@
 namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Admin;
 use think\Paginator;
@@ -63,7 +63,7 @@ class AdminService
         $admin = $adminModel->with('roles')->find($id);
         
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
         
         return $admin;
@@ -84,20 +84,20 @@ class AdminService
         
         // 检查用户名是否已存在
         if ($adminModel->where('username', $data['username'])->find()) {
-            throw new ApiException(ErrorCode::DUPLICATE_NAME, '用户名已存在');
+            throw new ApiException(Code::DUPLICATE_NAME, '用户名已存在');
         }
         
         // 检查手机号是否已存在（如果提供了手机号）
         if (!empty($data['phone'])) {
             if ($adminModel->where('phone', $data['phone'])->find()) {
-                throw new ApiException(ErrorCode::DUPLICATE_NAME, '手机号已存在');
+                throw new ApiException(Code::DUPLICATE_NAME, '手机号已存在');
             }
         }
         
         // 检查邮箱是否已存在（如果提供了邮箱）
         if (!empty($data['email'])) {
             if ($adminModel->where('email', $data['email'])->find()) {
-                throw new ApiException(ErrorCode::DUPLICATE_NAME, '邮箱已存在');
+                throw new ApiException(Code::DUPLICATE_NAME, '邮箱已存在');
             }
         }
         
@@ -111,7 +111,7 @@ class AdminService
         $admin = $adminModel->createAdmin($data);
         
         if (!$admin) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '创建管理员失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '创建管理员失败');
         }
         
         return $admin;
@@ -134,7 +134,7 @@ class AdminService
         // 检查管理员是否存在
         $admin = $adminModel->find($id);
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
         
         // 检查用户名是否已被其他管理员使用
@@ -143,7 +143,7 @@ class AdminService
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingAdmin) {
-                throw new ApiException(ErrorCode::DUPLICATE_NAME, '用户名已存在');
+                throw new ApiException(Code::DUPLICATE_NAME, '用户名已存在');
             }
         }
         
@@ -153,7 +153,7 @@ class AdminService
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingAdmin) {
-                throw new ApiException(ErrorCode::DUPLICATE_NAME, '手机号已存在');
+                throw new ApiException(Code::DUPLICATE_NAME, '手机号已存在');
             }
         }
         
@@ -163,7 +163,7 @@ class AdminService
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingAdmin) {
-                throw new ApiException(ErrorCode::DUPLICATE_NAME, '邮箱已存在');
+                throw new ApiException(Code::DUPLICATE_NAME, '邮箱已存在');
             }
         }
         
@@ -174,7 +174,7 @@ class AdminService
         $result = $adminModel->updateAdmin($id, $data);
         
         if (!$result) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '更新管理员失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '更新管理员失败');
         }
         
         return true;
@@ -193,14 +193,14 @@ class AdminService
         // 检查管理员是否存在
         $admin = $adminModel->find($id);
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
         
         // 软删除
         $result = $adminModel->destroy($id);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '删除管理员失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '删除管理员失败');
         }
         
         return true;
@@ -220,7 +220,7 @@ class AdminService
         // 检查管理员是否存在
         $admin = $adminModel->find($id);
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
         
         // 更新状态
@@ -230,7 +230,7 @@ class AdminService
         ]);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '更新管理员状态失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '更新管理员状态失败');
         }
         
         return true;
@@ -250,7 +250,7 @@ class AdminService
         // 检查管理员是否存在
         $admin = $adminModel->find($adminId);
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
         
         // 验证角色是否存在
@@ -260,7 +260,7 @@ class AdminService
             
             $invalidRoleIds = array_diff($roleIds, $existingRoles);
             if (!empty($invalidRoleIds)) {
-                throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在: ' . implode(',', $invalidRoleIds));
+                throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在: ' . implode(',', $invalidRoleIds));
             }
         }
         
@@ -268,7 +268,7 @@ class AdminService
         $result = $admin->assignRoles($roleIds);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '分配角色失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '分配角色失败');
         }
         
         return true;
@@ -287,7 +287,7 @@ class AdminService
         // 检查管理员是否存在
         $admin = $adminModel->find($adminId);
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
         
         return $admin->getPermissions();
@@ -306,7 +306,7 @@ class AdminService
         // 检查管理员是否存在
         $admin = $adminModel->find($adminId);
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
         
         return $admin->getMenus();
@@ -371,19 +371,19 @@ class AdminService
         // 检查管理员是否存在
         $admin = $adminModel->find($adminId);
         if (!$admin) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在');
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
         
         // 如果提供了旧密码，需要验证
         if (!empty($oldPassword)) {
             if (!$admin->verifyPassword($oldPassword)) {
-                throw new ApiException(ErrorCode::PASSWORD_ERROR, '原密码错误');
+                throw new ApiException(Code::PASSWORD_ERROR, '原密码错误');
             }
         }
         
         // 密码强度验证
         if (strlen($newPassword) < 6) {
-            throw new ApiException(ErrorCode::PARAMETER_ERROR, '密码长度不能少于6位');
+            throw new ApiException(Code::PARAMETER_ERROR, '密码长度不能少于6位');
         }
         
         // 更新密码
@@ -393,7 +393,7 @@ class AdminService
         ]);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '修改密码失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '修改密码失败');
         }
         
         return true;
@@ -410,48 +410,48 @@ class AdminService
         // 创建时必须提供用户名和密码
         if ($isCreate) {
             if (empty($data['username'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '用户名不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '用户名不能为空');
             }
             if (empty($data['password'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '密码不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '密码不能为空');
             }
         }
         
         // 用户名格式验证
         if (!empty($data['username'])) {
             if (strlen($data['username']) < 3 || strlen($data['username']) > 20) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '用户名长度必须在3-20个字符之间');
+                throw new ApiException(Code::PARAMETER_ERROR, '用户名长度必须在3-20个字符之间');
             }
             if (!preg_match('/^[a-zA-Z0-9_]+$/', $data['username'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '用户名只能包含字母、数字和下划线');
+                throw new ApiException(Code::PARAMETER_ERROR, '用户名只能包含字母、数字和下划线');
             }
         }
         
         // 密码格式验证
         if (!empty($data['password'])) {
             if (strlen($data['password']) < 6) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '密码长度不能少于6位');
+                throw new ApiException(Code::PARAMETER_ERROR, '密码长度不能少于6位');
             }
         }
         
         // 昵称验证
         if (!empty($data['nickname'])) {
             if (strlen($data['nickname']) > 50) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '昵称长度不能超过50个字符');
+                throw new ApiException(Code::PARAMETER_ERROR, '昵称长度不能超过50个字符');
             }
         }
         
         // 手机号验证
         if (!empty($data['phone'])) {
             if (!preg_match('/^1[3-9]\d{9}$/', $data['phone'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '手机号格式不正确');
+                throw new ApiException(Code::PARAMETER_ERROR, '手机号格式不正确');
             }
         }
         
         // 邮箱验证
         if (!empty($data['email'])) {
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '邮箱格式不正确');
+                throw new ApiException(Code::PARAMETER_ERROR, '邮箱格式不正确');
             }
         }
     }
@@ -465,7 +465,7 @@ class AdminService
     public function batchDeleteAdmins(array $ids): bool
     {
         if (empty($ids)) {
-            throw new ApiException(ErrorCode::PARAMETER_ERROR, '请选择要删除的管理员');
+            throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的管理员');
         }
         
         $adminModel = ModelFactory::admin();
@@ -475,14 +475,14 @@ class AdminService
         $invalidIds = array_diff($ids, $existingAdmins);
         
         if (!empty($invalidIds)) {
-            throw new ApiException(ErrorCode::ADMIN_NOT_FOUND, '管理员不存在: ' . implode(',', $invalidIds));
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在: ' . implode(',', $invalidIds));
         }
         
         // 批量软删除
         $result = $adminModel->destroy($ids);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '批量删除管理员失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '批量删除管理员失败');
         }
         
         return true;

@@ -5,7 +5,7 @@ namespace plugin\theadmin\app\service;
 use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Menu;
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 
 /**
  * 菜单数据转换服务
@@ -145,7 +145,7 @@ class MenuTransformService
 
             return $config;
         } catch (\Exception $e) {
-            throw new ApiException('菜单路由配置转换失败: ' . $e->getMessage(), ErrorCode::MENU_TRANSFORM_ERROR);
+            throw new ApiException('菜单路由配置转换失败: ' . $e->getMessage(), Code::MENU_TRANSFORM_ERROR);
         }
     }
 
@@ -219,7 +219,7 @@ class MenuTransformService
 
             return $dbData;
         } catch (\Exception $e) {
-            throw new ApiException('表单数据转换失败: ' . $e->getMessage(), ErrorCode::MENU_TRANSFORM_ERROR);
+            throw new ApiException('表单数据转换失败: ' . $e->getMessage(), Code::MENU_TRANSFORM_ERROR);
         }
     }
 
@@ -262,7 +262,7 @@ class MenuTransformService
 
             return $formData;
         } catch (\Exception $e) {
-            throw new ApiException('数据库数据转换失败: ' . $e->getMessage(), ErrorCode::MENU_TRANSFORM_ERROR);
+            throw new ApiException('数据库数据转换失败: ' . $e->getMessage(), Code::MENU_TRANSFORM_ERROR);
         }
     }
 
@@ -361,18 +361,18 @@ class MenuTransformService
         if (is_string($roles)) {
             $decoded = json_decode($roles, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new ApiException('角色权限JSON格式错误: ' . json_last_error_msg(), ErrorCode::INVALID_JSON_FORMAT);
+                throw new ApiException('角色权限JSON格式错误: ' . json_last_error_msg(), Code::INVALID_JSON_FORMAT);
             }
             $roles = $decoded;
         }
 
         if (!is_array($roles)) {
-            throw new ApiException('角色权限必须是数组格式', ErrorCode::INVALID_MENU_DATA);
+            throw new ApiException('角色权限必须是数组格式', Code::INVALID_MENU_DATA);
         }
 
         // 验证角色数组格式
         if (!Menu::validateRoles($roles)) {
-            throw new ApiException('角色权限数组格式不正确', ErrorCode::INVALID_MENU_DATA);
+            throw new ApiException('角色权限数组格式不正确', Code::INVALID_MENU_DATA);
         }
 
         return array_values(array_unique(array_filter($roles))); // 去重并过滤空值
@@ -393,18 +393,18 @@ class MenuTransformService
         if (is_string($authList)) {
             $decoded = json_decode($authList, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new ApiException('权限按钮列表JSON格式错误: ' . json_last_error_msg(), ErrorCode::INVALID_JSON_FORMAT);
+                throw new ApiException('权限按钮列表JSON格式错误: ' . json_last_error_msg(), Code::INVALID_JSON_FORMAT);
             }
             $authList = $decoded;
         }
 
         if (!is_array($authList)) {
-            throw new ApiException('权限按钮列表必须是数组格式', ErrorCode::INVALID_MENU_DATA);
+            throw new ApiException('权限按钮列表必须是数组格式', Code::INVALID_MENU_DATA);
         }
 
         // 验证权限按钮列表格式
         if (!Menu::validateAuthList($authList)) {
-            throw new ApiException('权限按钮列表格式不正确', ErrorCode::INVALID_MENU_DATA);
+            throw new ApiException('权限按钮列表格式不正确', Code::INVALID_MENU_DATA);
         }
 
         // 标准化权限按钮数据

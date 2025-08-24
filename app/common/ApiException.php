@@ -12,7 +12,7 @@ class ApiException extends Exception
     /**
      * 错误码
      */
-    protected int|ErrorCode $errorCode;
+    protected int|Code $errorCode;
 
     /**
      * HTTP状态码
@@ -24,10 +24,10 @@ class ApiException extends Exception
      */
     protected $data;
 
-    public function __construct(ErrorCode|int $errorCode, string $message = '', int $httpCode = 0, $data = null)
+    public function __construct(Code|int $errorCode, string $message = '', int $httpCode = 0, $data = null)
     {
         // 处理枚举和整数两种类型
-        if ($errorCode instanceof ErrorCode) {
+        if ($errorCode instanceof Code) {
             $this->errorCode = $errorCode->value;
             $this->httpCode = $httpCode ?: $errorCode->getHttpCode();
 
@@ -37,11 +37,11 @@ class ApiException extends Exception
             }
         } else {
             $this->errorCode = $errorCode;
-            $this->httpCode = $httpCode ?: ErrorCode::getHttpCodeByCode($errorCode);
+            $this->httpCode = $httpCode ?: Code::getHttpCodeByCode($errorCode);
 
             // 如果没有提供消息，使用默认消息
             if (empty($message)) {
-                $message = ErrorCode::getMessageByCode($errorCode);
+                $message = Code::getMessageByCode($errorCode);
             }
         }
 
@@ -91,7 +91,7 @@ class ApiException extends Exception
      */
     public static function parameterError(string $message = ''): self
     {
-        return new self(ErrorCode::PARAMETER_ERROR, $message);
+        return new self(Code::PARAMETER_ERROR, $message);
     }
 
     /**
@@ -99,7 +99,7 @@ class ApiException extends Exception
      */
     public static function unauthorized(string $message = ''): self
     {
-        return new self(ErrorCode::UNAUTHORIZED, $message);
+        return new self(Code::UNAUTHORIZED, $message);
     }
 
     /**
@@ -107,7 +107,7 @@ class ApiException extends Exception
      */
     public static function forbidden(string $message = ''): self
     {
-        return new self(ErrorCode::FORBIDDEN, $message);
+        return new self(Code::FORBIDDEN, $message);
     }
 
     /**
@@ -115,7 +115,7 @@ class ApiException extends Exception
      */
     public static function notFound(string $message = ''): self
     {
-        return new self(ErrorCode::NOT_FOUND, $message);
+        return new self(Code::NOT_FOUND, $message);
     }
 
     /**
@@ -123,6 +123,6 @@ class ApiException extends Exception
      */
     public static function systemError(string $message = ''): self
     {
-        return new self(ErrorCode::SYSTEM_ERROR, $message);
+        return new self(Code::SYSTEM_ERROR, $message);
     }
 }

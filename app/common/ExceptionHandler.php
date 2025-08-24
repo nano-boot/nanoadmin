@@ -54,7 +54,7 @@ class ExceptionHandler
         $httpCode = $exception->getHttpCode();
 
         // 记录错误日志（非系统错误）
-        if ($exception->getErrorCode() >= ErrorCode::SYSTEM_ERROR) {
+        if ($exception->getErrorCode() >= Code::SYSTEM_ERROR) {
             Log::error('API异常', [
                 'code' => $exception->getErrorCode(),
                 'message' => $exception->getMessage(),
@@ -95,7 +95,7 @@ class ExceptionHandler
             $message = '数据库操作失败';
         }
 
-        $data = ApiResponse::error(ErrorCode::DATABASE_ERROR, $message);
+        $data = ApiResponse::error(Code::DATABASE_ERROR, $message);
         return json($data, 500);
     }
 

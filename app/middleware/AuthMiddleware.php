@@ -2,13 +2,13 @@
 
 namespace plugin\theadmin\app\middleware;
 
+use plugin\theadmin\app\common\R;
 use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
 use plugin\theadmin\app\common\JwtUtil;
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ApiResponse;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
 
 /**
@@ -44,30 +44,30 @@ class AuthMiddleware implements MiddlewareInterface
             // 获取Token
             $token = $this->extractToken($request);
             if (empty($token)) {
-                var_dump('缺少认证Token', $request->path());
-                throw new ApiException(ErrorCode::UNAUTHORIZED, '缺少认证Token');
+                throw new ApiException(Code::UNAUTHORIZED, '缺少认证Token');
             }
 
             // 验证Token
             $payload = JwtUtil::verifyToken($token);
             // 检查Token类型
             if (!JwtUtil::isAccessToken($payload)) {
-                throw new ApiException(ErrorCode::TOKEN_INVALID, '无效的Token类型');
+                throw new ApiException(Code::TOKEN_INVALID, '无效的Token类型');
             }
 
             // 获取用户信息
             $userId = $payload['user_id'] ?? null;
             if (empty($userId)) {
-                throw new ApiException(ErrorCode::TOKEN_INVALID, 'Token中缺少用户信息');
+                throw new ApiException(Code::TOKEN_INVALID, 'Token中缺少用户信息');
             }
             // 查询用户
             $adminModel = ModelFactory::admin();
             $admin = $adminModel->where('id', $userId)
-                              ->where('status', 1)
-                              ->find();
+                                ->with('roles')
+                                ->where('status', 1)
+                                ->first();
 
             if (!$admin) {
-                throw new ApiException(ErrorCode::ACCOUNT_NOT_FOUND, '用户不存在或已被禁用');
+                throw new ApiException(Code::ACCOUNT_NOT_FOUND, '用户不存在或已被禁用');
             }
 
             // 将用户信息注入到请求中
@@ -81,8 +81,7 @@ class AuthMiddleware implements MiddlewareInterface
         } catch (ApiException $e) {
             return $this->unauthorizedResponse($e->getMessage(), $e->getErrorCode());
         } catch (\Exception $e) {
-            var_dump('认证失败' . $e->getMessage() );
-            return $this->unauthorizedResponse('认证失败', ErrorCode::UNAUTHORIZED->value);
+            return $this->unauthorizedResponse('认证失败', Code::UNAUTHORIZED->value);
         }
     }
 
@@ -140,8 +139,7 @@ class AuthMiddleware implements MiddlewareInterface
      */
     protected function unauthorizedResponse(string $message, int $code): Response
     {
-        $response = ApiResponse::error($code, $message);
-        return new Response(401, ['Content-Type' => 'application/json'], json_encode($response));
+        return R::error($message, $code);
     }
 
     /**

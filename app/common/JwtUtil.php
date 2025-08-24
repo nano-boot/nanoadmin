@@ -71,6 +71,7 @@ class JwtUtil
      * 验证Token
      * @param string $token JWT Token
      * @return array|null 返回解码后的载荷数据，失败返回null
+     * @throws ApiException
      */
     public static function verifyToken(string $token): ?array
     {
@@ -79,16 +80,16 @@ class JwtUtil
             return (array) $decoded;
         } catch (ExpiredException $e) {
             // Token已过期
-            throw new ApiException(ErrorCode::TOKEN_EXPIRED, 'Token已过期');
+            throw new ApiException(Code::TOKEN_EXPIRED, 'Token已过期');
         } catch (SignatureInvalidException $e) {
             // 签名无效
-            throw new ApiException(ErrorCode::TOKEN_INVALID, 'Token签名无效');
+            throw new ApiException(Code::TOKEN_INVALID, 'Token签名无效');
         } catch (BeforeValidException $e) {
             // Token还未生效
-            throw new ApiException(ErrorCode::TOKEN_INVALID, 'Token还未生效');
+            throw new ApiException(Code::TOKEN_INVALID, 'Token还未生效');
         } catch (\Exception $e) {
             // 其他错误
-            throw new ApiException(ErrorCode::TOKEN_INVALID, 'Token无效');
+            throw new ApiException(Code::TOKEN_INVALID, 'Token无效');
         }
     }
 

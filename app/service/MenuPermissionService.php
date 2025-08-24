@@ -6,7 +6,7 @@ use plugin\theadmin\app\model\Menu;
 use plugin\theadmin\app\model\Admin;
 use plugin\theadmin\app\model\Role;
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
@@ -58,7 +58,7 @@ class MenuPermissionService
             // 获取管理员信息
             $admin = $this->adminModel->find($adminId);
             if (!$admin) {
-                throw new ApiException('管理员不存在', ErrorCode::ADMIN_NOT_FOUND);
+                throw new ApiException('管理员不存在', Code::ADMIN_NOT_FOUND);
             }
 
             // 获取管理员的角色
@@ -82,7 +82,7 @@ class MenuPermissionService
             // 根据角色过滤菜单
             return $this->filterMenuTreeByRoles($menuTree, $roleCodes);
         } catch (\Exception $e) {
-            throw new ApiException('菜单权限过滤失败: ' . $e->getMessage(), ErrorCode::MENU_PERMISSION_ERROR);
+            throw new ApiException('菜单权限过滤失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
         }
     }
 
@@ -164,7 +164,7 @@ class MenuPermissionService
             // 检查菜单权限
             return $this->hasMenuPermission($menu->toArray(), $roleCodes);
         } catch (\Exception $e) {
-            throw new ApiException('菜单权限验证失败: ' . $e->getMessage(), ErrorCode::MENU_PERMISSION_ERROR);
+            throw new ApiException('菜单权限验证失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
         }
     }
 
@@ -216,7 +216,7 @@ class MenuPermissionService
             // 检查权限按钮权限
             return $this->hasAuthButtonPermission($menu->toArray(), $authMark, $roleCodes);
         } catch (\Exception $e) {
-            throw new ApiException('按钮权限验证失败: ' . $e->getMessage(), ErrorCode::MENU_PERMISSION_ERROR);
+            throw new ApiException('按钮权限验证失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
         }
     }
 
@@ -232,7 +232,7 @@ class MenuPermissionService
             // 获取管理员信息
             $admin = $this->adminModel->find($adminId);
             if (!$admin) {
-                throw new ApiException('管理员不存在', ErrorCode::ADMIN_NOT_FOUND);
+                throw new ApiException('管理员不存在', Code::ADMIN_NOT_FOUND);
             }
 
             // 获取管理员的角色
@@ -263,7 +263,7 @@ class MenuPermissionService
 
             return $accessibleIds;
         } catch (\Exception $e) {
-            throw new ApiException('获取可访问菜单失败: ' . $e->getMessage(), ErrorCode::MENU_PERMISSION_ERROR);
+            throw new ApiException('获取可访问菜单失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
         }
     }
 
@@ -316,7 +316,7 @@ class MenuPermissionService
 
             return array_unique($permissions);
         } catch (\Exception $e) {
-            throw new ApiException('获取菜单权限失败: ' . $e->getMessage(), ErrorCode::MENU_PERMISSION_ERROR);
+            throw new ApiException('获取菜单权限失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
         }
     }
 
@@ -496,7 +496,7 @@ class MenuPermissionService
             // 检查角色是否有此菜单权限
             return $role->hasMenu($menuId);
         } catch (\Exception $e) {
-            throw new ApiException('角色菜单权限验证失败: ' . $e->getMessage(), ErrorCode::MENU_PERMISSION_ERROR);
+            throw new ApiException('角色菜单权限验证失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
         }
     }
 
@@ -524,7 +524,7 @@ class MenuPermissionService
             // 构建菜单树
             return $this->buildMenuTreeFromIds($menuIds);
         } catch (\Exception $e) {
-            throw new ApiException('获取角色菜单树失败: ' . $e->getMessage(), ErrorCode::MENU_PERMISSION_ERROR);
+            throw new ApiException('获取角色菜单树失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
         }
     }
 
@@ -694,7 +694,7 @@ class MenuPermissionService
 
             return $stats;
         } catch (\Exception $e) {
-            throw new ApiException('获取权限统计失败: ' . $e->getMessage(), ErrorCode::MENU_PERMISSION_ERROR);
+            throw new ApiException('获取权限统计失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
         }
     }
 }

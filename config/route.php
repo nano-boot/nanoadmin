@@ -9,7 +9,7 @@ Route::group('/sys/auth', function () {
     
     // 需要认证的接口
     Route::post('/logout', [plugin\theadmin\app\controller\AuthController::class, 'logout']);
-    Route::get('/profile', [plugin\theadmin\app\controller\AuthController::class, 'profile']);
+    Route::get('/info', [plugin\theadmin\app\controller\AuthController::class, 'info']);
     Route::get('/permissions', [plugin\theadmin\app\controller\AuthController::class, 'permissions']);
     Route::get('/menus', [plugin\theadmin\app\controller\AuthController::class, 'menus']);
     Route::post('/refresh', [plugin\theadmin\app\controller\AuthController::class, 'refresh']);

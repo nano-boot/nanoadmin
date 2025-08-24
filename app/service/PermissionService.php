@@ -3,7 +3,7 @@
 namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Permission;
 use think\Paginator;
@@ -67,7 +67,7 @@ class PermissionService
         $permission = $permissionModel->with('roles')->find($id);
         
         if (!$permission) {
-            throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在');
+            throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在');
         }
         
         return $permission;
@@ -88,7 +88,7 @@ class PermissionService
         
         // 检查权限代码是否已存在
         if ($permissionModel->where('code', $data['code'])->find()) {
-            throw new ApiException(ErrorCode::DUPLICATE_NAME, '权限代码已存在');
+            throw new ApiException(Code::DUPLICATE_NAME, '权限代码已存在');
         }
         
         // 设置默认值
@@ -106,7 +106,7 @@ class PermissionService
         $permission = $permissionModel->createPermission($data);
         
         if (!$permission) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '创建权限失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '创建权限失败');
         }
         
         return $permission;
@@ -129,7 +129,7 @@ class PermissionService
         // 检查权限是否存在
         $permission = $permissionModel->find($id);
         if (!$permission) {
-            throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在');
+            throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在');
         }
         
         // 检查权限代码是否已被其他权限使用
@@ -139,7 +139,7 @@ class PermissionService
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingPermission) {
-                throw new ApiException(ErrorCode::DUPLICATE_NAME, '权限代码已存在');
+                throw new ApiException(Code::DUPLICATE_NAME, '权限代码已存在');
             }
         }
         
@@ -150,7 +150,7 @@ class PermissionService
         $result = $permissionModel->updatePermission($id, $data);
         
         if (!$result) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '更新权限失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '更新权限失败');
         }
         
         return true;
@@ -169,19 +169,19 @@ class PermissionService
         // 检查权限是否存在
         $permission = $permissionModel->find($id);
         if (!$permission) {
-            throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在');
+            throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在');
         }
         
         // 检查权限是否被使用
         if ($permission->isUsed($id)) {
-            throw new ApiException(ErrorCode::DATA_IN_USE, '权限正在使用中，无法删除');
+            throw new ApiException(Code::DATA_IN_USE, '权限正在使用中，无法删除');
         }
         
         // 软删除
         $result = $permissionModel->destroy($id);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '删除权限失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '删除权限失败');
         }
         
         return true;
@@ -201,7 +201,7 @@ class PermissionService
         // 检查权限是否存在
         $permission = $permissionModel->find($id);
         if (!$permission) {
-            throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在');
+            throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在');
         }
         
         // 更新状态
@@ -211,7 +211,7 @@ class PermissionService
         ]);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '更新权限状态失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '更新权限状态失败');
         }
         
         return true;
@@ -386,7 +386,7 @@ class PermissionService
                 $createdPermissions[] = $permission;
             } catch (ApiException $e) {
                 // 如果权限已存在，跳过
-                if ($e->getErrorCode() !== ErrorCode::DUPLICATE_NAME->value) {
+                if ($e->getErrorCode() !== Code::DUPLICATE_NAME->value) {
                     throw $e;
                 }
             }
@@ -409,12 +409,12 @@ class PermissionService
         // 检查权限是否存在
         $permission = $permissionModel->find($permissionId);
         if (!$permission) {
-            throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在');
+            throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在');
         }
         
         // 验证排序值
         if ($sort < 0) {
-            throw new ApiException(ErrorCode::INVALID_SORT_ORDER, '排序值不能为负数');
+            throw new ApiException(Code::INVALID_SORT_ORDER, '排序值不能为负数');
         }
         
         // 更新排序
@@ -424,7 +424,7 @@ class PermissionService
         ]);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '更新权限排序失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '更新权限排序失败');
         }
         
         return true;
@@ -439,7 +439,7 @@ class PermissionService
     public function batchDeletePermissions(array $ids): bool
     {
         if (empty($ids)) {
-            throw new ApiException(ErrorCode::PARAMETER_ERROR, '请选择要删除的权限');
+            throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的权限');
         }
         
         $permissionModel = ModelFactory::permission();
@@ -450,13 +450,13 @@ class PermissionService
         $invalidIds = array_diff($ids, $existingIds);
         
         if (!empty($invalidIds)) {
-            throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在: ' . implode(',', $invalidIds));
+            throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在: ' . implode(',', $invalidIds));
         }
         
         // 检查是否有权限正在使用
         foreach ($existingPermissions as $permission) {
             if ($permission->isUsed($permission->id)) {
-                throw new ApiException(ErrorCode::DATA_IN_USE, "权限 '{$permission->name}' 正在使用中，无法删除");
+                throw new ApiException(Code::DATA_IN_USE, "权限 '{$permission->name}' 正在使用中，无法删除");
             }
         }
         
@@ -464,7 +464,7 @@ class PermissionService
         $result = $permissionModel->destroy($ids);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '批量删除权限失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '批量删除权限失败');
         }
         
         return true;
@@ -481,58 +481,58 @@ class PermissionService
         // 创建时必须提供权限代码和名称
         if ($isCreate) {
             if (empty($data['code'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '权限代码不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '权限代码不能为空');
             }
             if (empty($data['name'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '权限名称不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '权限名称不能为空');
             }
             if (empty($data['resource'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '资源类型不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '资源类型不能为空');
             }
             if (empty($data['action'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '操作类型不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '操作类型不能为空');
             }
         }
         
         // 权限代码格式验证
         if (!empty($data['code'])) {
             if (!Permission::validateCode($data['code'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '权限代码格式不正确，格式应为：resource:action 或 resource:action:detail');
+                throw new ApiException(Code::PARAMETER_ERROR, '权限代码格式不正确，格式应为：resource:action 或 resource:action:detail');
             }
         }
         
         // 权限名称格式验证
         if (!empty($data['name'])) {
             if (!Permission::validateName($data['name'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '权限名称长度必须在2-100个字符之间');
+                throw new ApiException(Code::PARAMETER_ERROR, '权限名称长度必须在2-100个字符之间');
             }
         }
         
         // 资源类型格式验证
         if (!empty($data['resource'])) {
             if (!Permission::validateResource($data['resource'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '资源类型格式不正确，只能包含字母、数字、下划线，长度2-50个字符，且必须以字母开头');
+                throw new ApiException(Code::PARAMETER_ERROR, '资源类型格式不正确，只能包含字母、数字、下划线，长度2-50个字符，且必须以字母开头');
             }
         }
         
         // 操作类型格式验证
         if (!empty($data['action'])) {
             if (!Permission::validateAction($data['action'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '操作类型格式不正确，只能包含字母、数字、下划线，长度2-50个字符，且必须以字母开头');
+                throw new ApiException(Code::PARAMETER_ERROR, '操作类型格式不正确，只能包含字母、数字、下划线，长度2-50个字符，且必须以字母开头');
             }
         }
         
         // 描述长度验证
         if (!empty($data['description'])) {
             if (mb_strlen($data['description']) > 500) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '权限描述长度不能超过500个字符');
+                throw new ApiException(Code::PARAMETER_ERROR, '权限描述长度不能超过500个字符');
             }
         }
         
         // 排序值验证
         if (isset($data['sort'])) {
             if (!is_numeric($data['sort']) || $data['sort'] < 0) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '排序值必须为非负整数');
+                throw new ApiException(Code::PARAMETER_ERROR, '排序值必须为非负整数');
             }
         }
     }

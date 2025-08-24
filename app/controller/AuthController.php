@@ -2,11 +2,11 @@
 
 namespace plugin\theadmin\app\controller;
 
+use plugin\theadmin\app\common\R;
 use support\Request;
 use support\Response;
-use plugin\theadmin\app\common\ApiResponse;
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\service\AuthService;
 
 /**
@@ -36,22 +36,16 @@ class AuthController
 
             // 验证必填参数
             if (empty($username) || empty($password)) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '用户名或密码不能为空');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error('用户名或密码不能为空',Code::PARAMETER_ERROR->value);
             }
 
             // 执行登录
             $result = $this->authService->login($username, $password, $ip);
-            $response = ApiResponse::success($result, '登录成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
+            return R::ok( '登录成功',$result);
         } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error($e->getMessage(),$e->getCode());
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '登录失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error('登录失败：' . $e->getMessage(),Code::SYSTEM_ERROR->value);
         }
     }
 
@@ -61,71 +55,37 @@ class AuthController
      * @param Request $request
      * @return Response
      */
-    public function logout(Request $request)
+    public function logout(Request $request): Response
     {
-        try {
-            $token = $this->getTokenFromRequest($request);
-            
-            if (!empty($token)) {
-                $this->authService->logout($token);
-            }
-
-            $response = ApiResponse::success(null, '退出成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '退出失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
+        $this->authService->logout($request->admin);
+        return R::ok('退出成功');
     }
 
     /**
      * 获取当前用户信息
-     * GET /sys/auth/profile
+     * GET /sys/auth/info
      * @param Request $request
      * @return Response
      */
-    public function profile(Request $request)
+    public function info(Request $request): Response
     {
-        try {
-            $token = $this->getTokenFromRequest($request);
-            
-            if (empty($token)) {
-                $response = ApiResponse::error(ErrorCode::TOKEN_MISSING, '未提供访问令牌');
-                return new Response(401, ['Content-Type' => 'application/json'], json_encode($response));
-            }
+        $admin = $request->admin;
+        $profile = [
+            'id' => $admin->id,
+            'username' => $admin->username,
+            'nickname' => $admin->nickname,
+            'phone' => $admin->phone,
+            'email' => $admin->email,
+            'avatar' => $admin->avatar,
+            'status' => $admin->status,
+            'created_at' => $admin->created_at,
+            'updated_at' => $admin->updated_at,
+            'last_login_at' => $admin->last_login_at,
+            'last_login_ip' => $admin->last_login_ip,
+            'roles' => $admin->roles->pluck('code')->toArray(),
+        ];
 
-            $admin = $this->authService->getAdminByToken($token);
-
-            $profile = [
-                'id' => $admin->id,
-                'username' => $admin->username,
-                'nickname' => $admin->nickname,
-                'phone' => $admin->phone,
-                'email' => $admin->email,
-                'avatar' => $admin->avatar,
-                'status' => $admin->status,
-                'created_at' => $admin->created_at,
-                'updated_at' => $admin->updated_at,
-                'last_login_at' => $admin->last_login_at,
-                'last_login_ip' => $admin->last_login_ip,
-            ];
-
-            $response = ApiResponse::success($profile, '获取用户信息成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取用户信息失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
+        return R::ok('获取用户信息成功',$profile);
     }
 
     /**
@@ -134,30 +94,10 @@ class AuthController
      * @param Request $request
      * @return Response
      */
-    public function permissions(Request $request)
+    public function permissions(Request $request): Response
     {
-        try {
-            $token = $this->getTokenFromRequest($request);
-
-            if (empty($token)) {
-                $response = ApiResponse::error(ErrorCode::TOKEN_MISSING, '未提供访问令牌');
-                return new Response(401, ['Content-Type' => 'application/json'], json_encode($response));
-            }
-
-            $admin = $this->authService->getAdminByToken($token);
-            $permissions = $this->authService->getAdminPermissions($admin->id);
-
-            $response = ApiResponse::success($permissions, '获取权限列表成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取权限列表失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
+        $permissions =  $request->admin->getPermissions();
+        return R::ok('获取权限列表成功',$permissions);
     }
 
     /**
@@ -166,30 +106,10 @@ class AuthController
      * @param Request $request
      * @return Response
      */
-    public function menus(Request $request)
+    public function menus(Request $request): Response
     {
-        try {
-            $token = $this->getTokenFromRequest($request);
-            
-            if (empty($token)) {
-                $response = ApiResponse::error(ErrorCode::TOKEN_MISSING, '未提供访问令牌');
-                return new Response(401, ['Content-Type' => 'application/json'], json_encode($response));
-            }
-
-            $admin = $this->authService->getAdminByToken($token);
-            $menus = $this->authService->getAdminMenus($admin->id);
-
-            $response = ApiResponse::success($menus, '获取菜单列表成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取菜单列表失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
+        $menus = $request->admin->getMenus();
+        return R::ok('获取菜单列表成功',$menus);
     }
 
     /**
@@ -198,28 +118,19 @@ class AuthController
      * @param Request $request
      * @return Response
      */
-    public function refresh(Request $request)
+    public function refresh(Request $request): Response
     {
         try {
             $refreshToken = $request->post('refresh_token', '');
-            
             if (empty($refreshToken)) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '未提供刷新令牌');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error(Code::REFRESH_TOKEN_MISSING);
             }
-
             $tokenData = $this->authService->refreshToken($refreshToken);
-
-            $response = ApiResponse::success($tokenData, '刷新令牌成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
+            return R::ok('刷新令牌成功',$tokenData);
         } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error($e->getMessage(),$e->getCode());
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '刷新令牌失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error('刷新令牌失败：' . $e->getMessage(),Code::SYSTEM_ERROR->value);
         }
     }
 
@@ -235,8 +146,7 @@ class AuthController
             $token = $this->getTokenFromRequest($request);
             
             if (empty($token)) {
-                $response = ApiResponse::error(ErrorCode::TOKEN_MISSING, '未提供访问令牌');
-                return new Response(401, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error(Code::TOKEN_MISSING);
             }
 
             $payload = $this->authService->validateToken($token);
@@ -249,16 +159,12 @@ class AuthController
                 'expires_at' => $payload['exp'] ?? 0,
             ];
 
-            $response = ApiResponse::success($result, 'Token有效');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::ok('Token有效',$result);
 
         } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error($e->getMessage(),$e->getCode());
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, 'Token验证失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error('Token验证失败：' . $e->getMessage(),Code::SYSTEM_ERROR->value);
         }
     }
 

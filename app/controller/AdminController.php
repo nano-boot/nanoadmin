@@ -6,7 +6,7 @@ use support\Request;
 use support\Response;
 use plugin\theadmin\app\common\ApiResponse;
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\service\AdminService;
 
 /**
@@ -44,10 +44,10 @@ class AdminController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取管理员列表失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取管理员列表失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -64,7 +64,7 @@ class AdminController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '管理员ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '管理员ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -75,10 +75,10 @@ class AdminController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取管理员详情失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取管理员详情失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -105,7 +105,7 @@ class AdminController
             // 参数验证
             $validation = $this->validateAdminData($data, true);
             if ($validation !== true) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, $validation);
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, $validation);
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -116,10 +116,10 @@ class AdminController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '创建管理员失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '创建管理员失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -136,7 +136,7 @@ class AdminController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '管理员ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '管理员ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -158,7 +158,7 @@ class AdminController
             // 参数验证
             $validation = $this->validateAdminData($data, false);
             if ($validation !== true) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, $validation);
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, $validation);
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -169,10 +169,10 @@ class AdminController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '更新管理员失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '更新管理员失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -189,7 +189,7 @@ class AdminController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '管理员ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '管理员ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -200,10 +200,10 @@ class AdminController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '删除管理员失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '删除管理员失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -220,14 +220,14 @@ class AdminController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '管理员ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '管理员ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
             $roleIds = $request->post('role_ids', []);
             
             if (!is_array($roleIds)) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '角色ID列表格式错误');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID列表格式错误');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -244,10 +244,10 @@ class AdminController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '分配角色失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '分配角色失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -264,7 +264,7 @@ class AdminController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '管理员ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '管理员ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -275,10 +275,10 @@ class AdminController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取管理员角色失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取管理员角色失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -295,7 +295,7 @@ class AdminController
             $ids = $request->post('ids', []);
             
             if (!is_array($ids) || empty($ids)) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '请选择要删除的管理员');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '请选择要删除的管理员');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -306,7 +306,7 @@ class AdminController
             });
 
             if (empty($ids)) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '管理员ID列表无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '管理员ID列表无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -317,10 +317,10 @@ class AdminController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '批量删除管理员失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '批量删除管理员失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }

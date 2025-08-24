@@ -6,7 +6,7 @@ use support\Request;
 use support\Response;
 use plugin\theadmin\app\common\ApiResponse;
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\service\RoleService;
 
 /**
@@ -44,10 +44,10 @@ class RoleController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取角色列表失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取角色列表失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -64,7 +64,7 @@ class RoleController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '角色ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -75,10 +75,10 @@ class RoleController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取角色详情失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取角色详情失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -103,7 +103,7 @@ class RoleController
             // 参数验证
             $validation = $this->validateRoleData($data, true);
             if ($validation !== true) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, $validation);
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, $validation);
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -114,10 +114,10 @@ class RoleController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '创建角色失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '创建角色失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -134,7 +134,7 @@ class RoleController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '角色ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -149,7 +149,7 @@ class RoleController
             // 参数验证
             $validation = $this->validateRoleData($data, false);
             if ($validation !== true) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, $validation);
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, $validation);
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -160,10 +160,10 @@ class RoleController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '更新角色失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '更新角色失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -180,7 +180,7 @@ class RoleController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '角色ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -191,10 +191,10 @@ class RoleController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '删除角色失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '删除角色失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -211,14 +211,14 @@ class RoleController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '角色ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
             $permissionIds = $request->post('permission_ids', []);
             
             if (!is_array($permissionIds)) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '权限ID列表格式错误');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '权限ID列表格式错误');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -235,10 +235,10 @@ class RoleController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '分配权限失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '分配权限失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -255,14 +255,14 @@ class RoleController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '角色ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
             $menuIds = $request->post('menu_ids', []);
             
             if (!is_array($menuIds)) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '菜单ID列表格式错误');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '菜单ID列表格式错误');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -279,10 +279,10 @@ class RoleController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '分配菜单失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '分配菜单失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -299,7 +299,7 @@ class RoleController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '角色ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -310,10 +310,10 @@ class RoleController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取角色权限失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取角色权限失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -330,7 +330,7 @@ class RoleController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '角色ID无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -341,10 +341,10 @@ class RoleController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '获取角色菜单失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取角色菜单失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -361,7 +361,7 @@ class RoleController
             $ids = $request->post('ids', []);
             
             if (!is_array($ids) || empty($ids)) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '请选择要删除的角色');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '请选择要删除的角色');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -372,7 +372,7 @@ class RoleController
             });
 
             if (empty($ids)) {
-                $response = ApiResponse::error(ErrorCode::PARAMETER_ERROR, '角色ID列表无效');
+                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID列表无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -383,10 +383,10 @@ class RoleController
 
         } catch (ApiException $e) {
             $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = ErrorCode::getHttpCodeByCode($e->getCode());
+            $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(ErrorCode::SYSTEM_ERROR, '批量删除角色失败：' . $e->getMessage());
+            $response = ApiResponse::error(Code::SYSTEM_ERROR, '批量删除角色失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }

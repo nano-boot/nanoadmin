@@ -3,7 +3,7 @@
 namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\ErrorCode;
+use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Role;
 use think\Paginator;
@@ -61,7 +61,7 @@ class RoleService
         $role = $roleModel->with(['permissions', 'menus'])->find($id);
         
         if (!$role) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         return $role;
@@ -82,12 +82,12 @@ class RoleService
         
         // 检查角色代码是否已存在
         if ($roleModel->where('code', $data['code'])->find()) {
-            throw new ApiException(ErrorCode::DUPLICATE_NAME, '角色代码已存在');
+            throw new ApiException(Code::DUPLICATE_NAME, '角色代码已存在');
         }
         
         // 检查角色名称是否已存在
         if ($roleModel->where('name', $data['name'])->find()) {
-            throw new ApiException(ErrorCode::DUPLICATE_NAME, '角色名称已存在');
+            throw new ApiException(Code::DUPLICATE_NAME, '角色名称已存在');
         }
         
         // 设置默认值
@@ -105,7 +105,7 @@ class RoleService
         $role = $roleModel->createRole($data);
         
         if (!$role) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '创建角色失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '创建角色失败');
         }
         
         return $role;
@@ -128,7 +128,7 @@ class RoleService
         // 检查角色是否存在
         $role = $roleModel->find($id);
         if (!$role) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         // 检查角色代码是否已被其他角色使用
@@ -138,7 +138,7 @@ class RoleService
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingRole) {
-                throw new ApiException(ErrorCode::DUPLICATE_NAME, '角色代码已存在');
+                throw new ApiException(Code::DUPLICATE_NAME, '角色代码已存在');
             }
         }
         
@@ -149,7 +149,7 @@ class RoleService
                 ->where('id', '<>', $id)
                 ->find();
             if ($existingRole) {
-                throw new ApiException(ErrorCode::DUPLICATE_NAME, '角色名称已存在');
+                throw new ApiException(Code::DUPLICATE_NAME, '角色名称已存在');
             }
         }
         
@@ -160,7 +160,7 @@ class RoleService
         $result = $roleModel->updateRole($id, $data);
         
         if (!$result) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '更新角色失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '更新角色失败');
         }
         
         return true;
@@ -179,19 +179,19 @@ class RoleService
         // 检查角色是否存在
         $role = $roleModel->find($id);
         if (!$role) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         // 检查角色是否被使用
         if ($role->isUsed($id)) {
-            throw new ApiException(ErrorCode::DATA_IN_USE, '角色正在使用中，无法删除');
+            throw new ApiException(Code::DATA_IN_USE, '角色正在使用中，无法删除');
         }
         
         // 软删除
         $result = $roleModel->destroy($id);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '删除角色失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '删除角色失败');
         }
         
         return true;
@@ -211,7 +211,7 @@ class RoleService
         // 检查角色是否存在
         $role = $roleModel->find($id);
         if (!$role) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         // 更新状态
@@ -221,7 +221,7 @@ class RoleService
         ]);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '更新角色状态失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '更新角色状态失败');
         }
         
         return true;
@@ -241,7 +241,7 @@ class RoleService
         // 检查角色是否存在
         $role = $roleModel->find($roleId);
         if (!$role) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         // 验证权限是否存在
@@ -251,7 +251,7 @@ class RoleService
             
             $invalidPermissionIds = array_diff($permissionIds, $existingPermissions);
             if (!empty($invalidPermissionIds)) {
-                throw new ApiException(ErrorCode::PERMISSION_NOT_FOUND, '权限不存在: ' . implode(',', $invalidPermissionIds));
+                throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在: ' . implode(',', $invalidPermissionIds));
             }
         }
         
@@ -259,7 +259,7 @@ class RoleService
         $result = $role->assignPermissions($permissionIds);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '分配权限失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '分配权限失败');
         }
         
         return true;
@@ -279,7 +279,7 @@ class RoleService
         // 检查角色是否存在
         $role = $roleModel->find($roleId);
         if (!$role) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         // 验证菜单是否存在
@@ -289,7 +289,7 @@ class RoleService
             
             $invalidMenuIds = array_diff($menuIds, $existingMenus);
             if (!empty($invalidMenuIds)) {
-                throw new ApiException(ErrorCode::MENU_NOT_FOUND, '菜单不存在: ' . implode(',', $invalidMenuIds));
+                throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在: ' . implode(',', $invalidMenuIds));
             }
         }
         
@@ -297,7 +297,7 @@ class RoleService
         $result = $role->assignMenus($menuIds);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '分配菜单失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '分配菜单失败');
         }
         
         return true;
@@ -316,7 +316,7 @@ class RoleService
         // 检查角色是否存在
         $role = $roleModel->find($roleId);
         if (!$role) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         return $role->getAllPermissions();
@@ -335,7 +335,7 @@ class RoleService
         // 检查角色是否存在
         $role = $roleModel->find($roleId);
         if (!$role) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         return $role->getAllMenus();
@@ -399,20 +399,20 @@ class RoleService
         // 检查源角色是否存在
         $sourceRole = $roleModel->find($sourceRoleId);
         if (!$sourceRole) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '源角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '源角色不存在');
         }
         
         // 检查目标角色是否存在
         $targetRole = $roleModel->find($targetRoleId);
         if (!$targetRole) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '目标角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '目标角色不存在');
         }
         
         // 复制权限
         $result = $sourceRole->copyPermissionsTo($targetRoleId);
         
         if (!$result) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '复制角色权限失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '复制角色权限失败');
         }
         
         return true;
@@ -432,20 +432,20 @@ class RoleService
         // 检查源角色是否存在
         $sourceRole = $roleModel->find($sourceRoleId);
         if (!$sourceRole) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '源角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '源角色不存在');
         }
         
         // 检查目标角色是否存在
         $targetRole = $roleModel->find($targetRoleId);
         if (!$targetRole) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '目标角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '目标角色不存在');
         }
         
         // 复制菜单
         $result = $sourceRole->copyMenusTo($targetRoleId);
         
         if (!$result) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '复制角色菜单失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '复制角色菜单失败');
         }
         
         return true;
@@ -464,7 +464,7 @@ class RoleService
         // 检查角色是否存在
         $role = $roleModel->find($roleId);
         if (!$role) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         return $role->getStats();
@@ -507,12 +507,12 @@ class RoleService
         // 检查角色是否存在
         $role = $roleModel->find($roleId);
         if (!$role) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在');
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         // 验证排序值
         if ($sort < 0) {
-            throw new ApiException(ErrorCode::INVALID_SORT_ORDER, '排序值不能为负数');
+            throw new ApiException(Code::INVALID_SORT_ORDER, '排序值不能为负数');
         }
         
         // 更新排序
@@ -522,7 +522,7 @@ class RoleService
         ]);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '更新角色排序失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '更新角色排序失败');
         }
         
         return true;
@@ -537,7 +537,7 @@ class RoleService
     public function batchDeleteRoles(array $ids): bool
     {
         if (empty($ids)) {
-            throw new ApiException(ErrorCode::PARAMETER_ERROR, '请选择要删除的角色');
+            throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的角色');
         }
         
         $roleModel = ModelFactory::role();
@@ -548,13 +548,13 @@ class RoleService
         $invalidIds = array_diff($ids, $existingIds);
         
         if (!empty($invalidIds)) {
-            throw new ApiException(ErrorCode::ROLE_NOT_FOUND, '角色不存在: ' . implode(',', $invalidIds));
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在: ' . implode(',', $invalidIds));
         }
         
         // 检查是否有角色正在使用
         foreach ($existingRoles as $role) {
             if ($role->isUsed($role->id)) {
-                throw new ApiException(ErrorCode::DATA_IN_USE, "角色 '{$role->name}' 正在使用中，无法删除");
+                throw new ApiException(Code::DATA_IN_USE, "角色 '{$role->name}' 正在使用中，无法删除");
             }
         }
         
@@ -562,7 +562,7 @@ class RoleService
         $result = $roleModel->destroy($ids);
         
         if ($result === false) {
-            throw new ApiException(ErrorCode::SYSTEM_ERROR, '批量删除角色失败');
+            throw new ApiException(Code::SYSTEM_ERROR, '批量删除角色失败');
         }
         
         return true;
@@ -579,38 +579,38 @@ class RoleService
         // 创建时必须提供角色代码和名称
         if ($isCreate) {
             if (empty($data['code'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '角色代码不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '角色代码不能为空');
             }
             if (empty($data['name'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '角色名称不能为空');
+                throw new ApiException(Code::PARAMETER_ERROR, '角色名称不能为空');
             }
         }
         
         // 角色代码格式验证
         if (!empty($data['code'])) {
             if (!Role::validateCode($data['code'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '角色代码格式不正确，只能包含字母、数字、下划线，长度3-50个字符，且必须以字母开头');
+                throw new ApiException(Code::PARAMETER_ERROR, '角色代码格式不正确，只能包含字母、数字、下划线，长度3-50个字符，且必须以字母开头');
             }
         }
         
         // 角色名称格式验证
         if (!empty($data['name'])) {
             if (!Role::validateName($data['name'])) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '角色名称长度必须在2-100个字符之间');
+                throw new ApiException(Code::PARAMETER_ERROR, '角色名称长度必须在2-100个字符之间');
             }
         }
         
         // 描述长度验证
         if (!empty($data['description'])) {
             if (mb_strlen($data['description']) > 500) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '角色描述长度不能超过500个字符');
+                throw new ApiException(Code::PARAMETER_ERROR, '角色描述长度不能超过500个字符');
             }
         }
         
         // 排序值验证
         if (isset($data['sort'])) {
             if (!is_numeric($data['sort']) || $data['sort'] < 0) {
-                throw new ApiException(ErrorCode::PARAMETER_ERROR, '排序值必须为非负整数');
+                throw new ApiException(Code::PARAMETER_ERROR, '排序值必须为非负整数');
             }
         }
     }
