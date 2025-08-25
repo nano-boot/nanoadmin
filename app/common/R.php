@@ -71,17 +71,21 @@ class R
      */
     public static function paginate(array $paginateData, string $msg = '获取成功'): Response
     {
+        $list = $paginateData['list'];
+        $p = $paginateData['pagination'];
+        $pagination = [
+            'total' => (int)($p['total'] ?? 0),
+            'per_page' => (int)($p['size'] ?? 0),
+            'current_page' => (int)($p['page'] ?? 1),
+            'last_page' => (int)($p['pages'] ?? 1),
+        ];
+
         return json([
             'code' => Code::SUCCESS->value,
             'msg' => $msg,
             'data' => [
-                'list' => $paginateData['data'],
-                'pagination' => [
-                    'total' => $paginateData['total'],
-                    'per_page' => $paginateData['per_page'],
-                    'current_page' => $paginateData['current_page'],
-                    'last_page' => $paginateData['last_page'],
-                ],
+                'list' => $list,
+                'pagination' => $pagination,
             ],
             'timestamp' => time(),
         ]) ;

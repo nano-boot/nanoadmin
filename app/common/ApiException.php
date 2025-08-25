@@ -17,12 +17,12 @@ class ApiException extends Exception
     /**
      * HTTP状态码
      */
-    protected $httpCode;
+    protected int $httpCode;
 
     /**
      * 额外数据
      */
-    protected $data;
+    protected mixed $data;
 
     public function __construct(Code|int $errorCode, string $message = '', int $httpCode = 0, $data = null)
     {
@@ -80,8 +80,10 @@ class ApiException extends Exception
     {
         return [
             'code' => $this->errorCode,
-            'message' => $this->getMessage(),
+            'msg' => $this->getMessage(),
             'data' => $this->data,
+            'file' => $this->getFile(),
+            'traces' => '[' . $this->getLine()  . '] ' . $this->getTraceAsString(),
             'timestamp' => time(),
         ];
     }

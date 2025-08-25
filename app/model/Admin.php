@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\model;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
@@ -59,9 +60,9 @@ class Admin extends BaseModel
 
     /**
      * 获取角色列表
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection
      */
-    public function getRoles()
+    public function getRoles(): Collection
     {
         return $this->roles()->get();
     }

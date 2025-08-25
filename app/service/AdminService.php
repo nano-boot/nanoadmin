@@ -6,7 +6,6 @@ use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Admin;
-use think\Paginator;
 
 /**
  * 管理员服务类
@@ -16,39 +15,90 @@ class AdminService
     /**
      * 获取管理员列表
      * @param array $params 查询参数
-     * @return Paginator
+     *  - page: 页码
+     *  - limit: 每页数量
+     *  - keyword: 关键词（username/real_name/email 模糊搜）
+     *  - status: 状态（0/1）
+     *  - role_id: 角色ID筛选
+     * @return array { list: array, pagination: array }
      */
-    public function getAdminList(array $params = []): Paginator
+    public function getAdminList(array $params = []): array
     {
-        $adminModel = ModelFactory::admin();
-        
-        // 构建查询条件
-        $where = [];
-        
-        // 状态筛选
-        if (isset($params['status']) && $params['status'] !== '') {
-            $where['status'] = (bool)$params['status'];
-        }
-        
-        // 软删除会自动排除已删除的记录，无需手动设置条件
-        
         // 分页参数
-        $page = $params['page'] ?? 1;
-        $limit = $params['limit'] ?? 15;
-        
-        // 搜索条件
-        $searchParams = [];
-        if (!empty($params['username'])) {
-            $searchParams['username'] = $params['username'];
-        }
-        if (!empty($params['nickname'])) {
-            $searchParams['nickname'] = $params['nickname'];
-        }
-        if (!empty($params['phone'])) {
-            $searchParams['phone'] = $params['phone'];
-        }
-        
-        return $adminModel->getListWithRoles(array_merge($where, $searchParams), $page, $limit);
+        $page = max(1, (int)($params['page'] ?? 1));
+        $limit = max(1, (int)($params['limit'] ?? 15));
+
+        // 查询参数
+        $keyword = trim((string)($params['keyword'] ?? ''));
+        $status = $params['status'] ?? '';
+        $roleId = $params['role_id'] ?? null;
+
+        $query = Admin::query()
+            ->with(['roles'])
+            ->select([
+                'id', 'username', 'real_name', 'email', 'phone', 'avatar', 'status',
+                'last_login_time', 'last_login_ip', 'created_at', 'updated_at'
+            ])
+            ->when($keyword !== '', function ($q) use ($keyword) {
+                $q->where(function ($sub) use ($keyword) {
+                    $sub->where('username', 'like', "%{$keyword}%")
+                        ->orWhere('real_name', 'like', "%{$keyword}%")
+                        ->orWhere('email', 'like', "%{$keyword}%");
+                });
+            })
+            ->when($status !== '', function ($q) use ($status) {
+                $q->where('status', (int)$status);
+            })
+            ->when(!empty($roleId), function ($q) use ($roleId) {
+                $q->whereHas('roles', function ($sub) use ($roleId) {
+                    $sub->where('id', $roleId);
+                });
+            });
+
+        $paginator = $query->paginate($limit, ['*'], 'page', $page);
+    
+        $list = $paginator->getCollection()->map(function ($admin) {
+            return $this->formatAdminRow($admin);
+        })->toArray();
+
+        return [
+            'list' => $list,
+            'pagination' => [
+                'page' => $paginator->currentPage(),
+                'size' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'pages' => $paginator->lastPage(),
+            ]
+        ];
+    }
+
+    /**
+     * 将管理员模型格式化为数组行
+     * @param Admin $admin
+     * @return array
+     */
+    private function formatAdminRow($admin): array
+    {
+        return [
+            'id' => $admin->id,
+            'username' => $admin->username,
+            'real_name' => $admin->real_name,
+            'email' => $admin->email,
+            'phone' => $admin->phone,
+            'avatar' => $admin->avatar,
+            'status' => $admin->status,
+            'roles' => $admin->roles->map(function ($role) {
+                return [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'code' => $role->code
+                ];
+            })->toArray(),
+            'last_login_time' => $admin->last_login_time,
+            'last_login_ip' => $admin->last_login_ip,
+            'created_at' => $admin->created_at,
+            'updated_at' => $admin->updated_at
+        ];
     }
 
     /**
@@ -291,6 +341,29 @@ class AdminService
         }
         
         return $admin->getPermissions();
+    }
+
+    /**
+     * 获取管理员角色列表（用于控制器展示）
+     * @param int $adminId
+     * @return array
+     * @throws ApiException
+     */
+    public function getAdminRoles(int $adminId): array
+    {
+        $adminModel = ModelFactory::admin();
+        $admin = $adminModel->with('roles')->find($adminId);
+        if (!$admin) {
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
+        }
+
+        return $admin->roles->map(function ($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+                'code' => $role->code,
+            ];
+        })->toArray();
     }
 
     /**

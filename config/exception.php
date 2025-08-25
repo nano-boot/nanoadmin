@@ -1,5 +1,7 @@
 <?php
 
+use plugin\theadmin\app\common\TheHandler;
+
 return [
-    '' => support\exception\Handler::class,
+    '' => TheHandler::class,
 ];

@@ -18,7 +18,7 @@ Route::group('/sys/auth', function () {
 
 
 // 管理员管理相关路由（需要认证）
-Route::group('/sys/admins', function () {
+Route::group('/sys/admin', function () {
     Route::get('', [plugin\theadmin\app\controller\AdminController::class, 'index']);
     Route::post('', [plugin\theadmin\app\controller\AdminController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'show']);
@@ -33,7 +33,7 @@ Route::group('/sys/admins', function () {
 });
 
 // 角色管理相关路由（需要认证）
-Route::group('/sys/roles', function () {
+Route::group('/sys/role', function () {
     Route::get('', [plugin\theadmin\app\controller\RoleController::class, 'index']);
     Route::post('', [plugin\theadmin\app\controller\RoleController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'show']);

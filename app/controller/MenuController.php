@@ -52,25 +52,20 @@ class MenuController
      * GET /menus/routes
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
     public function routes(Request $request): Response
     {
-        try {
-            $adminId = $request->adminId ?? 0;
-            if (empty($adminId)) {
-                return $this->error(Code::UNAUTHORIZED, '未登录');
-            }
-
-            // 获取管理员可访问的菜单树并转换为前端路由格式
-            $menuTree = $this->menuModel->getAdminMenuTree((int)$adminId);
-
-            $routes = $this->transformService->toRouteConfigTree($menuTree);
-            return R::ok('获取成功', ['routes' => $routes]);
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error( '获取路由失败：' . $e->getMessage(),Code::SYSTEM_ERROR->value);
+        $adminId = $request->adminId ?? 0;
+        if (empty($adminId)) {
+            return $this->error(Code::UNAUTHORIZED, '未登录');
         }
+
+        // 获取管理员可访问的菜单树并转换为前端路由格式
+        $menuTree = $this->menuModel->getAdminMenuTree((int)$adminId);
+
+        $routes = $this->transformService->toRouteConfigTree($menuTree);
+        return R::ok('获取成功', ['routes' => $routes]);
     }
 
     /**

@@ -2,14 +2,12 @@
 
 namespace plugin\theadmin\app\model;
 
-use think\Collection;
-use think\db\exception\DataNotFoundException;
-use think\db\exception\DbException;
-use think\db\exception\ModelNotFoundException;
-use think\model\relation\BelongsToMany;
-use think\model\relation\HasMany;
-use think\model\relation\HasOne;
-use think\Paginator;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 /**
  * 菜单模型
@@ -45,7 +43,7 @@ class Menu extends BaseModel
      * 表名
      * @var string
      */
-    protected $name = 'sys_menu';
+    protected $table = 'sys_menu';
 
     /**
      * 主键
@@ -175,14 +173,10 @@ class Menu extends BaseModel
      * @param bool $onlyEnabled 是否只获取启用的菜单
      * @param bool $includeDeleted 是否包含已删除的菜单
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function getTree(int $parentId = 0, bool $onlyEnabled = true, bool $includeDeleted = false): array
     {
         $query = $this->where('parent_id', $parentId);
-        
         if ($onlyEnabled) {
             $query->where('status', 1);
         }
@@ -190,10 +184,10 @@ class Menu extends BaseModel
         if (!$includeDeleted) {
             $query->where('deleted', false);
         }
-        
-        $menus = $query->order('sort asc, id asc')->select();
+        $menus = $query->orderBy('sort', 'asc')
+                      ->orderBy('id', 'asc')
+                      ->get();
         $tree = [];
-        
         foreach ($menus as $menu) {
             $item = $menu->toArray();
             $item['children'] = $this->getTree($menu->id, $onlyEnabled, $includeDeleted);
@@ -207,36 +201,29 @@ class Menu extends BaseModel
      * 获取管理员菜单树
      * @param int $adminId 管理员ID
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function getAdminMenuTree(int $adminId): array
     {
-        $admin = Admin::find($adminId);
+        $admin = Admin::with('roles')->find($adminId);
         if (!$admin) {
             return [];
         }
         
         // 检查是否为超级管理员
         $isSuperAdmin = false;
-        $roles = $admin->roles()->select();
-        foreach ($roles as $role) {
-            if ($role->code === 'super_admin') {
+        foreach ($admin->roles as $role) {
+            if ($role->code === 'R_SUPER') {
                 $isSuperAdmin = true;
                 break;
             }
         }
-        
         // 超级管理员获取所有菜单
         if ($isSuperAdmin) {
             return $this->getTree();
         }
-        
         // 获取管理员的所有菜单ID
         $menuIds = [];
-        $rolesWithMenus = $admin->roles()->with('menus')->select();
-        
+        $rolesWithMenus = $admin->roles()->with('menus')->get();
         foreach ($rolesWithMenus as $role) {
             foreach ($role->menus as $menu) {
                 $menuIds[] = $menu->id;
@@ -255,9 +242,6 @@ class Menu extends BaseModel
      * 根据菜单ID数组构建树形结构
      * @param array $menuIds 菜单ID数组
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     private function buildTreeFromIds(array $menuIds): array
     {
@@ -268,8 +252,9 @@ class Menu extends BaseModel
         // 获取所有相关菜单
         $menus = $this->whereIn('id', $menuIds)
                      ->enabled()
-                     ->order('sort asc, id asc')
-                     ->select();
+                     ->orderBy('sort', 'asc')
+                     ->orderBy('id', 'asc')
+                     ->get();
         
         // 构建菜单映射
         $menuMap = [];
@@ -298,10 +283,9 @@ class Menu extends BaseModel
      * @param array $where 查询条件
      * @param int $page 页码
      * @param int $limit 每页数量
-     * @return Paginator
-     * @throws DbException
+     * @return LengthAwarePaginator
      */
-    public function getListWithLevel(array $where = [], int $page = 1, int $limit = 15): Paginator
+    public function getListWithLevel(array $where = [], int $page = 1, int $limit = 15): LengthAwarePaginator
     {
         $query = $this->where($where);
         
@@ -320,10 +304,9 @@ class Menu extends BaseModel
             $query->where('menu_type', $where['menu_type']);
         }
         
-        return $query->order('sort asc, id asc')->paginate([
-            'list_rows' => $limit,
-            'page' => $page
-        ]);
+        return $query->orderBy('sort', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->paginate($limit, ['*'], 'page', $page);
     }
 
     /**
@@ -468,7 +451,7 @@ class Menu extends BaseModel
             return false;
         }
         
-        $this->startTrans();
+        DB::beginTransaction();
         try {
             foreach ($sortData as $item) {
                 if (isset($item['id'])) {
@@ -485,10 +468,10 @@ class Menu extends BaseModel
                     }
                 }
             }
-            $this->commit();
+            DB::commit();
             return true;
         } catch (\Exception $e) {
-            $this->rollback();
+            DB::rollback();
             return false;
         }
     }
@@ -749,7 +732,9 @@ class Menu extends BaseModel
             $query->where('deleted', false);
         }
         
-        return $query->order('sort asc, id asc')->select();
+        return $query->orderBy('sort', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->get();
     }
 
     /**
@@ -799,8 +784,9 @@ class Menu extends BaseModel
     {
         return $this->where('permission', $permission)
                    ->enabled()
-                   ->order('sort asc, id asc')
-                   ->select();
+                   ->orderBy('sort', 'asc')
+                   ->orderBy('id', 'asc')
+                   ->get();
     }
 
     /**
@@ -811,17 +797,15 @@ class Menu extends BaseModel
     {
         return $this->where('status', 1)
                    ->where('deleted', false)
-                   ->order('sort asc, id asc')
-                   ->select();
+                   ->orderBy('sort', 'asc')
+                   ->orderBy('id', 'asc')
+                   ->get();
     }
 
     /**
      * 构建前端路由配置
      * @param int $adminId 管理员ID（可选）
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function buildRouteConfig(int $adminId = 0): array
     {
@@ -1237,7 +1221,7 @@ class Menu extends BaseModel
             $parentId = $menu->parent_id;
         }
         
-        $this->startTrans();
+        DB::beginTransaction();
         try {
             // 获取目标位置的排序值
             $newSort = 100;
@@ -1250,7 +1234,7 @@ class Menu extends BaseModel
                     $this->where('parent_id', $parentId)
                          ->where('sort', '>=', $newSort)
                          ->where('id', '<>', $id)
-                         ->inc('sort', 10);
+                         ->increment('sort', 10);
                 }
             } else {
                 // 移动到最后
@@ -1263,10 +1247,10 @@ class Menu extends BaseModel
                 'sort' => $newSort
             ]);
             
-            $this->commit();
+            DB::commit();
             return true;
         } catch (\Exception $e) {
-            $this->rollback();
+            DB::rollback();
             return false;
         }
     }
@@ -1283,7 +1267,7 @@ class Menu extends BaseModel
             return false;
         }
         
-        $this->startTrans();
+        DB::beginTransaction();
         try {
             $sort = 100;
             foreach ($menuIds as $menuId) {
@@ -1292,10 +1276,10 @@ class Menu extends BaseModel
                      ->update(['sort' => $sort]);
                 $sort += 10;
             }
-            $this->commit();
+            DB::commit();
             return true;
         } catch (\Exception $e) {
-            $this->rollback();
+            DB::rollback();
             return false;
         }
     }
@@ -1485,17 +1469,13 @@ class Menu extends BaseModel
      * 获取已删除的菜单列表
      * @param int $page 页码
      * @param int $limit 每页数量
-     * @return Paginator
-     * @throws DbException
+     * @return LengthAwarePaginator
      */
-    public function getDeletedMenus(int $page = 1, int $limit = 15): Paginator
+    public function getDeletedMenus(int $page = 1, int $limit = 15): LengthAwarePaginator
     {
         return $this->where('deleted', true)
-                   ->order('updated_at desc')
-                   ->paginate([
-                       'list_rows' => $limit,
-                       'page' => $page
-                   ]);
+                   ->orderBy('updated_at', 'desc')
+                   ->paginate($limit, ['*'], 'page', $page);
     }
 
     /**
@@ -1509,7 +1489,7 @@ class Menu extends BaseModel
             return false;
         }
         
-        $this->startTrans();
+        DB::beginTransaction();
         try {
             // 按父菜单分组处理
             $groupedData = [];
@@ -1549,10 +1529,10 @@ class Menu extends BaseModel
                 }
             }
             
-            $this->commit();
+            DB::commit();
             return true;
         } catch (\Exception $e) {
-            $this->rollback();
+            DB::rollback();
             return false;
         }
     }
@@ -1566,8 +1546,8 @@ class Menu extends BaseModel
     {
         $menus = $this->where('parent_id', $parentId)
                      ->where('deleted', false)
-                     ->order('sort asc')
-                     ->select();
+                     ->orderBy('sort', 'asc')
+                     ->get();
         
         $stats = [
             'total' => $menus->count(),
@@ -1578,7 +1558,7 @@ class Menu extends BaseModel
         ];
         
         if ($menus->count() > 0) {
-            $sorts = $menus->column('sort');
+            $sorts = $menus->pluck('sort')->toArray();
             $stats['min_sort'] = min($sorts);
             $stats['max_sort'] = max($sorts);
             
@@ -1616,24 +1596,25 @@ class Menu extends BaseModel
     {
         $menus = $this->where('parent_id', $parentId)
                      ->where('deleted', false)
-                     ->order('sort asc, id asc')
-                     ->select();
+                     ->orderBy('sort', 'asc')
+                     ->orderBy('id', 'asc')
+                     ->get();
         
         if ($menus->count() == 0) {
             return true;
         }
         
-        $this->startTrans();
+        DB::beginTransaction();
         try {
             $sort = 100;
             foreach ($menus as $menu) {
                 $this->where('id', $menu->id)->update(['sort' => $sort]);
                 $sort += 10;
             }
-            $this->commit();
+            DB::commit();
             return true;
         } catch (\Exception $e) {
-            $this->rollback();
+            DB::rollback();
             return false;
         }
     }
