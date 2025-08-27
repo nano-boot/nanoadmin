@@ -27,7 +27,7 @@ class AdminController
      * @param Request $request
      * @return Response
      */
-    public function index(Request $request): Response
+    public function list(Request $request): Response
     {
         $params = [
             'page' => (int)$request->get('page', 1),

@@ -35,10 +35,6 @@ class AdminService
 
         $query = Admin::query()
             ->with(['roles'])
-            ->select([
-                'id', 'username', 'real_name', 'email', 'phone', 'avatar', 'status',
-                'last_login_time', 'last_login_ip', 'created_at', 'updated_at'
-            ])
             ->when($keyword !== '', function ($q) use ($keyword) {
                 $q->where(function ($sub) use ($keyword) {
                     $sub->where('username', 'like', "%{$keyword}%")

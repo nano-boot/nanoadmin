@@ -19,7 +19,7 @@ Route::group('/sys/auth', function () {
 
 // 管理员管理相关路由（需要认证）
 Route::group('/sys/admin', function () {
-    Route::get('', [plugin\theadmin\app\controller\AdminController::class, 'index']);
+    Route::get('', [plugin\theadmin\app\controller\AdminController::class, 'list']);
     Route::post('', [plugin\theadmin\app\controller\AdminController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'update']);

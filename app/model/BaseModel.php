@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\model;
 
+use Illuminate\Database\Eloquent\Collection;
 use support\Model;
 
 /**
@@ -99,9 +100,9 @@ abstract class BaseModel extends Model
      * @param array $where 查询条件
      * @param string $order 排序
      * @param string $field 字段
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return Collection|\Illuminate\Support\Collection
      */
-    public function getAll(array $where = [], string $order = 'id desc', string $field = '*'): \Illuminate\Database\Eloquent\Collection
+    public function getAll(array $where = [], string $order = 'id desc', string $field = '*'): Collection|\Illuminate\Support\Collection
     {
         $query = $this->select($field)->where($where);
 
