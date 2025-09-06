@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\controller;
 
+use plugin\theadmin\app\common\R;
 use support\Request;
 use support\Response;
 use plugin\theadmin\app\common\ApiResponse;
@@ -27,29 +28,8 @@ class RoleController
      * @param Request $request
      * @return Response
      */
-    public function index(Request $request)
+    public function list(Request $request)
     {
-        try {
-            $params = [
-                'page' => (int)$request->get('page', 1),
-                'limit' => (int)$request->get('limit', 20),
-                'keyword' => $request->get('keyword', ''),
-                'status' => $request->get('status', ''),
-            ];
-
-            $result = $this->roleService->getRoleList($params);
-
-            $response = ApiResponse::paginate($result, '获取角色列表成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取角色列表失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
     }
 
     /**

@@ -27,7 +27,7 @@ class Admin extends BaseModel
      * @var array
      */
     protected $fillable = [
-        'username', 'password', 'nickname', 'phone', 'email', 'avatar', 'status'
+        'username', 'password', 'nickname','gender', 'phone', 'email', 'avatar', 'status'
     ];
 
     /**
@@ -42,11 +42,11 @@ class Admin extends BaseModel
      */
     protected $casts = [
         'id' => 'integer',
-        'status' => 'boolean',
         'deleted' => 'boolean',
-        'last_login_time' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'last_login_time' => 'string',
+        'last_login_ip' => 'string',
+        'created_at' => 'string',
+        'updated_at' => 'string'
     ];
 
     /**

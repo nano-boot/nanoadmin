@@ -41,6 +41,7 @@ CREATE TABLE `th_sys_admin` (
     `username` varchar(50) NOT NULL COMMENT '用户名',
     `password` varchar(255) NOT NULL COMMENT '密码',
     `nickname` varchar(50) DEFAULT '' COMMENT '昵称',
+    `gender` tinyint(1) DEFAULT '0' COMMENT '性别（0未知 1男 2女）',
     `avatar` varchar(255) DEFAULT '' COMMENT '头像',
     `phone` varchar(20) DEFAULT '' COMMENT '手机号',
     `last_login_ip` varchar(50) DEFAULT NULL COMMENT '最后登录IP',

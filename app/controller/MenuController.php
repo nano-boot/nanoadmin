@@ -54,7 +54,7 @@ class MenuController
      * @return Response
      * @throws ApiException
      */
-    public function routes(Request $request): Response
+    public function route(Request $request): Response
     {
         $adminId = $request->adminId ?? 0;
         if (empty($adminId)) {

@@ -38,8 +38,8 @@ class AdminService
             ->when($keyword !== '', function ($q) use ($keyword) {
                 $q->where(function ($sub) use ($keyword) {
                     $sub->where('username', 'like', "%{$keyword}%")
-                        ->orWhere('real_name', 'like', "%{$keyword}%")
-                        ->orWhere('email', 'like', "%{$keyword}%");
+                        ->orWhere('phone', 'like', "%{$keyword}%")
+                        ->orWhere('nickname', 'like', "%{$keyword}%");
                 });
             })
             ->when($status !== '', function ($q) use ($status) {
@@ -78,7 +78,8 @@ class AdminService
         return [
             'id' => $admin->id,
             'username' => $admin->username,
-            'real_name' => $admin->real_name,
+            'gender' => $admin->gender,
+            'nickname' => $admin->nickname,
             'email' => $admin->email,
             'phone' => $admin->phone,
             'avatar' => $admin->avatar,

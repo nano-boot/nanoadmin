@@ -34,7 +34,7 @@ Route::group('/sys/admin', function () {
 
 // 角色管理相关路由（需要认证）
 Route::group('/sys/role', function () {
-    Route::get('', [plugin\theadmin\app\controller\RoleController::class, 'index']);
+    Route::get('', [plugin\theadmin\app\controller\RoleController::class, 'list']);
     Route::post('', [plugin\theadmin\app\controller\RoleController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'update']);
@@ -59,11 +59,11 @@ Route::group('/sys/permissions', function () {
 });
 
 // 菜单管理相关路由（需要认证）
-Route::group('/sys/menus', function () {
+Route::group('/sys/menu', function () {
     Route::get('', [plugin\theadmin\app\controller\MenuController::class, 'index']);
     Route::post('', [plugin\theadmin\app\controller\MenuController::class, 'store']);
     Route::post('/tree', [plugin\theadmin\app\controller\MenuController::class, 'tree']);
-    Route::get('/routes', [plugin\theadmin\app\controller\MenuController::class, 'routes']);
+    Route::get('/route', [plugin\theadmin\app\controller\MenuController::class, 'route']);
     Route::get('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'update']);
 //    Route::delete('/batch', [plugin\theadmin\app\controller\MenuController::class, 'batchDestroy']);
