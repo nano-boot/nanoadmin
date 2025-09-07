@@ -5,7 +5,6 @@ namespace plugin\theadmin\app\controller;
 use plugin\theadmin\app\common\R;
 use support\Request;
 use support\Response;
-use plugin\theadmin\app\common\ApiResponse;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\service\RoleService;
@@ -28,8 +27,16 @@ class RoleController
      * @param Request $request
      * @return Response
      */
-    public function list(Request $request)
+    public function list(Request $request): Response
     {
+        $params = [
+            'page' => (int)$request->get('page', 1),
+            'limit' => (int)$request->get('limit', 20),
+            'keyword' => $request->get('keyword', ''),
+            'status' => $request->get('status', ''),
+        ];
+        $result = $this->roleService->getRoleList($params);
+        return R::paginate($result, '获取角色列表成功');
     }
 
     /**
@@ -37,30 +44,17 @@ class RoleController
      * GET /sys/roles/{id}
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
-    public function show(Request $request)
+    public function show(Request $request): Response
     {
-        try {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-            }
-
-            $role = $this->roleService->getRoleById($id);
-
-            $response = ApiResponse::success($role, '获取角色详情成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取角色详情失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+        $id = (int)$request->get('id', 0);
+        if ($id <= 0) {
+            $response = R::error('角色ID无效',Code::PARAMETER_ERROR->value);
+            return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
         }
+        $role = $this->roleService->getRoleById($id);
+        return R::data($role, '获取角色详情成功');
     }
 
     /**
@@ -68,38 +62,25 @@ class RoleController
      * POST /sys/roles
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
     public function store(Request $request)
     {
-        try {
-            $data = [
-                'code' => $request->post('code', ''),
-                'name' => $request->post('name', ''),
-                'description' => $request->post('description', ''),
-                'sort' => (int)$request->post('sort', 0),
-                'status' => (int)$request->post('status', 1),
-            ];
-
-            // 参数验证
-            $validation = $this->validateRoleData($data, true);
-            if ($validation !== true) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, $validation);
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-            }
-
-            $role = $this->roleService->createRole($data);
-
-            $response = ApiResponse::created($role, '创建角色成功');
-            return new Response(201, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '创建角色失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+        $data = [
+            'code' => $request->post('code', ''),
+            'name' => $request->post('name', ''),
+            'description' => $request->post('description', ''),
+            'sort' => (int)$request->post('sort', 0),
+            'status' => (int)$request->post('status', 1),
+        ];
+        // 参数验证
+        $validation = $this->validateRoleData($data, true);
+        if ($validation !== true) {
+            $response = R::error(Code::PARAMETER_ERROR);
+            return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
         }
+        $role = $this->roleService->createRole($data);
+        return R::created($role, '创建角色成功');
     }
 
     /**
@@ -107,15 +88,15 @@ class RoleController
      * PUT /sys/roles/{id}
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
     public function update(Request $request)
     {
-        try {
+
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
             }
 
             $data = [
@@ -129,23 +110,15 @@ class RoleController
             // 参数验证
             $validation = $this->validateRoleData($data, false);
             if ($validation !== true) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, $validation);
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error(Code::PARAMETER_ERROR);
             }
 
             $role = $this->roleService->updateRole($id, $data);
 
-            $response = ApiResponse::updated($role, '更新角色成功');
+            $response = R::updated($role, '更新角色成功');
             return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
 
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '更新角色失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
+
     }
 
     /**
@@ -153,30 +126,17 @@ class RoleController
      * DELETE /sys/roles/{id}
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
-    public function destroy(Request $request)
+    public function destroy(Request $request): Response
     {
-        try {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-            }
 
-            $this->roleService->deleteRole($id);
-
-            $response = ApiResponse::deleted('删除角色成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '删除角色失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+        $id = (int)$request->get('id', 0);
+        if ($id <= 0) {
+            return R::error(Code::PARAMETER_ERROR);
         }
+        $this->roleService->deleteRole($id);
+        return R::deleted('删除角色成功');
     }
 
     /**
@@ -184,22 +144,20 @@ class RoleController
      * POST /sys/roles/{id}/permissions
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
-    public function assignPermissions(Request $request)
+    public function assignPermissions(Request $request): Response
     {
-        try {
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
             }
 
             $permissionIds = $request->post('permission_ids', []);
             
             if (!is_array($permissionIds)) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '权限ID列表格式错误');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error('权限ID列表格式错误', Code::PARAMETER_ERROR->value);
             }
 
             // 转换为整数数组
@@ -207,20 +165,8 @@ class RoleController
             $permissionIds = array_filter($permissionIds, function($id) {
                 return $id > 0;
             });
-
             $result = $this->roleService->assignPermissions($id, $permissionIds);
-
-            $response = ApiResponse::success($result, '分配权限成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '分配权限失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
+            return R::data($result, '分配权限成功');
     }
 
     /**
@@ -228,43 +174,30 @@ class RoleController
      * POST /sys/roles/{id}/menus
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
     public function assignMenus(Request $request)
     {
-        try {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-            }
+        $id = (int)$request->get('id', 0);
 
-            $menuIds = $request->post('menu_ids', []);
-            
-            if (!is_array($menuIds)) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '菜单ID列表格式错误');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-            }
-
-            // 转换为整数数组
-            $menuIds = array_map('intval', $menuIds);
-            $menuIds = array_filter($menuIds, function($id) {
-                return $id > 0;
-            });
-
-            $result = $this->roleService->assignMenus($id, $menuIds);
-
-            $response = ApiResponse::success($result, '分配菜单成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '分配菜单失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+        if ($id <= 0) {
+            return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
         }
+
+        $menuIds = $request->post('menu_ids', []);
+
+        if (!is_array($menuIds)) {
+            return R::error('菜单ID列表格式错误', Code::PARAMETER_ERROR->value);
+        }
+
+        // 转换为整数数组
+        $menuIds = array_map('intval', $menuIds);
+        $menuIds = array_filter($menuIds, function($id) {
+            return $id > 0;
+        });
+
+        $result = $this->roleService->assignMenus($id, $menuIds);
+        return R::data($result, '分配菜单成功');
     }
 
     /**
@@ -272,30 +205,16 @@ class RoleController
      * GET /sys/roles/{id}/permissions
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
-    public function getPermissions(Request $request)
+    public function getPermissions(Request $request): Response
     {
-        try {
             $id = (int)$request->get('id', 0);
-            
             if ($id <= 0) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
             }
-
             $permissions = $this->roleService->getRolePermissions($id);
-
-            $response = ApiResponse::success($permissions, '获取角色权限成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取角色权限失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
+            return R::data($permissions, '获取角色权限成功');
     }
 
     /**
@@ -303,30 +222,19 @@ class RoleController
      * GET /sys/roles/{id}/menus
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
     public function getMenus(Request $request)
     {
-        try {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-            }
+        $id = (int)$request->get('id', 0);
 
-            $menus = $this->roleService->getRoleMenus($id);
-
-            $response = ApiResponse::success($menus, '获取角色菜单成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取角色菜单失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+        if ($id <= 0) {
+            $response = R::error(Code::PARAMETER_ERROR, '角色ID无效');
+            return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
         }
+
+        $menus = $this->roleService->getRoleMenus($id);
+        return R::list($menus, '获取角色菜单成功');
     }
 
     /**
@@ -334,15 +242,14 @@ class RoleController
      * DELETE /sys/roles/batch
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
-    public function batchDestroy(Request $request)
+    public function batchDestroy(Request $request): Response
     {
-        try {
             $ids = $request->post('ids', []);
             
             if (!is_array($ids) || empty($ids)) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '请选择要删除的角色');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error('请选择要删除的角色', Code::PARAMETER_ERROR->value);
             }
 
             // 转换为整数数组
@@ -352,23 +259,11 @@ class RoleController
             });
 
             if (empty($ids)) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '角色ID列表无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error('角色ID列表无效', Code::PARAMETER_ERROR->value);
             }
 
             $result = $this->roleService->batchDeleteRoles($ids);
-
-            $response = ApiResponse::success($result, '批量删除角色成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '批量删除角色失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
+            return R::data($result, '批量删除角色成功');
     }
 
     /**

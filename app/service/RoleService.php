@@ -6,7 +6,6 @@ use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Role;
-use think\Paginator;
 
 /**
  * 角色服务类
@@ -16,37 +15,70 @@ class RoleService
     /**
      * 获取角色列表
      * @param array $params 查询参数
-     * @return Paginator
+     *  - page: 页码
+     *  - limit: 每页数量
+     *  - keyword: 关键词（name/code/description 模糊搜索）
+     *  - status: 状态（0/1）
+     * @return array { list: array, pagination: array }
      */
-    public function getRoleList(array $params = []): Paginator
+    public function getRoleList(array $params = []): array
     {
-        $roleModel = ModelFactory::role();
-        
-        // 构建查询条件
-        $where = [];
-        
-        // 状态筛选
-        if (isset($params['status']) && $params['status'] !== '') {
-            $where['status'] = (bool)$params['status'];
-        }
-        
-        // 排除已删除的记录
-        $where['deleted'] = false;
-        
         // 分页参数
-        $page = $params['page'] ?? 1;
-        $limit = $params['limit'] ?? 15;
-        
-        // 搜索条件
-        $searchParams = [];
-        if (!empty($params['name'])) {
-            $searchParams['name'] = $params['name'];
-        }
-        if (!empty($params['code'])) {
-            $searchParams['code'] = $params['code'];
-        }
-        
-        return $roleModel->getListWithCounts(array_merge($where, $searchParams), $page, $limit);
+        $page = max(1, (int)($params['page'] ?? 1));
+        $limit = max(1, (int)($params['limit'] ?? 15));
+
+        // 查询参数
+        $keyword = trim((string)($params['keyword'] ?? ''));
+        $status = $params['status'] ?? '';
+
+        $query = Role::query()
+            ->when($keyword !== '', function ($q) use ($keyword) {
+                $q->where(function ($sub) use ($keyword) {
+                    $sub->where('name', 'like', "%{$keyword}%")
+                        ->orWhere('code', 'like', "%{$keyword}%")
+                        ->orWhere('description', 'like', "%{$keyword}%");
+                });
+            })
+            ->when($status !== '', function ($q) use ($status) {
+                $q->where('status', (int)$status);
+            })
+            ->orderBy('sort', 'asc')
+            ->orderBy('id', 'asc');
+
+        $paginator = $query->paginate($limit, ['*'], 'page', $page);
+    
+        $list = $paginator->getCollection()->map(function ($role) {
+            return $this->formatRoleRow($role);
+        })->toArray();
+
+        return [
+            'list' => $list,
+            'pagination' => [
+                'page' => $paginator->currentPage(),
+                'size' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'pages' => $paginator->lastPage(),
+            ]
+        ];
+    }
+
+    /**
+     * 将角色模型格式化为数组行
+     * @param Role $role
+     * @return array
+     */
+    private function formatRoleRow($role): array
+    {
+        return [
+            'id' => $role->id,
+            'name' => $role->name,
+            'code' => $role->code,
+            'description' => $role->description,
+            'status' => $role->status,
+            'sort' => $role->sort,
+            'created_at' => $role->created_at,
+            'updated_at' => $role->updated_at
+        ];
     }
 
     /**

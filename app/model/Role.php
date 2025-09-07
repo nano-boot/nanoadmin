@@ -38,8 +38,8 @@ class Role extends BaseModel
         'status' => 'boolean',
         'sort' => 'integer',
         'deleted' => 'boolean',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'created_at' => 'string',
+        'updated_at' => 'string'
     ];
 
     /**
