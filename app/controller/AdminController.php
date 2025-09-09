@@ -8,6 +8,7 @@ use support\Response;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\service\AdminService;
+use plugin\theadmin\app\validator\AdminValidator;
 
 /**
  * 管理员控制器
@@ -29,14 +30,26 @@ class AdminController
      */
     public function list(Request $request): Response
     {
-        $params = [
-            'page' => (int)$request->get('page', 1),
-            'limit' => (int)$request->get('limit', 20),
-            'keyword' => $request->get('keyword', ''),
-            'status' => $request->get('status', ''),
-        ];
-        $result = $this->adminService->getAdminList($params);
-        return R::paginate($result, '获取管理员列表成功');
+        try {
+            // 参数验证
+            $params = AdminValidator::validateListParams($request->all());
+            
+            // 设置默认值
+            $params = array_merge([
+                'page' => 1,
+                'limit' => 20,
+                'keyword' => '',
+                'status' => '',
+            ], $params);
+
+            $result = $this->adminService->getAdminList($params);
+            return R::paginate($result, '获取管理员列表成功');
+
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('获取管理员列表失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
     }
 
     /**
@@ -48,11 +61,8 @@ class AdminController
     public function show(Request $request): Response
     {
         try {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                return R::error('管理员ID无效', Code::PARAMETER_ERROR->value);
-            }
+            // 参数验证
+            $id = AdminValidator::validateId($request->get('id', 0));
 
             $admin = $this->adminService->getAdminById($id);
 
@@ -74,7 +84,8 @@ class AdminController
     public function store(Request $request): Response
     {
         try {
-            $data = [
+            // 获取请求数据
+            $requestData = [
                 'username' => $request->post('username', ''),
                 'password' => $request->post('password', ''),
                 'nickname' => $request->post('nickname', ''),
@@ -86,12 +97,9 @@ class AdminController
             ];
 
             // 参数验证
-            $validation = $this->validateAdminData($data, true);
-            if ($validation !== true) {
-                return R::error((string)$validation, Code::PARAMETER_ERROR->value);
-            }
+            $validatedData = AdminValidator::validateCreateData($requestData);
 
-            $admin = $this->adminService->createAdmin($data);
+            $admin = $this->adminService->createAdmin($validatedData);
 
             return R::created($admin, '创建管理员成功');
 
@@ -111,13 +119,11 @@ class AdminController
     public function update(Request $request): Response
     {
         try {
-            $id = (int)$request->input('id', 0);
-            
-            if ($id <= 0) {
-                return R::error('管理员ID无效', Code::PARAMETER_ERROR->value);
-            }
+            // 验证ID参数
+            $id = AdminValidator::validateId($request->input('id', 0));
 
-            $data = [
+            // 获取请求数据
+            $requestData = [
                 'username' => $request->post('username', ''),
                 'password' => $request->post('password', ''),
                 'nickname' => $request->post('nickname', ''),
@@ -126,21 +132,17 @@ class AdminController
                 'avatar' => $request->post('avatar', ''),
                 'gender' => $request->post('gender', ''),
                 'status' => (int)$request->post('status', 1),
-
             ];
 
             // 过滤空密码
-            if (empty($data['password'])) {
-                unset($data['password']);
+            if (empty($requestData['password'])) {
+                unset($requestData['password']);
             }
 
             // 参数验证
-            $validation = $this->validateAdminData($data, false);
-            if ($validation !== true) {
-                return R::error((string)$validation, Code::PARAMETER_ERROR->value);
-            }
+            $validatedData = AdminValidator::validateUpdateData($requestData);
 
-            $admin = $this->adminService->updateAdmin($id, $data);
+            $admin = $this->adminService->updateAdmin($id, $validatedData);
 
             return R::updated($admin, '更新管理员成功');
 
@@ -157,14 +159,11 @@ class AdminController
      * @param Request $request
      * @return Response
      */
-    public function destroy(Request $request)
+    public function destroy(Request $request): Response
     {
         try {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                return R::error('管理员ID无效', Code::PARAMETER_ERROR->value);
-            }
+            // 验证ID参数
+            $id = AdminValidator::validateId($request->get('id', 0));
 
             $this->adminService->deleteAdmin($id);
             return R::deleted('删除管理员成功');
@@ -182,28 +181,19 @@ class AdminController
      * @param Request $request
      * @return Response
      */
-    public function assignRoles(Request $request)
+    public function assignRoles(Request $request): Response
     {
         try {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                return R::error('管理员ID无效', Code::PARAMETER_ERROR->value);
-            }
+            // 验证ID参数
+            $id = AdminValidator::validateId($request->get('id', 0));
 
-            $roleIds = $request->post('role_ids', []);
-            
-            if (!is_array($roleIds)) {
-                return R::error('角色ID列表格式错误', Code::PARAMETER_ERROR->value);
-            }
+            // 验证角色数据
+            $requestData = [
+                'role_ids' => $request->post('role_ids', [])
+            ];
+            $validatedData = AdminValidator::validateRoleAssignData($requestData);
 
-            // 转换为整数数组
-            $roleIds = array_map('intval', $roleIds);
-            $roleIds = array_filter($roleIds, function($id) {
-                return $id > 0;
-            });
-
-            $result = $this->adminService->assignRoles($id, $roleIds);
+            $result = $this->adminService->assignRoles($id, $validatedData['role_ids']);
             return R::success($result, '分配角色成功');
 
         } catch (ApiException $e) {
@@ -219,14 +209,12 @@ class AdminController
      * @param Request $request
      * @return Response
      */
-    public function getRoles(Request $request)
+    public function getRoles(Request $request): Response
     {
         try {
-            $id = (int)$request->get('id', 0);
+            // 验证ID参数
+            $id = AdminValidator::validateId($request->get('id', 0));
             
-            if ($id <= 0) {
-                return R::error('管理员ID无效', Code::PARAMETER_ERROR->value);
-            }
             $roles = $this->adminService->getAdminRoles($id);
             return R::success($roles, '获取管理员角色成功');
 
@@ -243,26 +231,16 @@ class AdminController
      * @param Request $request
      * @return Response
      */
-    public function batchDestroy(Request $request)
+    public function batchDestroy(Request $request): Response
     {
         try {
-            $ids = $request->post('ids', []);
-            
-            if (!is_array($ids) || empty($ids)) {
-                return R::error('请选择要删除的管理员', Code::PARAMETER_ERROR->value);
-            }
+            // 验证批量ID数据
+            $requestData = [
+                'ids' => $request->post('ids', [])
+            ];
+            $validatedData = AdminValidator::validateBatchIds($requestData);
 
-            // 转换为整数数组
-            $ids = array_map('intval', $ids);
-            $ids = array_filter($ids, function($id) {
-                return $id > 0;
-            });
-
-            if (empty($ids)) {
-                return R::error('管理员ID列表无效', Code::PARAMETER_ERROR->value);
-            }
-
-            $result = $this->adminService->batchDeleteAdmins($ids);
+            $result = $this->adminService->batchDeleteAdmins($validatedData['ids']);
             return R::success($result, '批量删除管理员成功');
 
         } catch (ApiException $e) {
@@ -272,66 +250,4 @@ class AdminController
         }
     }
 
-    /**
-     * 验证管理员数据
-     * @param array $data
-     * @param bool $isCreate
-     * @return string|true
-     */
-    private function validateAdminData(array $data, bool $isCreate = false)
-    {
-        // 用户名验证
-        if (empty($data['username'])) {
-            return '用户名不能为空';
-        }
-
-        if (strlen($data['username']) < 3 || strlen($data['username']) > 20) {
-            return '用户名长度必须在3-20个字符之间';
-        }
-
-        if (!preg_match('/^[a-zA-Z0-9_]+$/', $data['username'])) {
-            return '用户名只能包含字母、数字和下划线';
-        }
-
-        // 密码验证（创建时必须，更新时可选）
-        if ($isCreate && empty($data['password'])) {
-            return '密码不能为空';
-        }
-
-        if (!empty($data['password'])) {
-            if (strlen($data['password']) < 6 || strlen($data['password']) > 20) {
-                return '密码长度必须在6-20个字符之间';
-            }
-        }
-
-        // 昵称验证
-        if (empty($data['nickname'])) {
-            return '昵称不能为空';
-        }
-
-        if (strlen($data['nickname']) > 50) {
-            return '昵称长度不能超过50个字符';
-        }
-
-        // 手机号验证
-        if (!empty($data['phone'])) {
-            if (!preg_match('/^1[3-9]\d{9}$/', $data['phone'])) {
-                return '手机号格式不正确';
-            }
-        }
-
-        // 邮箱验证
-        if (!empty($data['email'])) {
-            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-                return '邮箱格式不正确';
-            }
-        }
-
-        // 状态验证
-        if (!in_array($data['status'], [0, 1])) {
-            return '状态值无效';
-        }
-
-        return true;
-    }
 }
