@@ -130,20 +130,20 @@ class AdminService
         $adminModel = ModelFactory::admin();
         
         // 检查用户名是否已存在
-        if ($adminModel->where('username', $data['username'])->find()) {
+        if ($adminModel->where('username', $data['username'])->first()) {
             throw new ApiException(Code::DUPLICATE_NAME, '用户名已存在');
         }
         
         // 检查手机号是否已存在（如果提供了手机号）
         if (!empty($data['phone'])) {
-            if ($adminModel->where('phone', $data['phone'])->find()) {
+            if ($adminModel->where('phone', $data['phone'])->first()) {
                 throw new ApiException(Code::DUPLICATE_NAME, '手机号已存在');
             }
         }
         
         // 检查邮箱是否已存在（如果提供了邮箱）
         if (!empty($data['email'])) {
-            if ($adminModel->where('email', $data['email'])->find()) {
+            if ($adminModel->where('email', $data['email'])->first()) {
                 throw new ApiException(Code::DUPLICATE_NAME, '邮箱已存在');
             }
         }
@@ -188,7 +188,7 @@ class AdminService
         if (!empty($data['username'])) {
             $existingAdmin = $adminModel->where('username', $data['username'])
                 ->where('id', '<>', $id)
-                ->find();
+                ->first();
             if ($existingAdmin) {
                 throw new ApiException(Code::DUPLICATE_NAME, '用户名已存在');
             }
@@ -198,7 +198,7 @@ class AdminService
         if (!empty($data['phone'])) {
             $existingAdmin = $adminModel->where('phone', $data['phone'])
                 ->where('id', '<>', $id)
-                ->find();
+                ->first();
             if ($existingAdmin) {
                 throw new ApiException(Code::DUPLICATE_NAME, '手机号已存在');
             }
@@ -208,7 +208,7 @@ class AdminService
         if (!empty($data['email'])) {
             $existingAdmin = $adminModel->where('email', $data['email'])
                 ->where('id', '<>', $id)
-                ->find();
+                ->first();
             if ($existingAdmin) {
                 throw new ApiException(Code::DUPLICATE_NAME, '邮箱已存在');
             }

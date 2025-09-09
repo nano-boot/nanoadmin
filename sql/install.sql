@@ -44,16 +44,18 @@ CREATE TABLE `th_sys_admin` (
     `gender` tinyint(1) DEFAULT '0' COMMENT '性别（0未知 1男 2女）',
     `avatar` varchar(255) DEFAULT '' COMMENT '头像',
     `phone` varchar(20) DEFAULT '' COMMENT '手机号',
+    `email` varchar(100) DEFAULT '' COMMENT '邮箱',
     `last_login_ip` varchar(50) DEFAULT NULL COMMENT '最后登录IP',
     `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
     `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
-  
+    INDEX idx_nickname (nickname),
     UNIQUE KEY `idx_username` (`username`),
     INDEX idx_deleted (deleted)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='管理员表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员表';
+
 
 -- 2. 角色表
 CREATE TABLE IF NOT EXISTS th_sys_role (

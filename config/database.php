@@ -12,13 +12,13 @@ return [
             // 数据库类型
             'driver' => 'mysql',
             // 服务器地址
-            'host' => '127.0.0.1',
+            'host' => 'rm-2ze5996ty2e30f7ib3o.mysql.rds.aliyuncs.com',
             // 数据库名
             'database' => 'theadmin',
             // 数据库用户名
-            'username' => 'root',
+            'username' => 'wiki',
             // 数据库密码
-            'password' => '123456',
+            'password' => '2iw4xbW6PhpJTGGR',
             // 数据库连接参数
             'unix_socket' => '',
             // 数据库编码默认采用utf8

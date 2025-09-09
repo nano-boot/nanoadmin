@@ -45,7 +45,7 @@ class AdminController
      * @param Request $request
      * @return Response
      */
-    public function show(Request $request)
+    public function show(Request $request): Response
     {
         try {
             $id = (int)$request->get('id', 0);
@@ -71,7 +71,7 @@ class AdminController
      * @param Request $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(Request $request): Response
     {
         try {
             $data = [
@@ -82,6 +82,7 @@ class AdminController
                 'email' => $request->post('email', ''),
                 'avatar' => $request->post('avatar', ''),
                 'status' => (int)$request->post('status', 1),
+                'gender' => $request->post('gender', ''),
             ];
 
             // 参数验证
@@ -107,10 +108,10 @@ class AdminController
      * @param Request $request
      * @return Response
      */
-    public function update(Request $request)
+    public function update(Request $request): Response
     {
         try {
-            $id = (int)$request->get('id', 0);
+            $id = (int)$request->input('id', 0);
             
             if ($id <= 0) {
                 return R::error('管理员ID无效', Code::PARAMETER_ERROR->value);
@@ -123,7 +124,9 @@ class AdminController
                 'phone' => $request->post('phone', ''),
                 'email' => $request->post('email', ''),
                 'avatar' => $request->post('avatar', ''),
+                'gender' => $request->post('gender', ''),
                 'status' => (int)$request->post('status', 1),
+
             ];
 
             // 过滤空密码
