@@ -3,6 +3,7 @@
 namespace plugin\theadmin\app\common;
 
 use support\exception\Handler;
+use think\exception\ValidateException;
 use Throwable;
 use Webman\Http\Request;
 use Webman\Http\Response;
@@ -18,10 +19,9 @@ class TheHandler extends Handler
      */
     private const EXCEPTION_HANDLERS = [
         ApiException::class => ['method' => 'handleApiException', 'status' => 200],
-        \InvalidArgumentException::class => ['method' => 'handleValidationException', 'status' => 400],
+        ValidateException::class => ['method' => 'handleValidationException', 'status' => 400],
         \PDOException::class => ['method' => 'handleDatabaseException', 'status' => 400],
-        \Webman\Exception\NotFoundException::class => ['method' => 'handleNotFoundException', 'status' => 404],
-    ];
+        \Webman\Exception\NotFoundException::class => ['method' => 'handleNotFoundException', 'status' => 404],];
 
     /**
      * 处理异常
@@ -59,7 +59,7 @@ class TheHandler extends Handler
     /**
      * 处理验证异常
      */
-    private function handleValidationException(\InvalidArgumentException $exception, int $status = 400): Response
+    private function handleValidationException(ValidateException $exception, int $status = 400): Response
     {
         return $this->buildResponse($exception, $exception->getMessage(), $status);
     }
