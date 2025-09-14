@@ -8,3 +8,8 @@
 /tests/.phpunit.result.cache
 /test/
 /md/
+/example
+/app/examples/
+/docs/
+/docs/FORM_REQUEST_USAGE.md
+/app/validator/README.md
