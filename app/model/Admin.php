@@ -4,9 +4,20 @@ namespace plugin\theadmin\app\model;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use plugin\theadmin\app\common\ApiException;
+use plugin\theadmin\app\common\Code;
 
 /**
  * 管理员模型
+ * @property string $password 密码
+ * @property string $username 用户名
+ * @property string $nickname 昵称
+ * @property string $phone 手机号
+ * @property string $email 邮箱
+ * @property string $avatar 头像
+ * @property int $status 状态
+ * @property mixed $id
  */
 class Admin extends BaseModel
 {
@@ -158,12 +169,16 @@ class Admin extends BaseModel
 
     /**
      * 设置密码
-     * @param string $password 明文密码
+     * @param $value
      * @return void
      */
-    public function setPassword(string $password): void
+    public function setPasswordAttribute($value): void
     {
-        $this->password = password_hash($password, PASSWORD_DEFAULT);
+        if (is_null($value) || trim($value) === '') {
+            $this->attributes['password'] = $this->getOriginal('password');
+        } else  {
+            $this->attributes['password'] = password_hash($value, PASSWORD_DEFAULT);
+        }
     }
 
     /**
@@ -260,35 +275,7 @@ class Admin extends BaseModel
             return false;
         }
         
-        // 加密密码
-        if (isset($data['password'])) {
-            $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
-        }
-        
+        // 密码将通过修改器自动加密，无需手动处理
         return $this->create($data);
-    }
-
-    /**
-     * 更新管理员
-     * @param int $id 管理员ID
-     * @param array $data 更新数据
-     * @return bool
-     */
-    public function updateAdmin(int $id, array $data): bool
-    {
-        // 检查用户名是否已存在（排除自己）
-        if (isset($data['username']) && $this->where('username', $data['username'])->where('id', '!=', $id)->exists()) {
-            return false;
-        }
-        
-        // 如果有密码，进行加密
-        if (!empty($data['password'])) {
-            $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
-        } else {
-            // 如果密码为空，则不更新密码字段
-            unset($data['password']);
-        }
-        
-        return $this->where('id', $id)->update($data);
     }
 }
