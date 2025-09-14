@@ -22,11 +22,6 @@ class AuthService
      */
     public function login(string $username, string $password, string $ip = ''): array
     {
-        // 参数验证
-        if (empty($username) || empty($password)) {
-            throw new ApiException(Code::PARAMETER_ERROR, '用户名和密码不能为空');
-        }
-
         // 查找管理员
         $admin = Admin::where('username', $username)
             ->where('status', 1)
