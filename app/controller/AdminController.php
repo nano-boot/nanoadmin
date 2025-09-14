@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\controller;
 
+use DI\Attribute\Inject;
 use plugin\theadmin\app\common\R;
 use support\Request;
 use support\Response;
@@ -15,11 +16,20 @@ use plugin\theadmin\app\validator\AdminValidator;
  */
 class AdminController
 {
+    /**
+     * 管理员服务实例
+     * @var AdminService
+     */
     private AdminService $adminService;
 
-    public function __construct()
+    /**
+     * 构造函数 - 使用依赖注入
+     * @param AdminService $adminService 管理员服务实例
+     */
+    public function __construct(AdminService $adminService)
     {
-        $this->adminService = new AdminService();
+        new AdminValidator();
+        $this->adminService = $adminService;
     }
 
     /**
@@ -32,8 +42,8 @@ class AdminController
     {
         try {
             // 参数验证
-            $params = AdminValidator::validateListParams($request->all());
-            
+//            $params = AdminValidator::validateListParams($request->all());
+            $params = $request->all();
             // 设置默认值
             $params = array_merge([
                 'page' => 1,
@@ -62,8 +72,8 @@ class AdminController
     {
         try {
             // 参数验证
-            $id = AdminValidator::validateId($request->get('id', 0));
-
+//            $id = AdminValidator::validateId($request->get('id', 0));
+            $id = $request->get('id', 0);
             $admin = $this->adminService->getAdminById($id);
 
             return R::success($admin, '获取管理员详情成功');
@@ -97,9 +107,9 @@ class AdminController
             ];
 
             // 参数验证
-            $validatedData = AdminValidator::validateCreateData($requestData);
+//            $validatedData = AdminValidator::validateCreateData($requestData);
 
-            $admin = $this->adminService->createAdmin($validatedData);
+            $admin = $this->adminService->createAdmin($requestData);
 
             return R::created($admin, '创建管理员成功');
 
@@ -115,42 +125,18 @@ class AdminController
      * PUT /sys/admins/{id}
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
     public function update(Request $request): Response
     {
-        try {
-            // 验证ID参数
-            $id = AdminValidator::validateId($request->input('id', 0));
+        $id = (int)$request->input('id', 0);
 
-            // 获取请求数据
-            $requestData = [
-                'username' => $request->post('username', ''),
-                'password' => $request->post('password', ''),
-                'nickname' => $request->post('nickname', ''),
-                'phone' => $request->post('phone', ''),
-                'email' => $request->post('email', ''),
-                'avatar' => $request->post('avatar', ''),
-                'gender' => $request->post('gender', ''),
-                'status' => (int)$request->post('status', 1),
-            ];
+        $requestData = $request->only([
+            'username','nickname', 'password', 'phone', 'email', 'avatar', 'gender', 'status','admin'
+        ]);
+        $admin = $this->adminService->updateAdmin($id, $requestData);
 
-            // 过滤空密码
-            if (empty($requestData['password'])) {
-                unset($requestData['password']);
-            }
-
-            // 参数验证
-            $validatedData = AdminValidator::validateUpdateData($requestData);
-
-            $admin = $this->adminService->updateAdmin($id, $validatedData);
-
-            return R::updated($admin, '更新管理员成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('更新管理员失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        return R::data($admin, '更新管理员成功');
     }
 
     /**
@@ -163,7 +149,8 @@ class AdminController
     {
         try {
             // 验证ID参数
-            $id = AdminValidator::validateId($request->get('id', 0));
+            $validator = new AdminValidator();
+            $id = $validator->validateId($request->get('id', 0));
 
             $this->adminService->deleteAdmin($id);
             return R::deleted('删除管理员成功');
@@ -185,13 +172,14 @@ class AdminController
     {
         try {
             // 验证ID参数
-            $id = AdminValidator::validateId($request->get('id', 0));
+            $validator = new AdminValidator();
+            $id = $validator->validateId($request->get('id', 0));
 
             // 验证角色数据
             $requestData = [
                 'role_ids' => $request->post('role_ids', [])
             ];
-            $validatedData = AdminValidator::validateRoleAssignData($requestData);
+            $validatedData = $validator->validateRoleAssignData($requestData);
 
             $result = $this->adminService->assignRoles($id, $validatedData['role_ids']);
             return R::success($result, '分配角色成功');
@@ -213,7 +201,8 @@ class AdminController
     {
         try {
             // 验证ID参数
-            $id = AdminValidator::validateId($request->get('id', 0));
+            $validator = new AdminValidator();
+            $id = $validator->validateId($request->get('id', 0));
             
             $roles = $this->adminService->getAdminRoles($id);
             return R::success($roles, '获取管理员角色成功');
@@ -238,7 +227,8 @@ class AdminController
             $requestData = [
                 'ids' => $request->post('ids', [])
             ];
-            $validatedData = AdminValidator::validateBatchIds($requestData);
+            $validator = new AdminValidator();
+            $validatedData = $validator->validateBatchIds($requestData);
 
             $result = $this->adminService->batchDeleteAdmins($validatedData['ids']);
             return R::success($result, '批量删除管理员成功');

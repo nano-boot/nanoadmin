@@ -13,6 +13,21 @@ use plugin\theadmin\app\model\Admin;
 class AdminService
 {
     /**
+     * 管理员模型实例
+     * @var Admin
+     */
+    private Admin $model;
+
+    /**
+     * 构造函数
+     * @param Admin $model 管理员模型实例
+     */
+    public function __construct(Admin $model)
+    {
+        $this->model = $model;
+    }
+
+    /**
      * 获取管理员列表
      * @param array $params 查询参数
      *  - page: 页码
@@ -106,7 +121,7 @@ class AdminService
      */
     public function getAdminById(int $id): Admin
     {
-        $adminModel = ModelFactory::admin();
+        $adminModel = $this->model;
         $admin = $adminModel->with('roles')->find($id);
         
         if (!$admin) {
@@ -124,10 +139,7 @@ class AdminService
      */
     public function createAdmin(array $data): Admin
     {
-        // 数据验证
-        $this->validateAdminData($data, true);
-        
-        $adminModel = ModelFactory::admin();
+        $adminModel = $this->model;
         
         // 检查用户名是否已存在
         if ($adminModel->where('username', $data['username'])->first()) {
@@ -168,63 +180,17 @@ class AdminService
      * 更新管理员
      * @param int $id 管理员ID
      * @param array $data 更新数据
-     * @return bool
+     * @return Admin
      * @throws ApiException
      */
-    public function updateAdmin(int $id, array $data): bool
+    public function updateAdmin(int $id, array $data): Admin
     {
-        // 数据验证
-        $this->validateAdminData($data, false);
-        
-        $adminModel = ModelFactory::admin();
-        
-        // 检查管理员是否存在
-        $admin = $adminModel->find($id);
+        $admin = $this->model->find($id);
         if (!$admin) {
             throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
-        
-        // 检查用户名是否已被其他管理员使用
-        if (!empty($data['username'])) {
-            $existingAdmin = $adminModel->where('username', $data['username'])
-                ->where('id', '<>', $id)
-                ->first();
-            if ($existingAdmin) {
-                throw new ApiException(Code::DUPLICATE_NAME, '用户名已存在');
-            }
-        }
-        
-        // 检查手机号是否已被其他管理员使用
-        if (!empty($data['phone'])) {
-            $existingAdmin = $adminModel->where('phone', $data['phone'])
-                ->where('id', '<>', $id)
-                ->first();
-            if ($existingAdmin) {
-                throw new ApiException(Code::DUPLICATE_NAME, '手机号已存在');
-            }
-        }
-        
-        // 检查邮箱是否已被其他管理员使用
-        if (!empty($data['email'])) {
-            $existingAdmin = $adminModel->where('email', $data['email'])
-                ->where('id', '<>', $id)
-                ->first();
-            if ($existingAdmin) {
-                throw new ApiException(Code::DUPLICATE_NAME, '邮箱已存在');
-            }
-        }
-        
-        // 更新时间
-        $data['updated_at'] = date('Y-m-d H:i:s');
-        
-        // 更新管理员
-        $result = $adminModel->updateAdmin($id, $data);
-        
-        if (!$result) {
-            throw new ApiException(Code::SYSTEM_ERROR, '更新管理员失败');
-        }
-        
-        return true;
+        $admin->update($data);
+        return $admin->fresh();
     }
 
     /**
@@ -235,7 +201,7 @@ class AdminService
      */
     public function deleteAdmin(int $id): bool
     {
-        $adminModel = ModelFactory::admin();
+        $adminModel = $this->model;
         
         // 检查管理员是否存在
         $admin = $adminModel->find($id);
@@ -262,7 +228,7 @@ class AdminService
      */
     public function toggleAdminStatus(int $id, bool $status): bool
     {
-        $adminModel = ModelFactory::admin();
+        $adminModel = $this->model;
         
         // 检查管理员是否存在
         $admin = $adminModel->find($id);
@@ -292,7 +258,7 @@ class AdminService
      */
     public function assignRoles(int $adminId, array $roleIds): bool
     {
-        $adminModel = ModelFactory::admin();
+        $adminModel = $this->model;
         
         // 检查管理员是否存在
         $admin = $adminModel->find($adminId);
@@ -329,7 +295,7 @@ class AdminService
      */
     public function getAdminPermissions(int $adminId): array
     {
-        $adminModel = ModelFactory::admin();
+        $adminModel = $this->model;
         
         // 检查管理员是否存在
         $admin = $adminModel->find($adminId);
@@ -348,7 +314,7 @@ class AdminService
      */
     public function getAdminRoles(int $adminId): array
     {
-        $adminModel = ModelFactory::admin();
+        $adminModel = $this->model;
         $admin = $adminModel->with('roles')->find($adminId);
         if (!$admin) {
             throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
@@ -371,7 +337,7 @@ class AdminService
      */
     public function getAdminMenus(int $adminId): array
     {
-        $adminModel = ModelFactory::admin();
+        $adminModel = $this->model;
         
         // 检查管理员是否存在
         $admin = $adminModel->find($adminId);
@@ -391,7 +357,7 @@ class AdminService
     public function checkAdminPermission(int $adminId, string $permission): bool
     {
         try {
-            $adminModel = ModelFactory::admin();
+            $adminModel = $this->model;
             $admin = $adminModel->find($adminId);
             
             if (!$admin) {
@@ -413,7 +379,7 @@ class AdminService
     public function checkAdminRole(int $adminId, string $roleCode): bool
     {
         try {
-            $adminModel = ModelFactory::admin();
+            $adminModel = $this->model;
             $admin = $adminModel->where('deleted', false)->find($adminId);
             
             if (!$admin) {
@@ -436,7 +402,7 @@ class AdminService
      */
     public function changePassword(int $adminId, string $newPassword, string $oldPassword = ''): bool
     {
-        $adminModel = ModelFactory::admin();
+        $adminModel = $this->model;
         
         // 检查管理员是否存在
         $admin = $adminModel->find($adminId);
@@ -469,76 +435,20 @@ class AdminService
         return true;
     }
 
-    /**
-     * 验证管理员数据
-     * @param array $data 管理员数据
-     * @param bool $isCreate 是否为创建操作
-     * @throws ApiException
-     */
-    private function validateAdminData(array $data, bool $isCreate = false): void
-    {
-        // 创建时必须提供用户名和密码
-        if ($isCreate) {
-            if (empty($data['username'])) {
-                throw new ApiException(Code::PARAMETER_ERROR, '用户名不能为空');
-            }
-            if (empty($data['password'])) {
-                throw new ApiException(Code::PARAMETER_ERROR, '密码不能为空');
-            }
-        }
-        
-        // 用户名格式验证
-        if (!empty($data['username'])) {
-            if (strlen($data['username']) < 3 || strlen($data['username']) > 20) {
-                throw new ApiException(Code::PARAMETER_ERROR, '用户名长度必须在3-20个字符之间');
-            }
-            if (!preg_match('/^[a-zA-Z0-9_]+$/', $data['username'])) {
-                throw new ApiException(Code::PARAMETER_ERROR, '用户名只能包含字母、数字和下划线');
-            }
-        }
-        
-        // 密码格式验证
-        if (!empty($data['password'])) {
-            if (strlen($data['password']) < 6) {
-                throw new ApiException(Code::PARAMETER_ERROR, '密码长度不能少于6位');
-            }
-        }
-        
-        // 昵称验证
-        if (!empty($data['nickname'])) {
-            if (strlen($data['nickname']) > 50) {
-                throw new ApiException(Code::PARAMETER_ERROR, '昵称长度不能超过50个字符');
-            }
-        }
-        
-        // 手机号验证
-        if (!empty($data['phone'])) {
-            if (!preg_match('/^1[3-9]\d{9}$/', $data['phone'])) {
-                throw new ApiException(Code::PARAMETER_ERROR, '手机号格式不正确');
-            }
-        }
-        
-        // 邮箱验证
-        if (!empty($data['email'])) {
-            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-                throw new ApiException(Code::PARAMETER_ERROR, '邮箱格式不正确');
-            }
-        }
-    }
 
     /**
      * 批量删除管理员
      * @param array $ids 管理员ID数组
-     * @return bool
+     * @return int 删除数量
      * @throws ApiException
      */
-    public function batchDeleteAdmins(array $ids): bool
+    public function batchDeleteAdmins(array $ids): int
     {
         if (empty($ids)) {
             throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的管理员');
         }
         
-        $adminModel = ModelFactory::admin();
+        $adminModel = $this->model;
         
         // 检查管理员是否存在
         $existingAdmins = $adminModel->whereIn('id', $ids)->column('id');
@@ -553,6 +463,63 @@ class AdminService
         
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '批量删除管理员失败');
+        }
+        
+        return $result;
+    }
+
+    /**
+     * 更新管理员状态
+     * @param int $id 管理员ID
+     * @param int $status 状态值
+     * @return bool
+     * @throws ApiException
+     */
+    public function updateAdminStatus(int $id, int $status): bool
+    {
+        $adminModel = $this->model;
+        
+        // 检查管理员是否存在
+        $admin = $adminModel->find($id);
+        if (!$admin) {
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
+        }
+        
+        // 更新状态
+        $result = $adminModel->where('id', $id)->update(['status' => $status]);
+        
+        if ($result === false) {
+            throw new ApiException(Code::SYSTEM_ERROR, '更新管理员状态失败');
+        }
+        
+        return true;
+    }
+
+    /**
+     * 重置管理员密码
+     * @param int $id 管理员ID
+     * @param string $password 新密码
+     * @return bool
+     * @throws ApiException
+     */
+    public function resetAdminPassword(int $id, string $password): bool
+    {
+        $adminModel = $this->model;
+        
+        // 检查管理员是否存在
+        $admin = $adminModel->find($id);
+        if (!$admin) {
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
+        }
+        
+        // 加密密码
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        
+        // 更新密码
+        $result = $adminModel->where('id', $id)->update(['password' => $hashedPassword]);
+        
+        if ($result === false) {
+            throw new ApiException(Code::SYSTEM_ERROR, '重置密码失败');
         }
         
         return true;
