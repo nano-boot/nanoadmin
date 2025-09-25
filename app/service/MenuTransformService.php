@@ -132,6 +132,7 @@ class MenuTransformService
 
             $config = [
                 'id' => $menuData['id'] ?? 0,
+                'parentId' => $menuData['parent_id'] ?? 0,
                 'name' => $menuData['name'] ?? '',
                 'path' => $menuData['path'] ?? '',
                 'component' => $this->getComponentPath($menuData),

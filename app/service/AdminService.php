@@ -201,22 +201,14 @@ class AdminService
      */
     public function deleteAdmin(int $id): bool
     {
-        $adminModel = $this->model;
-        
-        // 检查管理员是否存在
-        $admin = $adminModel->find($id);
+        $admin = $this->model->find($id);
         if (!$admin) {
             throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
-        
-        // 软删除
-        $result = $adminModel->destroy($id);
-        
-        if ($result === false) {
-            throw new ApiException(Code::SYSTEM_ERROR, '删除管理员失败');
+        if ($admin->id == 1) {
+            throw new ApiException(Code::FORBIDDEN, '不允许删除超级管理员');
         }
-        
-        return true;
+        return $this->model->destroy($id);
     }
 
     /**

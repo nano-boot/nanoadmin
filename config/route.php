@@ -60,7 +60,7 @@ Route::group('/sys/permissions', function () {
 
 // 菜单管理相关路由（需要认证）
 Route::group('/sys/menu', function () {
-    Route::get('', [plugin\theadmin\app\controller\MenuController::class, 'index']);
+    Route::get('', [plugin\theadmin\app\controller\MenuController::class, 'tree']);
     Route::post('', [plugin\theadmin\app\controller\MenuController::class, 'store']);
     Route::post('/tree', [plugin\theadmin\app\controller\MenuController::class, 'tree']);
     Route::get('/route', [plugin\theadmin\app\controller\MenuController::class, 'route']);

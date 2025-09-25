@@ -13,6 +13,19 @@ use plugin\theadmin\app\model\Role;
 class RoleService
 {
     /**
+     * 模型
+     */
+    private Role $model;
+
+    /**
+     * 构造函数
+     * @param Role $model
+     */
+    public function __construct(Role $model)
+    {
+        $this->model = $model;
+    }
+    /**
      * 获取角色列表
      * @param array $params 查询参数
      *  - page: 页码
@@ -107,40 +120,12 @@ class RoleService
      */
     public function createRole(array $data): Role
     {
-        // 数据验证
-        $this->validateRoleData($data, true);
-        
-        $roleModel = ModelFactory::role();
-        
-        // 检查角色代码是否已存在
-        if ($roleModel->where('code', $data['code'])->find()) {
-            throw new ApiException(Code::DUPLICATE_NAME, '角色代码已存在');
-        }
-        
-        // 检查角色名称是否已存在
-        if ($roleModel->where('name', $data['name'])->find()) {
-            throw new ApiException(Code::DUPLICATE_NAME, '角色名称已存在');
-        }
-        
-        // 设置默认值
-        $data['status'] = $data['status'] ?? true;
-        $data['deleted'] = false;
-        $data['created_at'] = date('Y-m-d H:i:s');
-        $data['updated_at'] = date('Y-m-d H:i:s');
-        
         // 设置排序值
         if (!isset($data['sort'])) {
             $data['sort'] = $this->getNextSort();
         }
-        
         // 创建角色
-        $role = $roleModel->createRole($data);
-        
-        if (!$role) {
-            throw new ApiException(Code::SYSTEM_ERROR, '创建角色失败');
-        }
-        
-        return $role;
+        return $this->model->create($data);
     }
 
     /**
@@ -152,50 +137,11 @@ class RoleService
      */
     public function updateRole(int $id, array $data): bool
     {
-        // 数据验证
-        $this->validateRoleData($data, false);
-        
-        $roleModel = ModelFactory::role();
-        
-        // 检查角色是否存在
-        $role = $roleModel->find($id);
+        $role = $this->model->find($id);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
-        
-        // 检查角色代码是否已被其他角色使用
-        if (!empty($data['code'])) {
-            $existingRole = $roleModel->where('code', $data['code'])
-                
-                ->where('id', '<>', $id)
-                ->find();
-            if ($existingRole) {
-                throw new ApiException(Code::DUPLICATE_NAME, '角色代码已存在');
-            }
-        }
-        
-        // 检查角色名称是否已被其他角色使用
-        if (!empty($data['name'])) {
-            $existingRole = $roleModel->where('name', $data['name'])
-                
-                ->where('id', '<>', $id)
-                ->find();
-            if ($existingRole) {
-                throw new ApiException(Code::DUPLICATE_NAME, '角色名称已存在');
-            }
-        }
-        
-        // 更新时间
-        $data['updated_at'] = date('Y-m-d H:i:s');
-        
-        // 更新角色
-        $result = $roleModel->updateRole($id, $data);
-        
-        if (!$result) {
-            throw new ApiException(Code::SYSTEM_ERROR, '更新角色失败');
-        }
-        
-        return true;
+        return $role->update($data);
     }
 
     /**
@@ -653,8 +599,7 @@ class RoleService
      */
     private function getNextSort(): int
     {
-        $roleModel = ModelFactory::role();
-        $maxSort = $roleModel->max('sort');
+        $maxSort = $this->model->max('sort');
         return ($maxSort ?? 0) + 1;
     }
 }

@@ -3,7 +3,8 @@
 namespace plugin\theadmin\app\controller;
 
 use plugin\theadmin\app\common\R;
-use support\Request;
+use plugin\theadmin\app\validator\RoleValidator;
+use Webman\Http\Request;
 use support\Response;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
@@ -16,9 +17,10 @@ class RoleController
 {
     private RoleService $roleService;
 
-    public function __construct()
+    public function __construct(RoleService $roleService)
     {
-        $this->roleService = new RoleService();
+        new RoleValidator();
+        $this->roleService = $roleService;
     }
 
     /**
@@ -64,61 +66,25 @@ class RoleController
      * @return Response
      * @throws ApiException
      */
-    public function store(Request $request)
+    public function store(Request $request): Response
     {
-        $data = [
-            'code' => $request->post('code', ''),
-            'name' => $request->post('name', ''),
-            'description' => $request->post('description', ''),
-            'sort' => (int)$request->post('sort', 0),
-            'status' => (int)$request->post('status', 1),
-        ];
-        // 参数验证
-        $validation = $this->validateRoleData($data, true);
-        if ($validation !== true) {
-            $response = R::error(Code::PARAMETER_ERROR);
-            return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-        }
-        $role = $this->roleService->createRole($data);
-        return R::created($role, '创建角色成功');
+        return R::data($this->roleService->createRole($request->only([
+            'code', 'name', 'description', 'sort', 'status']
+        )));
     }
 
     /**
      * 更新角色
      * PUT /sys/roles/{id}
      * @param Request $request
+     * @param int $id
      * @return Response
      * @throws ApiException
      */
-    public function update(Request $request)
+    public function update(Request $request, int $id): Response
     {
-
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
-            }
-
-            $data = [
-                'code' => $request->post('code', ''),
-                'name' => $request->post('name', ''),
-                'description' => $request->post('description', ''),
-                'sort' => (int)$request->post('sort', 0),
-                'status' => (int)$request->post('status', 1),
-            ];
-
-            // 参数验证
-            $validation = $this->validateRoleData($data, false);
-            if ($validation !== true) {
-                return R::error(Code::PARAMETER_ERROR);
-            }
-
-            $role = $this->roleService->updateRole($id, $data);
-
-            $response = R::updated($role, '更新角色成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-
+        $this->roleService->updateRole($id, $request->only(['name', 'description', 'sort', 'status']));
+        return R::ok();
     }
 
     /**

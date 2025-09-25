@@ -5,7 +5,6 @@ namespace plugin\theadmin\app\controller;
 use plugin\theadmin\app\common\R;
 use support\Request;
 use support\Response;
-use plugin\theadmin\app\common\ApiResponse;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\Menu;
@@ -42,38 +41,11 @@ class MenuController
      */
     public function __construct()
     {
+        var_dump('菜单管理控制器');
         $this->menuModel = new Menu();
         $this->transformService = new MenuTransformService();
         $this->searchService = new MenuSearchService();
     }
-
-    /**
-     * 获取当前用户的树状路由
-     * GET /menus/routes
-     * @param Request $request
-     * @return Response
-     * @throws ApiException
-     */
-    public function route(Request $request): Response
-    {
-        $adminId = $request->adminId ?? 0;
-        if (empty($adminId)) {
-            return $this->error(Code::UNAUTHORIZED, '未登录');
-        }
-
-        // 获取管理员可访问的菜单树并转换为前端路由格式
-        $menuTree = $this->menuModel->getAdminMenuTree((int)$adminId);
-
-        $routes = $this->transformService->toRouteConfigTree($menuTree);
-        return R::ok('获取成功', ['routes' => $routes]);
-    }
-
-    /**
-     * 从请求中获取Token
-     * @param Request $request
-     * @return string
-     */
-    
 
     /**
      * 获取菜单列表（支持分页和搜索）
@@ -96,17 +68,17 @@ class MenuController
 
             // 构建查询条件
             $where = [];
-            
+
             // 状态筛选
             if ($params['status'] !== '') {
                 $where['status'] = (bool)$params['status'];
             }
-            
+
             // 菜单类型筛选
             if ($params['type'] !== '') {
                 $where['type'] = $params['type'];
             }
-            
+
             // 父菜单筛选
             if ($params['parent_id'] !== '') {
                 $where['parent_id'] = (int)$params['parent_id'];
@@ -120,7 +92,7 @@ class MenuController
 
             // 获取分页数据
             $paginator = $this->menuModel->getListWithLevel($where, $params['page'], $params['limit']);
-            
+
             // 格式化数据
             $list = [];
             foreach ($paginator->items() as $menu) {
@@ -145,48 +117,62 @@ class MenuController
     }
 
     /**
+     * 获取当前用户的树状路由
+     * GET /menus/routes
+     * @param Request $request
+     * @return Response
+     * @throws ApiException
+     */
+    public function route(Request $request): Response
+    {
+        $adminId = $request->adminId ?? 0;
+        if (empty($adminId)) {
+            return $this->error(Code::UNAUTHORIZED, '未登录');
+        }
+
+        // 获取管理员可访问的菜单树并转换为前端路由格式
+        $menuTree = $this->menuModel->getAdminMenuTree((int)$adminId);
+
+        $routes = $this->transformService->toRouteConfigTree($menuTree);
+        return R::data(['routes' => $routes]);
+    }
+
+
+    
+
+
+
+    /**
      * 获取菜单树形结构
-     * GET /api/menus/tree
+     * GET /admin/menu/tree
      * @param Request $request
      * @return Response
      */
     public function tree(Request $request): Response
     {
         var_dump('获取菜单树形结构');
-        try {
-            // 获取查询参数
-            $parentId = (int)$request->get('parent_id', 0);
-            $onlyEnabled = $request->get('only_enabled', 'true') === 'true';
-            $keyword = trim($request->get('keyword', ''));
-
-            if (!empty($keyword)) {
-                var_dump('搜索菜单');
-                // 使用搜索服务进行搜索
-                $options = [
-                    'search_fields' => ['name', 'title', 'path'],
-                    'include_disabled' => !$onlyEnabled,
-                    'include_hidden' => true,
-                    'maintain_hierarchy' => true,
-                    'parent_id' => $parentId > 0 ? $parentId : null
-                ];
-                
-                $tree = $this->searchService->searchMenus($keyword, $options);
-            } else {
-                var_dump('获取菜单树');
-                // 获取菜单树
-                $tree = $this->menuModel->getTree($parentId, $onlyEnabled);
-            }
-
-            // 格式化数据
-            $formattedTree = $this->formatTreeForApi($tree);
-
-            return $this->success($formattedTree, '获取菜单树成功');
-
-        } catch (ApiException $e) {
-            return $this->error($e->getCode(), $e->getMessage());
-        } catch (\Exception $e) {
-            return $this->error(Code::SYSTEM_ERROR, '获取菜单树失败：' . $e->getMessage());
+        // 获取查询参数
+        $parentId = (int)$request->get('parent_id', 0);
+        $onlyEnabled = $request->get('only_enabled', 'true') === 'true';
+        $keyword = trim($request->get('keyword', ''));
+        if (!empty($keyword)) {
+            // 使用搜索服务进行搜索
+            $options = [
+                'search_fields' => ['name', 'title', 'path'],
+                'include_disabled' => !$onlyEnabled,
+                'include_hidden' => true,
+                'maintain_hierarchy' => true,
+                'parent_id' => $parentId > 0 ? $parentId : null
+            ];
+            $tree = $this->searchService->searchMenus($keyword, $options);
+        } else {
+            // 获取菜单树
+            $tree = $this->menuModel->getTree($parentId, $onlyEnabled);
         }
+
+        $routes = $this->formatTreeForApi($tree);
+
+        return R::data(['routes' => $routes]);
     }
 
     /**

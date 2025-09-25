@@ -142,24 +142,14 @@ class AdminController
     /**
      * 删除管理员
      * DELETE /sys/admins/{id}
-     * @param Request $request
+     * @param int $id
      * @return Response
+     * @throws ApiException
      */
-    public function destroy(Request $request): Response
+    public function destroy(int $id): Response
     {
-        try {
-            // 验证ID参数
-            $validator = new AdminValidator();
-            $id = $validator->validateId($request->get('id', 0));
-
-            $this->adminService->deleteAdmin($id);
-            return R::deleted('删除管理员成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('删除管理员失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        $this->adminService->deleteAdmin($id);
+        return R::deleted('删除管理员成功');
     }
 
     /**

@@ -49,7 +49,7 @@ class ValidatorBase extends Validate
             }
             $this->scene($scene);
         }
-        $this->failException()->check(request()->all());
+        $this->failException()->check(request()->all() + request()->route->param());
     }
 
     /**

@@ -35,7 +35,7 @@ class Role extends BaseModel
      */
     protected $casts = [
         'id' => 'integer',
-        'status' => 'boolean',
+        'status' => 'integer',
         'sort' => 'integer',
         'deleted' => 'boolean',
         'created_at' => 'string',

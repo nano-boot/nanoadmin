@@ -33,9 +33,6 @@ class MenuSearchService
      * @param string $keyword 搜索关键词
      * @param array $options 搜索选项
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function searchMenus(string $keyword, array $options = []): array
     {

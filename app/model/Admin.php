@@ -17,7 +17,7 @@ use plugin\theadmin\app\common\Code;
  * @property string $email 邮箱
  * @property string $avatar 头像
  * @property int $status 状态
- * @property mixed $id
+ * @property int $id
  */
 class Admin extends BaseModel
 {
