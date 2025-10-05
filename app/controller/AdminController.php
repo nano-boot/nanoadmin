@@ -106,9 +106,6 @@ class AdminController
                 'gender' => $request->post('gender', ''),
             ];
 
-            // 参数验证
-//            $validatedData = AdminValidator::validateCreateData($requestData);
-
             $admin = $this->adminService->createAdmin($requestData);
 
             return R::created($admin, '创建管理员成功');

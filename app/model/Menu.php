@@ -66,7 +66,7 @@ class Menu extends BaseModel
         'parent_id' => 'integer',
         'type' => 'string',
         'hidden' => 'boolean',
-        'cacheable' => 'boolean',
+        'cache' => 'boolean',
         'affix' => 'boolean',
         'full_page' => 'boolean',
         'iframe' => 'boolean',
@@ -840,9 +840,9 @@ class Menu extends BaseModel
                 'meta' => [
                     'title' => $menu['title'],
                     'icon' => $menu['icon'],
-                    'keepAlive' => $menu['cacheable'],
+                    'keepAlive' => $menu['cache'],
                     'isHide' => $menu['hidden'],
-                    'fixedTab' => $menu['affix'],
+                    'fixedTab' => $menu['fixed_tab'],
                     'isFullPage' => $menu['full_page'],
                     'showBadge' => $menu['show_badge'],
                     'permission' => $menu['permission']
@@ -863,8 +863,8 @@ class Menu extends BaseModel
             }
             
             // 处理外链配置
-            if (!empty($menu['link_url'])) {
-                $route['meta']['link'] = $menu['link_url'];
+            if (!empty($menu['link'])) {
+                $route['meta']['link'] = $menu['link'];
                 $route['meta']['isIframe'] = $menu['iframe'];
             }
             
@@ -1029,7 +1029,7 @@ class Menu extends BaseModel
         }
 
         // 验证外链URL格式
-        if (!empty($data['link_url']) && !self::validateUrl($data['link_url'])) {
+        if (!empty($data['link']) && !self::validateUrl($data['link'])) {
             $errors[] = '外链地址格式不正确';
         }
 
@@ -1070,7 +1070,7 @@ class Menu extends BaseModel
      */
     public function isExternalLink(): bool
     {
-        return $this->type === self::TYPE_LINK || !empty($this->link_url);
+        return !empty($this->link);
     }
 
     /**
@@ -1079,7 +1079,7 @@ class Menu extends BaseModel
      */
     public function isIframe(): bool
     {
-        return $this->type === self::TYPE_IFRAME || ($this->isExternalLink() && $this->iframe);
+        return ($this->isExternalLink() && $this->iframe);
     }
 
     /**

@@ -123,12 +123,12 @@ CREATE TABLE IF NOT EXISTS th_sys_menu (
     full_page tinyint(1) DEFAULT 0 COMMENT '是否全屏显示（对应meta.isFullPage）',
 
     -- === 缓存和固定 ===
-    keep_alive tinyint(1) DEFAULT 1 COMMENT '是否缓存（对应meta.keepAlive）',
+    cache tinyint(1) DEFAULT 1 COMMENT '是否缓存（对应meta.keepAlive）',
     fixed_tab tinyint(1) DEFAULT 0 COMMENT '是否固定标签（对应meta.fixedTab）',
 
     
     -- 外链配置
-    link_url VARCHAR(500) DEFAULT '' COMMENT '外链地址（对应meta.link）',
+    link VARCHAR(500) DEFAULT '' COMMENT '外链地址（对应meta.link）',
     iframe tinyint(1) DEFAULT 0 COMMENT '是否内嵌（对应meta.isIframe）',
     
     -- 徽章配置

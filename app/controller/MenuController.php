@@ -41,10 +41,12 @@ class MenuController
      */
     public function __construct()
     {
-        var_dump('菜单管理控制器');
         $this->menuModel = new Menu();
         $this->transformService = new MenuTransformService();
         $this->searchService = new MenuSearchService();
+        
+        // 初始化验证器并自动验证请求参数
+        new \plugin\theadmin\app\validator\MenuValidator();
     }
 
     /**
@@ -217,28 +219,109 @@ class MenuController
     public function store(Request $request): Response
     {
         try {
-            // 获取表单数据
-            $formData = $this->getFormDataFromRequest($request);
+            // 验证器已在构造函数中自动验证，直接获取验证后的数据
+            $requestData = $request->all();
+            
+            // 数据类型转换和默认值设置
+            $requestData['parent_id'] = (int)($requestData['parent_id'] ?? 0);
+            $requestData['name'] = trim($requestData['name'] ?? '');
+            $requestData['path'] = trim($requestData['path'] ?? '');
+            $requestData['component'] = trim($requestData['component'] ?? '');
+            $requestData['redirect'] = trim($requestData['redirect'] ?? '');
+            $requestData['title'] = trim($requestData['title'] ?? '');
+            $requestData['icon'] = trim($requestData['icon'] ?? '');
+            $requestData['type'] = trim($requestData['type'] ?? 'D');
+            $requestData['permission'] = trim($requestData['permission'] ?? '');
+            $requestData['hidden'] = (bool)($requestData['hidden'] ?? false);
+            $requestData['hide_tab'] = (bool)($requestData['hide_tab'] ?? false);
+            $requestData['full_page'] = (bool)($requestData['full_page'] ?? false);
+            $requestData['keep_alive'] = (bool)($requestData['keep_alive'] ?? true);
+            $requestData['fixed_tab'] = (bool)($requestData['fixed_tab'] ?? false);
+            $requestData['link_url'] = trim($requestData['link_url'] ?? '');
+            $requestData['iframe'] = (bool)($requestData['iframe'] ?? false);
+            $requestData['show_badge'] = (bool)($requestData['show_badge'] ?? false);
+            $requestData['badge_text'] = trim($requestData['badge_text'] ?? '');
+            $requestData['active_path'] = trim($requestData['active_path'] ?? '');
+            $requestData['status'] = (bool)($requestData['status'] ?? true);
+            $requestData['sort'] = (int)($requestData['sort'] ?? 100);
 
-            // 数据验证
-            $validation = $this->transformService->validateMenuData($formData);
-            if (!$validation['valid']) {
-                return $this->error(Code::PARAMETER_ERROR, implode(', ', $validation['errors']));
+
+            // 检查父菜单是否存在（如果不是顶级菜单）
+            if ($requestData['parent_id'] > 0) {
+                $parentMenu = $this->menuModel->find($requestData['parent_id']);
+                if (!$parentMenu) {
+                    return $this->error(Code::MENU_NOT_FOUND, '父菜单不存在');
+                }
+                
+                // 检查父菜单类型，按钮不能有子菜单
+                if ($parentMenu->type === 'B') {
+                    return $this->error(Code::PARAMETER_ERROR, '按钮类型菜单不能添加子菜单');
+                }
             }
 
-            // 转换为数据库格式
-            $dbData = $this->transformService->fromFormData($formData);
+            // 检查同级菜单名称是否重复
+            $existingMenu = $this->menuModel
+                ->where('parent_id', $requestData['parent_id'])
+                ->where('name', $requestData['name'])
+                ->whereNull('deleted_at')
+                ->first();
+            
+            if ($existingMenu) {
+                return $this->error(Code::PARAMETER_ERROR, '同级菜单中已存在相同的路由名称');
+            }
+
+            // 检查路由路径是否重复（仅对菜单类型检查）
+            if ($requestData['type'] === 'M' && !empty($requestData['path'])) {
+                $existingPath = $this->menuModel
+                    ->where('path', $requestData['path'])
+                    ->where('type', 'M')
+                    ->whereNull('deleted_at')
+                    ->first();
+                
+                if ($existingPath) {
+                    return $this->error(Code::PARAMETER_ERROR, '路由路径已存在');
+                }
+            }
+
+            // 准备数据库数据
+            $dbData = [
+                'parent_id' => $requestData['parent_id'],
+                'name' => $requestData['name'],
+                'path' => $requestData['path'],
+                'component' => $requestData['component'],
+                'redirect' => $requestData['redirect'],
+                'title' => $requestData['title'],
+                'icon' => $requestData['icon'],
+                'type' => $requestData['type'],
+                'permission' => $requestData['permission'],
+                'hidden' => $requestData['hidden'] ? 1 : 0,
+                'hide_tab' => $requestData['hide_tab'] ? 1 : 0,
+                'full_page' => $requestData['full_page'] ? 1 : 0,
+                'keep_alive' => $requestData['keep_alive'] ? 1 : 0,
+                'fixed_tab' => $requestData['fixed_tab'] ? 1 : 0,
+                'link_url' => $requestData['link_url'],
+                'iframe' => $requestData['iframe'] ? 1 : 0,
+                'show_badge' => $requestData['show_badge'] ? 1 : 0,
+                'badge_text' => $requestData['badge_text'],
+                'active_path' => $requestData['active_path'],
+                'status' => $requestData['status'] ? 1 : 0,
+                'sort' => $requestData['sort'],
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+                'deleted' => false
+            ];
 
             // 创建菜单
-            $menu = $this->menuModel->createMenu($dbData);
+            $menu = $this->menuModel->create($dbData);
+            
             if (!$menu) {
                 return $this->error(Code::SYSTEM_ERROR, '创建菜单失败');
             }
 
-            // 格式化返回数据
-            $result = $this->transformService->formatForApi($menu->toArray());
+            // 转换为API响应格式
+            $formattedMenu = $this->transformService->formatForApi($menu->toArray());
 
-            return $this->success($result, '创建菜单成功', 201);
+            return $this->success($formattedMenu, '创建菜单成功');
 
         } catch (ApiException $e) {
             return $this->error($e->getCode(), $e->getMessage());
@@ -601,9 +684,11 @@ class MenuController
      */
     private function error(Code|int $code, string $message): Response
     {
-        $response = ApiResponse::error($code, $message);
-        $httpCode = $this->getHttpCodeByErrorCode($code);
-        return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
+        if ($code instanceof Code) {
+            return R::error($message, $code->value);
+        } else {
+            return R::error($message, $code);
+        }
     }
 
     /**

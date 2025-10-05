@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace plugin\theadmin\app\validator;
 
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\Admin;
 use think\Validate;
 use support\Request;
@@ -37,11 +35,11 @@ class ValidatorBase extends Validate
     /**
      * 当前请求实例
      */
-    protected $request;
+    protected Request $supportRequest;
 
     public function __construct() {
         parent::__construct();
-        $this->request = request();
+        $this->supportRequest = request();
         if ($this->scene){
             $scene = request()->action;
             if (!$this->hasScene($scene)){
@@ -55,9 +53,9 @@ class ValidatorBase extends Validate
     /**
      * 获取请求实例
      */
-    public function getRequest(): Request|\Webman\Http\Request|null
+    public function getRequest(): Request
     {
-        return $this->request;
+        return $this->supportRequest;
     }
 
     /**
@@ -65,7 +63,7 @@ class ValidatorBase extends Validate
      */
     public function hasParam(string $key): bool
     {
-        return isset($this->request->all()[$key]);
+        return isset($this->supportRequest->all()[$key]);
     }
 
     /**
@@ -73,7 +71,7 @@ class ValidatorBase extends Validate
      */
     public function getIp(): string
     {
-        return $this->request->getRealIp();
+        return $this->supportRequest->getRealIp();
     }
 
     /**
@@ -81,7 +79,7 @@ class ValidatorBase extends Validate
      */
     public function isPost(): bool
     {
-        return $this->request->method() === 'POST';
+        return $this->supportRequest->method() === 'POST';
     }
 
     /**
@@ -89,52 +87,17 @@ class ValidatorBase extends Validate
      */
     public function isPut(): bool
     {
-        return $this->request->method() === 'PUT';
+        return $this->supportRequest->method() === 'PUT';
     }
 
-
-    /**
-     * 手动验证数据
-     * 
-     * @param array $data 要验证的数据
-     * @param string|null $scene 验证场景
-     * @return array 验证后的数据
-     * @throws ApiException
-     */
-    public function validateData(array $data, ?string $scene = null): array
-    {
-        try {
-            // 设置验证场景
-            if ($scene && $this->hasScene($scene)) {
-                $this->scene($scene);
-            }
-
-            // 执行验证
-            if (!$this->check($data)) {
-                $errors = $this->getError();
-                if (is_array($errors)) {
-                    throw new ApiException(Code::PARAMETER_ERROR, implode('; ', $errors));
-                } else {
-                    throw new ApiException(Code::PARAMETER_ERROR, $errors);
-                }
-            }
-
-            return $data;
-        } catch (\Exception $e) {
-            if ($e instanceof ApiException) {
-                throw $e;
-            }
-            throw new ApiException(Code::PARAMETER_ERROR, '数据验证失败: ' . $e->getMessage());
-        }
-    }
 
     /**
      * 代理请求对象的其他方法
      * @throws \Exception
      */
    public function __call($method, $args) {
-       if (method_exists($this->request, $method)) {
-           return call_user_func_array([$this->request, $method], $args);
+       if (method_exists($this->supportRequest, $method)) {
+           return call_user_func_array([$this->supportRequest, $method], $args);
        }
        throw new \Exception("Method $method does not exist");
    }
