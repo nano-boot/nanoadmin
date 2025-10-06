@@ -11,6 +11,7 @@ namespace plugin\theadmin\app\validator;
 class MenuValidator extends ValidatorBase
 {
     protected $rule = [
+        'id' => 'require|integer|gt:0',
         'parent_id' => 'integer|min:0',
         'name' => 'require|string|min:2|max:100|regex:/^[a-zA-Z][a-zA-Z0-9_]*$/',
         'path' => 'string|max:200',
@@ -32,7 +33,6 @@ class MenuValidator extends ValidatorBase
         'active_path' => 'string|max:200',
         'status' => 'boolean',
         'sort' => 'integer|min:0|max:9999',
-        'id' => 'require|integer|gt:0',
         'page' => 'integer|min:1',
         'limit' => 'integer|min:1|max:100',
         'keyword' => 'string|max:100',
@@ -103,9 +103,9 @@ class MenuValidator extends ValidatorBase
      */
     protected $scene = [
         'store' => [
-            'parent_id', 'name', 'path', 'component', 'redirect', 'title', 
-            'icon', 'type', 'permission', 'hidden', 'hide_tab', 'full_page', 
-            'keep_alive', 'fixed_tab', 'link_url', 'iframe', 'show_badge', 
+            'parent_id', 'name', 'path', 'component', 'redirect', 'title',
+            'icon', 'type', 'permission', 'hidden', 'hide_tab', 'full_page',
+            'keep_alive', 'fixed_tab', 'link_url', 'iframe', 'show_badge',
             'badge_text', 'active_path', 'status', 'sort'
         ],
         'update' => [
@@ -179,7 +179,9 @@ class MenuValidator extends ValidatorBase
      */
     protected function sceneStore()
     {
-        return $this->append('type', 'checkMenuTypeFields');
+        // ✅ 引用 $scene['store'] 数组，避免重复定义
+        return $this->only($this->scene['store'])
+                    ->append('type', 'checkMenuTypeFields');
     }
 
     /**
@@ -187,6 +189,8 @@ class MenuValidator extends ValidatorBase
      */
     protected function sceneUpdate()
     {
-        return $this->append('type', 'checkMenuTypeFields');
+        // ✅ 引用 $scene['update'] 数组，避免重复定义
+        return $this->only($this->scene['update'])
+                    ->append('type', 'checkMenuTypeFields');
     }
 }

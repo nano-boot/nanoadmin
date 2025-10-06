@@ -3,6 +3,7 @@
 namespace plugin\theadmin\app\controller;
 
 use plugin\theadmin\app\common\R;
+use plugin\theadmin\app\validator\MenuValidator;
 use support\Request;
 use support\Response;
 use plugin\theadmin\app\common\ApiException;
@@ -46,7 +47,7 @@ class MenuController
         $this->searchService = new MenuSearchService();
         
         // 初始化验证器并自动验证请求参数
-        new \plugin\theadmin\app\validator\MenuValidator();
+        new MenuValidator();
     }
 
     /**
@@ -221,7 +222,7 @@ class MenuController
         try {
             // 验证器已在构造函数中自动验证，直接获取验证后的数据
             $requestData = $request->all();
-            
+            var_dump('$requestData');
             // 数据类型转换和默认值设置
             $requestData['parent_id'] = (int)($requestData['parent_id'] ?? 0);
             $requestData['name'] = trim($requestData['name'] ?? '');

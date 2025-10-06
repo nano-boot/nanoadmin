@@ -164,10 +164,11 @@ class AdminValidator extends ValidatorBase
 
     /**
      * 验证更新数据（排除当前记录的唯一性检查）
-     * 
+     *
      * @param array $data 要验证的数据
      * @param int $excludeId 要排除的记录ID
      * @return array
+     * @throws \Exception
      */
     public function validateUpdateData(array $data, int $excludeId): array
     {

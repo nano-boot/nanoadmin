@@ -50,7 +50,7 @@ class AuthService
         $this->recordLoginLog($admin->id, $ip, true);
 
         return [
-            'info' => [
+            'user' => [
                 'id' => $admin->id,
                 'username' => $admin->username,
                 'nickname' => $admin->nickname,

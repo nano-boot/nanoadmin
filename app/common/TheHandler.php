@@ -94,7 +94,7 @@ class TheHandler extends Handler
             'code' => $exception->getCode(),
             'file' => $exception->getFile(),
             'line' => $exception->getLine(),
-            'trace' => $exception->getTraceAsString(),
+            'trace' => $this->formatStackTrace($exception->getTraceAsString()),
         ]);
     }
 
@@ -145,7 +145,77 @@ class TheHandler extends Handler
         $json['msg'] = $exception->getMessage();
         $json['file'] = $exception->getFile();
         $json['line'] = $exception->getLine();
-        $json['traces'] = $exception->getTraceAsString();
+        $json['traces'] = $this->formatStackTrace($exception->getTraceAsString());
+    }
+
+    /**
+     * 格式化堆栈跟踪信息
+     */
+    private function formatStackTrace(string $traceString): array
+    {
+        $lines = explode("\n", trim($traceString));
+        $formattedTraces = [];
+        
+        foreach ($lines as $index => $line) {
+            if (empty($line)) continue;
+            
+            // 解析堆栈跟踪行
+            if (preg_match('/^#(\d+)\s+(.+?)(?:\((\d+)\))?:\s*(.+)$/', $line, $matches)) {
+                $filePath = $matches[2];
+                $lineNumber = isset($matches[3]) ? (int)$matches[3] : null;
+                $function = $matches[4];
+                
+                // 提取文件名和相对路径
+                $fileName = basename($filePath);
+                $relativePath = $this->getRelativePath($filePath);
+                
+                $formattedTraces[] = [
+                    'index' => (int)$matches[1],
+                    'file' => $filePath,
+                    'fileName' => $fileName,
+                    'relativePath' => $relativePath,
+                    'line' => $lineNumber,
+                    'function' => $function,
+                    'isProjectFile' => $this->isProjectFile($filePath),
+                ];
+            } else {
+                // 如果解析失败，保留原始格式
+                $formattedTraces[] = [
+                    'index' => $index,
+                    'file' => null,
+                    'fileName' => null,
+                    'relativePath' => null,
+                    'line' => null,
+                    'function' => $line,
+                    'isProjectFile' => false,
+                ];
+            }
+        }
+        
+        return $formattedTraces;
+    }
+
+    /**
+     * 获取相对路径
+     */
+    private function getRelativePath(string $filePath): string
+    {
+        $projectRoot = dirname(dirname(dirname(dirname(__DIR__))));
+        
+        if (strpos($filePath, $projectRoot) === 0) {
+            return ltrim(str_replace($projectRoot, '', $filePath), '/');
+        }
+        
+        return $filePath;
+    }
+
+    /**
+     * 判断是否为项目文件
+     */
+    private function isProjectFile(string $filePath): bool
+    {
+        $projectRoot = dirname(dirname(dirname(dirname(__DIR__))));
+        return strpos($filePath, $projectRoot) === 0;
     }
 
     /**

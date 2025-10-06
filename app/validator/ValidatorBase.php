@@ -40,14 +40,75 @@ class ValidatorBase extends Validate
     public function __construct() {
         parent::__construct();
         $this->supportRequest = request();
+        
+        // 自动设置场景
         if ($this->scene){
-            $scene = request()->action;
+            // 智能获取场景名
+            $scene = $this->getSceneName();
             if (!$this->hasScene($scene)){
                 return;
             }
             $this->scene($scene);
         }
+        
+        // 执行验证
         $this->failException()->check(request()->all() + request()->route->param());
+    }
+
+    /**
+     * 智能获取场景名
+     * @return string|null
+     */
+    protected function getSceneName(): ?string
+    {
+        $request = $this->supportRequest;
+        
+        // 方法1: 从 request()->action 获取
+        if (isset($request->action) && $request->action) {
+            return $request->action;
+        }
+        
+        // 方法2: 从路由回调中获取
+        if ($request->route && method_exists($request->route, 'getCallback')) {
+            $callback = $request->route->getCallback();
+            if (is_array($callback) && isset($callback[1])) {
+                return $callback[1]; // 返回方法名
+            }
+        }
+        
+        // 方法3: 根据请求方法和路由路径推断
+        $method = $request->method();
+        $path = $request->path();
+        
+        // POST 请求通常是 store（创建）
+        if ($method === 'POST') {
+            // 如果路径不包含 ID 参数，通常是创建操作
+            if (!preg_match('/\/\d+/', $path)) {
+                return 'store';
+            }
+        }
+        
+        // PUT 请求通常是 update（更新）
+        if ($method === 'PUT' && preg_match('/\/\d+/', $path)) {
+            return 'update';
+        }
+        
+        // DELETE 请求通常是 destroy（删除）
+        if ($method === 'DELETE' && preg_match('/\/\d+/', $path)) {
+            return 'destroy';
+        }
+        
+        // GET 请求且有 ID 参数，通常是 show（查看）
+        if ($method === 'GET' && preg_match('/\/\d+/', $path)) {
+            return 'show';
+        }
+        
+        // GET 请求且没有 ID 参数，通常是 index（列表）
+        if ($method === 'GET') {
+            return 'index';
+        }
+        
+        return null;
     }
 
     /**
