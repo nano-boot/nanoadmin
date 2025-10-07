@@ -10,7 +10,7 @@
 INSERT INTO `th_sys_menu` (
     `id`, `name`, `title`, `path`, `component`, `icon`, `redirect`,
     `parent_id`, `sort`, `type`, `status`,
-    `hidden`, `hide_tab`, `keep_alive`, `fixed_tab`, `active_path`
+    `hidden`, `hide_tab`, `cache`, `fixed_tab`, `active_path`
 ) VALUES
 -- === 一级菜单 ===
 (1, 'Dashboard', '数据面板', '/dashboard', '/index/index', '&#xe721;', '',

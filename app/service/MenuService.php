@@ -4,9 +4,8 @@ namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Menu;
-use think\Paginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * 菜单服务类
@@ -14,14 +13,26 @@ use think\Paginator;
 class MenuService
 {
     /**
+     * 菜单模型实例
+     * @var Menu
+     */
+    private Menu $model;
+
+    /**
+     * 构造函数
+     * @param Menu $model 菜单模型实例
+     */
+    public function __construct(Menu $model)
+    {
+        $this->model = $model;
+    }
+    /**
      * 获取菜单列表
      * @param array $params 查询参数
-     * @return Paginator
+     * @return LengthAwarePaginator
      */
-    public function getMenuList(array $params = []): Paginator
+    public function getMenuList(array $params = []): LengthAwarePaginator
     {
-        $menuModel = ModelFactory::menu();
-        
         // 构建查询条件
         $where = [];
         
@@ -51,7 +62,7 @@ class MenuService
             $searchParams['title'] = $params['title'];
         }
         
-        return $menuModel->getListWithLevel(array_merge($where, $searchParams), $page, $limit);
+        return $this->model->getListWithLevel(array_merge($where, $searchParams), $page, $limit);
     }
 
     /**
@@ -62,8 +73,7 @@ class MenuService
      */
     public function getMenuTree(int $parentId = 0, bool $onlyEnabled = true): array
     {
-        $menuModel = ModelFactory::menu();
-        return $menuModel->getTree($parentId, $onlyEnabled);
+        return $this->model->getTree($parentId, $onlyEnabled);
     }
 
     /**
@@ -74,8 +84,7 @@ class MenuService
      */
     public function getMenuById(int $id): Menu
     {
-        $menuModel = ModelFactory::menu();
-        $menu = $menuModel->with(['parent', 'children', 'roles'])->find($id);
+        $menu = $this->model->with(['parent', 'children', 'roles'])->find($id);
         
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
@@ -87,43 +96,51 @@ class MenuService
     /**
      * 创建菜单
      * @param array $data 菜单数据
-     * @return Menu
+     * @return array
      * @throws ApiException
      */
-    public function createMenu(array $data): Menu
+    public function createMenu(array $data): array
     {
-        // 数据验证
-        $this->validateMenuData($data, true);
-        
-        $menuModel = ModelFactory::menu();
-        
-        // 验证父菜单是否存在
+        // 验证父菜单是否存在（如果不是顶级菜单）
         if (!empty($data['parent_id']) && $data['parent_id'] > 0) {
-            $parent = $menuModel->find($data['parent_id']);
+            $parent = $this->model->find($data['parent_id']);
             if (!$parent) {
                 throw new ApiException(Code::MENU_NOT_FOUND, '父菜单不存在');
             }
         }
         
-        // 设置默认值
-        $data['status'] = $data['status'] ?? true;
-        $data['deleted'] = false;
-        $data['created_at'] = date('Y-m-d H:i:s');
-        $data['updated_at'] = date('Y-m-d H:i:s');
+        // 检查同级菜单名称是否重复
+        $existingMenu = $this->model
+            ->where('parent_id', $data['parent_id'] ?? 0)
+            ->where('name', $data['name'])
+            ->first();
         
-        // 设置排序值
-        if (!isset($data['sort'])) {
-            $data['sort'] = $this->getNextSort($data['parent_id'] ?? 0);
+        if ($existingMenu) {
+            throw new ApiException(Code::PARAMETER_ERROR, '同级菜单中已存在相同的路由名称');
         }
         
-        // 创建菜单
-        $menu = $menuModel->createMenu($data);
+        // 检查路由路径是否重复（仅对菜单类型检查）
+        if (isset($data['type']) && $data['type'] === 'M' && !empty($data['path'])) {
+            $existingPath = $this->model
+                ->where('path', $data['path'])
+                ->where('type', 'M')
+                ->first();
+            
+            if ($existingPath) {
+                throw new ApiException(Code::PARAMETER_ERROR, '路由路径已存在');
+            }
+        }
+        
+        // 创建菜单（默认值由 Model 层处理）
+        $menu = $this->model->create($data);
         
         if (!$menu) {
             throw new ApiException(Code::SYSTEM_ERROR, '创建菜单失败');
         }
         
-        return $menu;
+        // 返回格式化后的数据
+        $transformService = new MenuTransformService();
+        return $transformService->formatForApi($menu->toArray());
     }
 
     /**
@@ -138,10 +155,8 @@ class MenuService
         // 数据验证
         $this->validateMenuData($data, false);
         
-        $menuModel = ModelFactory::menu();
-        
         // 检查菜单是否存在
-        $menu = $menuModel->find($id);
+        $menu = $this->model->find($id);
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -155,7 +170,7 @@ class MenuService
                 }
                 
                 // 检查父菜单是否存在
-                $parent = $menuModel->find($data['parent_id']);
+                $parent = $this->model->find($data['parent_id']);
                 if (!$parent) {
                     throw new ApiException(Code::MENU_NOT_FOUND, '父菜单不存在');
                 }
@@ -167,11 +182,8 @@ class MenuService
             }
         }
         
-        // 更新时间
-        $data['updated_at'] = date('Y-m-d H:i:s');
-        
-        // 更新菜单
-        $result = $menuModel->updateMenu($id, $data);
+        // 更新菜单（updated_at 由 Model 层处理）
+        $result = $this->model->updateMenu($id, $data);
         
         if (!$result) {
             throw new ApiException(Code::SYSTEM_ERROR, '更新菜单失败');
@@ -188,10 +200,8 @@ class MenuService
      */
     public function deleteMenu(int $id): bool
     {
-        $menuModel = ModelFactory::menu();
-        
         // 检查菜单是否存在
-        $menu = $menuModel->find($id);
+        $menu = $this->model->find($id);
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -207,7 +217,7 @@ class MenuService
         }
         
         // 软删除
-        $result = $menuModel->destroy($id);
+        $result = $this->model->destroy($id);
         
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '删除菜单失败');
@@ -225,19 +235,14 @@ class MenuService
      */
     public function toggleMenuStatus(int $id, bool $status): bool
     {
-        $menuModel = ModelFactory::menu();
-        
         // 检查菜单是否存在
-        $menu = $menuModel->find($id);
+        $menu = $this->model->find($id);
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
-        // 更新状态
-        $result = $menuModel->where('id', $id)->update([
-            'status' => $status,
-            'updated_at' => date('Y-m-d H:i:s')
-        ]);
+        // 更新状态（updated_at 由 Model 层自动处理）
+        $result = $this->model->where('id', $id)->update(['status' => $status]);
         
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '更新菜单状态失败');
@@ -253,8 +258,7 @@ class MenuService
      */
     public function getAdminMenuTree(int $adminId): array
     {
-        $menuModel = ModelFactory::menu();
-        return $menuModel->getAdminMenuTree($adminId);
+        return $this->model->getAdminMenuTree($adminId);
     }
 
     /**
@@ -268,8 +272,6 @@ class MenuService
         if (empty($sortData)) {
             throw new ApiException(Code::PARAMETER_ERROR, '排序数据不能为空');
         }
-        
-        $menuModel = ModelFactory::menu();
         
         // 验证数据格式
         foreach ($sortData as $item) {
@@ -287,7 +289,7 @@ class MenuService
         }
         
         // 批量更新
-        $result = $menuModel->batchUpdateSort($sortData);
+        $result = $this->model->batchUpdateSort($sortData);
         
         if (!$result) {
             throw new ApiException(Code::SYSTEM_ERROR, '批量更新排序失败');
@@ -304,15 +306,13 @@ class MenuService
      */
     public function getMenuPath(int $menuId): array
     {
-        $menuModel = ModelFactory::menu();
-        
         // 检查菜单是否存在
-        $menu = $menuModel->find($menuId);
+        $menu = $this->model->find($menuId);
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
-        return $menuModel->getMenuPath($menuId);
+        return $this->model->getMenuPath($menuId);
     }
 
     /**
@@ -323,15 +323,13 @@ class MenuService
      */
     public function getMenuDepth(int $menuId): int
     {
-        $menuModel = ModelFactory::menu();
-        
         // 检查菜单是否存在
-        $menu = $menuModel->find($menuId);
+        $menu = $this->model->find($menuId);
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
-        return $menuModel->getMenuDepth($menuId);
+        return $this->model->getMenuDepth($menuId);
     }
 
     /**
@@ -341,8 +339,7 @@ class MenuService
      */
     public function getTopLevelMenus(bool $onlyEnabled = true): array
     {
-        $menuModel = ModelFactory::menu();
-        $menus = $menuModel->getTopLevelMenus($onlyEnabled);
+        $menus = $this->model->getTopLevelMenus($onlyEnabled);
         
         $result = [];
         foreach ($menus as $menu) {
@@ -369,15 +366,13 @@ class MenuService
      */
     public function getDescendantIds(int $menuId): array
     {
-        $menuModel = ModelFactory::menu();
-        
         // 检查菜单是否存在
-        $menu = $menuModel->find($menuId);
+        $menu = $this->model->find($menuId);
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
-        return $menuModel->getDescendantIds($menuId);
+        return $this->model->getDescendantIds($menuId);
     }
 
     /**
@@ -389,15 +384,13 @@ class MenuService
      */
     public function getFullPath(int $menuId, string $separator = ' > '): string
     {
-        $menuModel = ModelFactory::menu();
-        
         // 检查菜单是否存在
-        $menu = $menuModel->find($menuId);
+        $menu = $this->model->find($menuId);
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
         
-        return $menuModel->getFullPath($menuId, $separator);
+        return $this->model->getFullPath($menuId, $separator);
     }
 
     /**
@@ -407,8 +400,7 @@ class MenuService
      */
     public function buildRouteConfig(int $adminId = 0): array
     {
-        $menuModel = ModelFactory::menu();
-        return $menuModel->buildRouteConfig($adminId);
+        return $this->model->buildRouteConfig($adminId);
     }
 
     /**
@@ -418,8 +410,7 @@ class MenuService
      */
     public function getMenusByPermission(string $permission): array
     {
-        $menuModel = ModelFactory::menu();
-        $menus = $menuModel->getByPermission($permission);
+        $menus = $this->model->getByPermission($permission);
         
         $result = [];
         foreach ($menus as $menu) {
@@ -441,8 +432,7 @@ class MenuService
      */
     public function getEnabledMenus(): array
     {
-        $menuModel = ModelFactory::menu();
-        $menus = $menuModel->getEnabledList();
+        $menus = $this->model->getEnabledList();
         
         $result = [];
         foreach ($menus as $menu) {
@@ -471,10 +461,8 @@ class MenuService
      */
     public function adjustMenuLevel(int $menuId, int $parentId, int $sort = 0): bool
     {
-        $menuModel = ModelFactory::menu();
-        
         // 检查菜单是否存在
-        $menu = $menuModel->find($menuId);
+        $menu = $this->model->find($menuId);
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
@@ -487,7 +475,7 @@ class MenuService
             }
             
             // 检查父菜单是否存在
-            $parent = $menuModel->find($parentId);
+            $parent = $this->model->find($parentId);
             if (!$parent) {
                 throw new ApiException(Code::MENU_NOT_FOUND, '父菜单不存在');
             }
@@ -503,11 +491,10 @@ class MenuService
             $sort = $this->getNextSort($parentId);
         }
         
-        // 更新菜单层级
-        $result = $menuModel->where('id', $menuId)->update([
+        // 更新菜单层级（updated_at 由 Model 层自动处理）
+        $result = $this->model->where('id', $menuId)->update([
             'parent_id' => $parentId,
-            'sort' => $sort,
-            'updated_at' => date('Y-m-d H:i:s')
+            'sort' => $sort
         ]);
         
         if ($result === false) {
@@ -614,8 +601,6 @@ class MenuService
             return false;
         }
         
-        $menuModel = ModelFactory::menu();
-        
         // 检查父菜单的所有祖先菜单
         $currentParentId = $parentId;
         $visited = [];
@@ -630,7 +615,7 @@ class MenuService
             }
             
             $visited[] = $currentParentId;
-            $parent = $menuModel->find($currentParentId);
+            $parent = $this->model->find($currentParentId);
             $currentParentId = $parent ? $parent->parent_id : 0;
         }
         
@@ -644,8 +629,7 @@ class MenuService
      */
     private function getNextSort(int $parentId = 0): int
     {
-        $menuModel = ModelFactory::menu();
-        $maxSort = $menuModel->where('parent_id', $parentId)->max('sort');
+        $maxSort = $this->model->where('parent_id', $parentId)->max('sort');
         return ($maxSort ?? 0) + 1;
     }
 }

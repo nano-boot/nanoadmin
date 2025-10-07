@@ -57,6 +57,36 @@ class Menu extends BaseModel
      */
     protected array $json = ['roles', 'auth_list'];
 
+    protected $fillable = [
+        'parent_id',
+        'type',
+        'name',
+        'title',
+        'icon',
+        'path',
+        'component',
+        'hidden',
+        'cache',
+        'fixed_tab',
+        'full_page',
+        'iframe',
+        'show_badge',
+        'status',
+        'sort',
+        'roles',
+        'auth_list',
+        // 驼峰命名字段（通过修改器自动映射到下划线字段）
+        'keepAlive',
+        'fixedTab',
+        'fullPage',
+        'showBadge',
+        'linkUrl',
+        'badgeText',
+        'activePath',
+        'createdAt',
+        'updatedAt',
+    ];
+
     /**
      * 字段类型转换
      * @var array
@@ -67,7 +97,7 @@ class Menu extends BaseModel
         'type' => 'string',
         'hidden' => 'boolean',
         'cache' => 'boolean',
-        'affix' => 'boolean',
+        'fixed_tab' => 'boolean',
         'full_page' => 'boolean',
         'iframe' => 'boolean',
         'show_badge' => 'boolean',
@@ -78,6 +108,57 @@ class Menu extends BaseModel
         'auth_list' => 'json',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
+    ];
+
+    /**
+     * 字段类型转换
+     * @var array
+     */
+    protected $casts = [
+        'id' => 'integer',
+        'parent_id' => 'integer',
+        'type' => 'string',
+        'hidden' => 'boolean',
+        'cache' => 'boolean',
+        'fixed_tab' => 'boolean',
+        'full_page' => 'boolean',
+        'iframe' => 'boolean',
+        'show_badge' => 'boolean',
+        'status' => 'boolean',
+        'sort' => 'integer',
+        'deleted' => 'boolean',
+    ];
+
+    /**
+     * 需要隐藏的字段（使用驼峰命名代替）
+     * @var array
+     */
+    protected $hidden = [
+        'cache',           // 用 keepAlive 代替
+        'fixed_tab',       // 用 fixedTab 代替
+        'full_page',       // 用 fullPage 代替
+        'show_badge',      // 用 showBadge 代替
+        'link_url',        // 用 linkUrl 代替
+        'badge_text',      // 用 badgeText 代替
+        'active_path',     // 用 activePath 代替
+        'created_at',      // 用 createdAt 代替
+        'updated_at',      // 用 updatedAt 代替
+    ];
+
+    /**
+     * 追加到模型数组表单的访问器
+     * @var array
+     */
+    protected $appends = [
+        'keepAlive',
+        'fixedTab',
+        'fullPage',
+        'showBadge',
+        'linkUrl',
+        'badgeText',
+        'activePath',
+        'createdAt',
+        'updatedAt',
     ];
 
     /**
@@ -138,6 +219,172 @@ class Menu extends BaseModel
             return is_array($decoded) ? $decoded : [];
         }
         return is_array($value) ? $value : [];
+    }
+
+    // ==================== 字段名称映射访问器（驼峰式命名） ====================
+
+    /**
+     * keepAlive 访问器 (cache 字段的驼峰式别名)
+     * @return bool
+     */
+    public function getKeepAliveAttribute(): bool
+    {
+        return (bool)$this->attributes['cache'];
+    }
+
+    /**
+     * fixedTab 访问器 (fixed_tab 字段的驼峰式别名)
+     * @return bool
+     */
+    public function getFixedTabAttribute(): bool
+    {
+        return (bool)$this->attributes['fixed_tab'];
+    }
+
+    /**
+     * fullPage 访问器 (full_page 字段的驼峰式别名)
+     * @return bool
+     */
+    public function getFullPageAttribute(): bool
+    {
+        return (bool)$this->attributes['full_page'];
+    }
+
+    /**
+     * showBadge 访问器 (show_badge 字段的驼峰式别名)
+     * @return bool
+     */
+    public function getShowBadgeAttribute(): bool
+    {
+        return (bool)$this->attributes['show_badge'];
+    }
+
+    /**
+     * linkUrl 访问器 (link_url 字段的驼峰式别名)
+     * @return string
+     */
+    public function getLinkUrlAttribute(): string
+    {
+        return $this->attributes['link_url'] ?? '';
+    }
+
+    /**
+     * badgeText 访问器 (badge_text 字段的驼峰式别名)
+     * @return string
+     */
+    public function getBadgeTextAttribute(): string
+    {
+        return $this->attributes['badge_text'] ?? '';
+    }
+
+    /**
+     * activePath 访问器 (active_path 字段的驼峰式别名)
+     * @return string
+     */
+    public function getActivePathAttribute(): string
+    {
+        return $this->attributes['active_path'] ?? '';
+    }
+
+    /**
+     * createdAt 访问器 (created_at 字段的驼峰式别名)
+     * @return string|null
+     */
+    public function getCreatedAtAttribute(): ?string
+    {
+        return $this->attributes['created_at'] ?? null;
+    }
+
+    /**
+     * updatedAt 访问器 (updated_at 字段的驼峰式别名)
+     * @return string|null
+     */
+    public function getUpdatedAtAttribute(): ?string
+    {
+        return $this->attributes['updated_at'] ?? null;
+    }
+
+    // ==================== 字段名称映射修改器（驼峰式转下划线） ====================
+
+    /**
+     * keepAlive 修改器 (自动映射到 cache 字段)
+     * @param bool $value
+     */
+    public function setKeepAliveAttribute(bool $value): void
+    {
+        $this->attributes['cache'] = $value;
+    }
+
+    /**
+     * fixedTab 修改器 (自动映射到 fixed_tab 字段)
+     * @param bool $value
+     */
+    public function setFixedTabAttribute(bool $value): void
+    {
+        $this->attributes['fixed_tab'] = $value;
+    }
+
+    /**
+     * fullPage 修改器 (自动映射到 full_page 字段)
+     * @param bool $value
+     */
+    public function setFullPageAttribute(bool $value): void
+    {
+        $this->attributes['full_page'] = $value;
+    }
+
+    /**
+     * showBadge 修改器 (自动映射到 show_badge 字段)
+     * @param bool $value
+     */
+    public function setShowBadgeAttribute(bool $value): void
+    {
+        $this->attributes['show_badge'] = $value;
+    }
+
+    /**
+     * linkUrl 修改器 (自动映射到 link_url 字段)
+     * @param string $value
+     */
+    public function setLinkUrlAttribute(string $value): void
+    {
+        $this->attributes['link_url'] = $value;
+    }
+
+    /**
+     * badgeText 修改器 (自动映射到 badge_text 字段)
+     * @param string $value
+     */
+    public function setBadgeTextAttribute(string $value): void
+    {
+        $this->attributes['badge_text'] = $value;
+    }
+
+    /**
+     * activePath 修改器 (自动映射到 active_path 字段)
+     * @param string $value
+     */
+    public function setActivePathAttribute(string $value): void
+    {
+        $this->attributes['active_path'] = $value;
+    }
+
+    /**
+     * createdAt 修改器 (自动映射到 created_at 字段)
+     * @param string|null $value
+     */
+    public function setCreatedAtAttribute(?string $value): void
+    {
+        $this->attributes['created_at'] = $value;
+    }
+
+    /**
+     * updatedAt 修改器 (自动映射到 updated_at 字段)
+     * @param string|null $value
+     */
+    public function setUpdatedAtAttribute(?string $value): void
+    {
+        $this->attributes['updated_at'] = $value;
     }
 
     /**
@@ -916,8 +1163,8 @@ class Menu extends BaseModel
             'type' => $menu['type'] ?? self::TYPE_DIRECTORY,
             'permission' => $menu['permission'] ?? '',
             'hidden' => $menu['hidden'] ?? false,
-            'cacheable' => $menu['cacheable'] ?? true,
-            'affix' => $menu['affix'] ?? false,
+            'keepAlive' => $menu['keepAlive'] ?? true,
+            'fixed_tab' => $menu['fixed_tab'] ?? false,
             'full_page' => $menu['full_page'] ?? false,
             'link_url' => $menu['link_url'] ?? '',
             'iframe' => $menu['iframe'] ?? false,
@@ -962,8 +1209,8 @@ class Menu extends BaseModel
             'type' => $formData['type'] ?? self::TYPE_DIRECTORY,
             'permission' => $formData['permission'] ?? '',
             'hidden' => $formData['hidden'] ?? false,
-            'cacheable' => $formData['cacheable'] ?? true,
-            'affix' => $formData['affix'] ?? false,
+            'keepAlive' => $formData['keepAlive'] ?? true,
+            'fixed_tab' => $formData['fixed_tab'] ?? false,
             'full_page' => $formData['full_page'] ?? false,
             'link_url' => $formData['link_url'] ?? '',
             'iframe' => $formData['iframe'] ?? false,

@@ -203,7 +203,7 @@ class MenuTransformService
                 'permission' => $this->sanitizeString($formData['permission'] ?? ''),
                 'hidden' => $this->sanitizeBoolean($formData['hidden'] ?? false),
                 'cacheable' => $this->sanitizeBoolean($formData['cacheable'] ?? true),
-                'affix' => $this->sanitizeBoolean($formData['affix'] ?? false),
+                'fixed_tab' => $this->sanitizeBoolean($formData['fixed_tab'] ?? false),
                 'full_page' => $this->sanitizeBoolean($formData['full_page'] ?? false),
                 'link_url' => $this->sanitizeString($formData['link_url'] ?? ''),
                 'iframe' => $this->sanitizeBoolean($formData['iframe'] ?? false),
@@ -246,7 +246,7 @@ class MenuTransformService
                 'permission' => $dbData['permission'] ?? '',
                 'hidden' => (bool)($dbData['hidden'] ?? false),
                 'cacheable' => (bool)($dbData['cacheable'] ?? true),
-                'affix' => (bool)($dbData['affix'] ?? false),
+                'fixed_tab' => (bool)($dbData['fixed_tab'] ?? false),
                 'full_page' => (bool)($dbData['full_page'] ?? false),
                 'link_url' => $dbData['link_url'] ?? '',
                 'iframe' => (bool)($dbData['iframe'] ?? false),
@@ -277,11 +277,12 @@ class MenuTransformService
         $meta = [
             'title' => $menuData['title'] ?? '',
             'icon' => $menuData['icon'] ?? '',
-            'keepAlive' => (bool)($menuData['cacheable'] ?? true),
+            // 优先使用驼峰命名，兼容下划线命名
+            'keepAlive' => $menuData['keepAlive'] ?? (bool)($menuData['cache'] ?? true),
             'isHide' => (bool)($menuData['hidden'] ?? false),
-            'fixedTab' => (bool)($menuData['affix'] ?? false),
-            'isFullPage' => (bool)($menuData['full_page'] ?? false),
-            'showBadge' => (bool)($menuData['show_badge'] ?? false)
+            'fixedTab' => $menuData['fixedTab'] ?? (bool)($menuData['fixed_tab'] ?? false),
+            'isFullPage' => $menuData['fullPage'] ?? (bool)($menuData['full_page'] ?? false),
+            'showBadge' => $menuData['showBadge'] ?? (bool)($menuData['show_badge'] ?? false)
         ];
 
         // 添加权限标识
@@ -295,15 +296,17 @@ class MenuTransformService
             $meta['roles'] = $roles;
         }
 
-        // 处理外链配置
-        if (!empty($menuData['link_url'])) {
-            $meta['link'] = $menuData['link_url'];
+        // 处理外链配置（优先使用驼峰命名）
+        $linkUrl = $menuData['linkUrl'] ?? ($menuData['link_url'] ?? '');
+        if (!empty($linkUrl)) {
+            $meta['link'] = $linkUrl;
             $meta['isIframe'] = (bool)($menuData['iframe'] ?? false);
         }
 
-        // 处理徽章文本
-        if (!empty($menuData['badge_text'])) {
-            $meta['showTextBadge'] = $menuData['badge_text'];
+        // 处理徽章文本（优先使用驼峰命名）
+        $badgeText = $menuData['badgeText'] ?? ($menuData['badge_text'] ?? '');
+        if (!empty($badgeText)) {
+            $meta['showTextBadge'] = $badgeText;
         }
 
         // 处理权限按钮列表
@@ -312,9 +315,10 @@ class MenuTransformService
             $meta['authList'] = $authList;
         }
 
-        // 处理激活路径
-        if (!empty($menuData['active_path'])) {
-            $meta['activePath'] = $menuData['active_path'];
+        // 处理激活路径（优先使用驼峰命名）
+        $activePath = $menuData['activePath'] ?? ($menuData['active_path'] ?? '');
+        if (!empty($activePath)) {
+            $meta['activePath'] = $activePath;
         }
 
         return $meta;
@@ -495,7 +499,15 @@ class MenuTransformService
      */
     public function formatForApi(array $menuData): array
     {
-        $formatted = [
+        // 如果传入的是模型实例，直接转数组（会自动应用访问器）
+        if ($menuData instanceof Menu) {
+            $data = $menuData->toArray();
+            $data['type_text'] = Menu::TYPE_MAP[$data['type'] ?? Menu::TYPE_DIRECTORY] ?? '未知';
+            return $data;
+        }
+
+        // 手动格式化数组数据，使用驼峰命名
+        return [
             'id' => $menuData['id'] ?? 0,
             'parent_id' => $menuData['parent_id'] ?? 0,
             'name' => $menuData['name'] ?? '',
@@ -508,25 +520,20 @@ class MenuTransformService
             'type_text' => Menu::TYPE_MAP[$menuData['type'] ?? Menu::TYPE_DIRECTORY] ?? '未知',
             'permission' => $menuData['permission'] ?? '',
             'hidden' => (bool)($menuData['hidden'] ?? false),
-            'cacheable' => (bool)($menuData['cacheable'] ?? true),
-            'affix' => (bool)($menuData['affix'] ?? false),
-            'full_page' => (bool)($menuData['full_page'] ?? false),
-            'link_url' => $menuData['link_url'] ?? '',
+            // 使用驼峰命名的访问器字段
+            'keepAlive' => $menuData['keepAlive'] ?? (bool)($menuData['cache'] ?? true),
+            'fixedTab' => $menuData['fixedTab'] ?? (bool)($menuData['fixed_tab'] ?? false),
+            'fullPage' => $menuData['fullPage'] ?? (bool)($menuData['full_page'] ?? false),
+            'linkUrl' => $menuData['linkUrl'] ?? ($menuData['link_url'] ?? ''),
             'iframe' => (bool)($menuData['iframe'] ?? false),
-            'show_badge' => (bool)($menuData['show_badge'] ?? false),
-            'badge_text' => $menuData['badge_text'] ?? '',
-            'active_path' => $menuData['active_path'] ?? '',
+            'showBadge' => $menuData['showBadge'] ?? (bool)($menuData['show_badge'] ?? false),
+            'badgeText' => $menuData['badgeText'] ?? ($menuData['badge_text'] ?? ''),
+            'activePath' => $menuData['activePath'] ?? ($menuData['active_path'] ?? ''),
             'status' => (bool)($menuData['status'] ?? true),
             'sort' => $menuData['sort'] ?? 100,
-            'created_at' => $menuData['created_at'] ?? null,
-            'updated_at' => $menuData['updated_at'] ?? null
+            'createdAt' => $menuData['createdAt'] ?? ($menuData['created_at'] ?? null),
+            'updatedAt' => $menuData['updatedAt'] ?? ($menuData['updated_at'] ?? null),
         ];
-
-        // 处理JSON字段
-        $formatted['roles'] = $this->parseJsonField($menuData['roles'] ?? null, []);
-        $formatted['auth_list'] = $this->parseJsonField($menuData['auth_list'] ?? null, []);
-
-        return $formatted;
     }
 
     /**
