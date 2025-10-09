@@ -205,7 +205,7 @@ class MenuTransformService
                 'cacheable' => $this->sanitizeBoolean($formData['cacheable'] ?? true),
                 'fixed_tab' => $this->sanitizeBoolean($formData['fixed_tab'] ?? false),
                 'full_page' => $this->sanitizeBoolean($formData['full_page'] ?? false),
-                'link_url' => $this->sanitizeString($formData['link_url'] ?? ''),
+                'link' => $this->sanitizeString($formData['link'] ?? ''),
                 'iframe' => $this->sanitizeBoolean($formData['iframe'] ?? false),
                 'show_badge' => $this->sanitizeBoolean($formData['show_badge'] ?? false),
                 'badge_text' => $this->sanitizeString($formData['badge_text'] ?? ''),

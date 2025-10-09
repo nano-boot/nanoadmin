@@ -238,51 +238,13 @@ class MenuController
      * PUT /api/menus/{id}
      * @param Request $request
      * @return Response
+     * @throws ApiException
      */
     public function update(Request $request): Response
     {
-        try {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                return $this->error(Code::PARAMETER_ERROR, '菜单ID无效');
-            }
-
-            // 检查菜单是否存在
-            $menu = $this->menuModel->find($id);
-            if (!$menu) {
-                return $this->error(Code::MENU_NOT_FOUND, '菜单不存在');
-            }
-
-            // 获取表单数据
-            $formData = $this->getFormDataFromRequest($request);
-
-            // 数据验证
-            $validation = $this->transformService->validateMenuData($formData);
-            if (!$validation['valid']) {
-                return $this->error(Code::PARAMETER_ERROR, implode(', ', $validation['errors']));
-            }
-
-            // 转换为数据库格式
-            $dbData = $this->transformService->fromFormData($formData);
-
-            // 更新菜单
-            $result = $this->menuModel->updateMenu($id, $dbData);
-            if (!$result) {
-                return $this->error(Code::SYSTEM_ERROR, '更新菜单失败');
-            }
-
-            // 获取更新后的菜单数据
-            $updatedMenu = $this->menuModel->find($id);
-            $formattedData = $this->transformService->formatForApi($updatedMenu->toArray());
-
-            return $this->success($formattedData, '更新菜单成功');
-
-        } catch (ApiException $e) {
-            return $this->error($e->getCode(), $e->getMessage());
-        } catch (\Exception $e) {
-            return $this->error(Code::SYSTEM_ERROR, '更新菜单失败：' . $e->getMessage());
-        }
+        // 更新菜单
+        $result = $this->menuService->updateMenu($request->all());
+        return R::success($result, '更新菜单成功');
     }
 
     /**

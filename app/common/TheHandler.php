@@ -94,6 +94,7 @@ class TheHandler extends Handler
             'code' => $exception->getCode(),
             'file' => $exception->getFile(),
             'line' => $exception->getLine(),
+            'trace_string' => $exception->getTraceAsString(),
             'trace' => $this->formatStackTrace($exception->getTraceAsString()),
         ]);
     }
@@ -145,7 +146,8 @@ class TheHandler extends Handler
         $json['msg'] = $exception->getMessage();
         $json['file'] = $exception->getFile();
         $json['line'] = $exception->getLine();
-        $json['traces'] = $this->formatStackTrace($exception->getTraceAsString());
+        $json['trace_string'] = $exception->getTraceAsString();
+        $json['trace'] = $this->formatStackTrace($exception->getTraceAsString());
     }
 
     /**

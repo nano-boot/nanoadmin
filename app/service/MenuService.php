@@ -145,15 +145,22 @@ class MenuService
 
     /**
      * 更新菜单
-     * @param int $id 菜单ID
-     * @param array $data 更新数据
-     * @return bool
+     * @param array $data 更新数据 
+     * @return array
      * @throws ApiException
      */
-    public function updateMenu(int $id, array $data): bool
+    public function updateMenu(array $data): array
     {
-        // 数据验证
-        $this->validateMenuData($data, false);
+        // 提取菜单ID
+        $id = (int)($data['id'] ?? 0);
+        if ($id <= 0) {
+            throw new ApiException(Code::PARAMETER_ERROR, '菜单ID无效');
+        }
+        
+        // 移除ID字段，避免更新时包含ID
+        unset($data['id']);
+        
+  
         
         // 检查菜单是否存在
         $menu = $this->model->find($id);
@@ -182,6 +189,32 @@ class MenuService
             }
         }
         
+        // 检查同级菜单名称是否重复（排除自身）
+        if (isset($data['name'])) {
+            $existingMenu = $this->model
+                ->where('parent_id', $data['parent_id'] ?? $menu->parent_id)
+                ->where('name', $data['name'])
+                ->where('id', '!=', $id)
+                ->first();
+            
+            if ($existingMenu) {
+                throw new ApiException(Code::PARAMETER_ERROR, '同级菜单中已存在相同的路由名称');
+            }
+        }
+        
+        // 检查路由路径是否重复（仅对菜单类型检查，排除自身）
+        if (isset($data['type']) && $data['type'] === 'M' && !empty($data['path'])) {
+            $existingPath = $this->model
+                ->where('path', $data['path'])
+                ->where('type', 'M')
+                ->where('id', '!=', $id)
+                ->first();
+            
+            if ($existingPath) {
+                throw new ApiException(Code::PARAMETER_ERROR, message: '路由路径已存在');
+            }
+        }
+        
         // 更新菜单（updated_at 由 Model 层处理）
         $result = $this->model->updateMenu($id, $data);
         
@@ -189,7 +222,12 @@ class MenuService
             throw new ApiException(Code::SYSTEM_ERROR, '更新菜单失败');
         }
         
-        return true;
+        // 获取更新后的菜单数据
+        $updatedMenu = $this->model->find($id);
+        
+        // 返回格式化后的数据
+        $transformService = new MenuTransformService();
+        return $transformService->formatForApi($updatedMenu->toArray());
     }
 
     /**

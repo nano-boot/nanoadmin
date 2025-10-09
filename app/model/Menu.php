@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\model;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -65,53 +66,30 @@ class Menu extends BaseModel
         'icon',
         'path',
         'component',
-        'hidden',
-        'cache',
-        'fixed_tab',
-        'full_page',
+        'redirect',
+        'permission',
+        'hide_tab',
+        'link',
         'iframe',
-        'show_badge',
         'status',
         'sort',
+        'deleted',
         'roles',
         'auth_list',
-        // 驼峰命名字段（通过修改器自动映射到下划线字段）
-        'keepAlive',
-        'fixedTab',
-        'fullPage',
-        'showBadge',
-        'linkUrl',
-        'badgeText',
-        'activePath',
-        'createdAt',
-        'updatedAt',
+        // 底层数据库字段（snake_case）
+        'cache',           // 对应虚拟属性 keepAlive
+        'hidden',          // 对应虚拟属性 isHide
+        'fixed_tab',       // 对应虚拟属性 fixedTab
+        'full_page',       // 对应虚拟属性 fullPage
+        'show_badge',      // 对应虚拟属性 showBadge
+        'badge_text',      // 对应虚拟属性 badgeText
+        'active_path',     // 对应虚拟属性 activePath
+        // 注意: 不要在 $fillable 中包含驼峰式虚拟属性(keepAlive, fixedTab等)
+        // 这些虚拟属性通过访问器/修改器自动映射到上面的 snake_case 字段
     ];
 
     /**
-     * 字段类型转换
-     * @var array
-     */
-    protected array $type = [
-        'id' => 'integer',
-        'parent_id' => 'integer',
-        'type' => 'string',
-        'hidden' => 'boolean',
-        'cache' => 'boolean',
-        'fixed_tab' => 'boolean',
-        'full_page' => 'boolean',
-        'iframe' => 'boolean',
-        'show_badge' => 'boolean',
-        'status' => 'boolean',
-        'sort' => 'integer',
-        'deleted' => 'boolean',
-        'roles' => 'json',
-        'auth_list' => 'json',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
-    ];
-
-    /**
-     * 字段类型转换
+     * 字段类型转换 (Laravel Eloquent 标准配置)
      * @var array
      */
     protected $casts = [
@@ -135,10 +113,10 @@ class Menu extends BaseModel
      */
     protected $hidden = [
         'cache',           // 用 keepAlive 代替
+        'hidden',          // 用 isHide 代替
         'fixed_tab',       // 用 fixedTab 代替
         'full_page',       // 用 fullPage 代替
         'show_badge',      // 用 showBadge 代替
-        'link_url',        // 用 linkUrl 代替
         'badge_text',      // 用 badgeText 代替
         'active_path',     // 用 activePath 代替
         'created_at',      // 用 createdAt 代替
@@ -151,10 +129,10 @@ class Menu extends BaseModel
      */
     protected $appends = [
         'keepAlive',
+        'isHide',
         'fixedTab',
         'fullPage',
         'showBadge',
-        'linkUrl',
         'badgeText',
         'activePath',
         'createdAt',
@@ -221,15 +199,24 @@ class Menu extends BaseModel
         return is_array($value) ? $value : [];
     }
 
-    // ==================== 字段名称映射访问器（驼峰式命名） ====================
+    // ==================== 字段名称映射访问器  ====================
 
-    /**
+      /**
      * keepAlive 访问器 (cache 字段的驼峰式别名)
      * @return bool
      */
     public function getKeepAliveAttribute(): bool
     {
-        return (bool)$this->attributes['cache'];
+        return (bool)($this->attributes['cache'] ?? false);
+    }
+
+     /**
+     * isHide 访问器 (hidden 字段的驼峰式别名)
+     * @return bool
+     */
+    public function getIsHideAttribute(): bool
+    {
+        return (bool)($this->attributes['hidden'] ?? false);
     }
 
     /**
@@ -257,15 +244,6 @@ class Menu extends BaseModel
     public function getShowBadgeAttribute(): bool
     {
         return (bool)$this->attributes['show_badge'];
-    }
-
-    /**
-     * linkUrl 访问器 (link_url 字段的驼峰式别名)
-     * @return string
-     */
-    public function getLinkUrlAttribute(): string
-    {
-        return $this->attributes['link_url'] ?? '';
     }
 
     /**
@@ -304,15 +282,24 @@ class Menu extends BaseModel
         return $this->attributes['updated_at'] ?? null;
     }
 
-    // ==================== 字段名称映射修改器（驼峰式转下划线） ====================
+    // ==================== 字段名称映射修改器  ====================
 
-    /**
-     * keepAlive 修改器 (自动映射到 cache 字段)
+      /**
+     * keepAlive 修改器 (cache 字段的驼峰式别名)
      * @param bool $value
      */
     public function setKeepAliveAttribute(bool $value): void
     {
         $this->attributes['cache'] = $value;
+    }
+
+     /**
+     * isHide 修改器 (hidden 字段的驼峰式别名)
+     * @return bool
+     */
+    public function setIsHideAttribute($value): void
+    {
+        $this->attributes['hidden']= $value;
     }
 
     /**
@@ -340,15 +327,6 @@ class Menu extends BaseModel
     public function setShowBadgeAttribute(bool $value): void
     {
         $this->attributes['show_badge'] = $value;
-    }
-
-    /**
-     * linkUrl 修改器 (自动映射到 link_url 字段)
-     * @param string $value
-     */
-    public function setLinkUrlAttribute(string $value): void
-    {
-        $this->attributes['link_url'] = $value;
     }
 
     /**
@@ -584,31 +562,83 @@ class Menu extends BaseModel
      * @param int $id 菜单ID
      * @param array $data 更新数据
      * @return bool
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function updateMenu(int $id, array $data): bool
     {
+        // 获取菜单实例
+        $menu = $this->find($id);
+        if (!$menu) {
+            return false;
+        }
+
         // 验证父菜单是否存在（如果有设置）
         if (!empty($data['parent_id']) && $data['parent_id'] > 0) {
             // 不能将自己设为父菜单
             if ($data['parent_id'] == $id) {
                 return false;
             }
-            
+
             $parent = $this->find($data['parent_id']);
             if (!$parent) {
                 return false;
             }
-            
+
             // 检查是否会形成循环引用
             if ($this->wouldCreateCircularReference($id, $data['parent_id'])) {
                 return false;
             }
         }
-        
-        return $this->where('id', $id)->update($data) !== false;
+
+        // 使用模型实例逐个设置属性（会自动触发修改器）
+        // 这样 keepAlive 会通过 setKeepAliveAttribute() 自动转换为 cache
+        foreach ($data as $key => $value) {
+            $menu->$key = $value;
+        }
+
+        // 保存更改（会触发 updated_at 自动更新）
+        return $menu->save();
+    }
+
+    /**
+     * 转换驼峰式字段名为 snake_case
+     *
+     * 注意: updateMenu() 方法已改用模型实例的 save() 方式,会自动触发修改器。
+     * 此方法保留用于其他可能需要批量更新的场景(如批量导入、批量修改等)。
+     *
+     * 使用场景:
+     * - 批量更新: Menu::where(...)->update($this->convertCamelCaseToSnakeCase($data))
+     * - 批量插入: Menu::insert($this->convertCamelCaseToSnakeCase($data))
+     *
+     * @param array $data 原始数据(可能包含驼峰式字段名)
+     * @return array 转换后的数据(所有字段名转换为 snake_case)
+     */
+    private function convertCamelCaseToSnakeCase(array $data): array
+    {
+        // 定义驼峰式到 snake_case 的映射
+        $fieldMapping = [
+            'keepAlive' => 'cache',
+            'fixedTab' => 'fixed_tab',
+            'fullPage' => 'full_page',
+            'showBadge' => 'show_badge',
+            'badgeText' => 'badge_text',
+            'activePath' => 'active_path',
+            'createdAt' => 'created_at',
+            'updatedAt' => 'updated_at',
+        ];
+
+        $converted = [];
+
+        foreach ($data as $key => $value) {
+            // 如果是驼峰式字段,转换为 snake_case
+            if (isset($fieldMapping[$key])) {
+                $converted[$fieldMapping[$key]] = $value;
+            } else {
+                // 保持原字段名
+                $converted[$key] = $value;
+            }
+        }
+
+        return $converted;
     }
 
     /**
@@ -622,25 +652,25 @@ class Menu extends BaseModel
         if ($parentId == 0) {
             return false;
         }
-        
+
         // 检查父菜单的所有祖先菜单
         $currentParentId = $parentId;
         $visited = [];
-        
+
         while ($currentParentId > 0) {
             if ($currentParentId == $menuId) {
                 return true; // 发现循环引用
             }
-            
+
             if (in_array($currentParentId, $visited)) {
                 break; // 防止无限循环
             }
-            
+
             $visited[] = $currentParentId;
             $parent = $this->find($currentParentId);
             $currentParentId = $parent ? $parent->parent_id : 0;
         }
-        
+
         return false;
     }
 
@@ -1166,7 +1196,7 @@ class Menu extends BaseModel
             'keepAlive' => $menu['keepAlive'] ?? true,
             'fixed_tab' => $menu['fixed_tab'] ?? false,
             'full_page' => $menu['full_page'] ?? false,
-            'link_url' => $menu['link_url'] ?? '',
+            'link' => $menu['link'] ?? '',
             'iframe' => $menu['iframe'] ?? false,
             'show_badge' => $menu['show_badge'] ?? false,
             'badge_text' => $menu['badge_text'] ?? '',
@@ -1212,7 +1242,7 @@ class Menu extends BaseModel
             'keepAlive' => $formData['keepAlive'] ?? true,
             'fixed_tab' => $formData['fixed_tab'] ?? false,
             'full_page' => $formData['full_page'] ?? false,
-            'link_url' => $formData['link_url'] ?? '',
+            'link' => $formData['link'] ?? '',
             'iframe' => $formData['iframe'] ?? false,
             'show_badge' => $formData['show_badge'] ?? false,
             'badge_text' => $formData['badge_text'] ?? '',

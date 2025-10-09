@@ -125,11 +125,11 @@ class MenuSearchService
             if ($filters['is_external']) {
                 $query->where(function($q) {
                     $q->where('type', Menu::TYPE_LINK)
-                      ->orWhere('link_url', '<>', '');
+                      ->orWhere('link', '<>', '');
                 });
             } else {
                 $query->where('type', '<>', Menu::TYPE_LINK)
-                      ->where('link_url', '=', '');
+                      ->where('link', '=', '');
             }
         }
         
