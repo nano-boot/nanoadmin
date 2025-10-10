@@ -78,11 +78,12 @@ class Menu extends BaseModel
         'auth_list',
         // 底层数据库字段（snake_case）
         'cache',           // 对应虚拟属性 keepAlive
-        'hidden',          // 对应虚拟属性 isHide
+        'hide',          // 对应虚拟属性 isHide
+        'hide_tab',        // 对应虚拟属性 isHideTab
         'fixed_tab',       // 对应虚拟属性 fixedTab
-        'full_page',       // 对应虚拟属性 fullPage
+        'full_page',       // 对应虚拟属性 isFullPage
         'show_badge',      // 对应虚拟属性 showBadge
-        'badge_text',      // 对应虚拟属性 badgeText
+        'badge_text',      // 对应虚拟属性 showTextBadge
         'active_path',     // 对应虚拟属性 activePath
         // 注意: 不要在 $fillable 中包含驼峰式虚拟属性(keepAlive, fixedTab等)
         // 这些虚拟属性通过访问器/修改器自动映射到上面的 snake_case 字段
@@ -96,7 +97,8 @@ class Menu extends BaseModel
         'id' => 'integer',
         'parent_id' => 'integer',
         'type' => 'string',
-        'hidden' => 'boolean',
+        'hide' => 'boolean',
+        'hide_tab' => 'boolean',
         'cache' => 'boolean',
         'fixed_tab' => 'boolean',
         'full_page' => 'boolean',
@@ -113,11 +115,12 @@ class Menu extends BaseModel
      */
     protected $hidden = [
         'cache',           // 用 keepAlive 代替
-        'hidden',          // 用 isHide 代替
+        'hide',          // 用 isHide 代替
+        'hide_tab',        // 用 isHideTab 代替
         'fixed_tab',       // 用 fixedTab 代替
-        'full_page',       // 用 fullPage 代替
+        'full_page',       // 用 isFullPage 代替
         'show_badge',      // 用 showBadge 代替
-        'badge_text',      // 用 badgeText 代替
+        'badge_text',      // 用 showTextBadge 代替
         'active_path',     // 用 activePath 代替
         'created_at',      // 用 createdAt 代替
         'updated_at',      // 用 updatedAt 代替
@@ -130,10 +133,11 @@ class Menu extends BaseModel
     protected $appends = [
         'keepAlive',
         'isHide',
+        'isHideTab',
         'fixedTab',
-        'fullPage',
+        'isFullPage',
         'showBadge',
-        'badgeText',
+        'showTextBadge',
         'activePath',
         'createdAt',
         'updatedAt',
@@ -211,12 +215,21 @@ class Menu extends BaseModel
     }
 
      /**
-     * isHide 访问器 (hidden 字段的驼峰式别名)
+     * isHide 访问器 (hide 字段的驼峰式别名)
      * @return bool
      */
     public function getIsHideAttribute(): bool
     {
-        return (bool)($this->attributes['hidden'] ?? false);
+        return (bool)($this->attributes['hide'] ?? false);
+    }
+
+    /**
+     * isHideTab 访问器 (hide_tab 字段的驼峰式别名)
+     * @return bool
+     */
+    public function getIsHideTabAttribute(): bool
+    {
+        return (bool)($this->attributes['hide_tab'] ?? false);
     }
 
     /**
@@ -229,10 +242,10 @@ class Menu extends BaseModel
     }
 
     /**
-     * fullPage 访问器 (full_page 字段的驼峰式别名)
+     * isFullPage 访问器 (full_page 字段的驼峰式别名)
      * @return bool
      */
-    public function getFullPageAttribute(): bool
+    public function getIsFullPageAttribute(): bool
     {
         return (bool)$this->attributes['full_page'];
     }
@@ -247,10 +260,10 @@ class Menu extends BaseModel
     }
 
     /**
-     * badgeText 访问器 (badge_text 字段的驼峰式别名)
+     * showTextBadge 访问器 (badge_text 字段的驼峰式别名)
      * @return string
      */
-    public function getBadgeTextAttribute(): string
+    public function getShowTextBadgeAttribute(): string
     {
         return $this->attributes['badge_text'] ?? '';
     }
@@ -294,12 +307,21 @@ class Menu extends BaseModel
     }
 
      /**
-     * isHide 修改器 (hidden 字段的驼峰式别名)
+     * isHide 修改器 (hide 字段的驼峰式别名)
      * @return bool
      */
     public function setIsHideAttribute($value): void
     {
-        $this->attributes['hidden']= $value;
+        $this->attributes['hide']= $value;
+    }
+
+    /**
+     * isHideTab 修改器 (自动映射到 hide_tab 字段)
+     * @param bool $value
+     */
+    public function setIsHideTabAttribute(bool $value): void
+    {
+        $this->attributes['hide_tab'] = $value;
     }
 
     /**
@@ -312,10 +334,10 @@ class Menu extends BaseModel
     }
 
     /**
-     * fullPage 修改器 (自动映射到 full_page 字段)
+     * isFullPage 修改器 (自动映射到 full_page 字段)
      * @param bool $value
      */
-    public function setFullPageAttribute(bool $value): void
+    public function setIsFullPageAttribute(bool $value): void
     {
         $this->attributes['full_page'] = $value;
     }
@@ -330,10 +352,10 @@ class Menu extends BaseModel
     }
 
     /**
-     * badgeText 修改器 (自动映射到 badge_text 字段)
+     * showTextBadge 修改器 (自动映射到 badge_text 字段)
      * @param string $value
      */
-    public function setBadgeTextAttribute(string $value): void
+    public function setShowTextBadgeAttribute(string $value): void
     {
         $this->attributes['badge_text'] = $value;
     }
@@ -618,9 +640,11 @@ class Menu extends BaseModel
         $fieldMapping = [
             'keepAlive' => 'cache',
             'fixedTab' => 'fixed_tab',
-            'fullPage' => 'full_page',
+            'isHide' => 'hide',
+            'isHideTab' => 'hide_tab',
+            'isFullPage' => 'full_page',
             'showBadge' => 'show_badge',
-            'badgeText' => 'badge_text',
+            'showTextBadge' => 'badge_text',
             'activePath' => 'active_path',
             'createdAt' => 'created_at',
             'updatedAt' => 'updated_at',
@@ -1118,10 +1142,12 @@ class Menu extends BaseModel
                     'title' => $menu['title'],
                     'icon' => $menu['icon'],
                     'keepAlive' => $menu['cache'],
-                    'isHide' => $menu['hidden'],
+                    'isHide' => $menu['hide'],
+                    'isHideTab' => $menu['hide_tab'],
                     'fixedTab' => $menu['fixed_tab'],
                     'isFullPage' => $menu['full_page'],
                     'showBadge' => $menu['show_badge'],
+                    'showTextBadge' => $menu['badge_text'],
                     'permission' => $menu['permission']
                 ]
             ];
@@ -1192,7 +1218,7 @@ class Menu extends BaseModel
             'icon' => $menu['icon'] ?? '',
             'type' => $menu['type'] ?? self::TYPE_DIRECTORY,
             'permission' => $menu['permission'] ?? '',
-            'hidden' => $menu['hidden'] ?? false,
+            'hide' => $menu['hide'] ?? false,
             'keepAlive' => $menu['keepAlive'] ?? true,
             'fixed_tab' => $menu['fixed_tab'] ?? false,
             'full_page' => $menu['full_page'] ?? false,
@@ -1238,7 +1264,7 @@ class Menu extends BaseModel
             'icon' => $formData['icon'] ?? '',
             'type' => $formData['type'] ?? self::TYPE_DIRECTORY,
             'permission' => $formData['permission'] ?? '',
-            'hidden' => $formData['hidden'] ?? false,
+            'hide' => $formData['hide'] ?? false,
             'keepAlive' => $formData['keepAlive'] ?? true,
             'fixed_tab' => $formData['fixed_tab'] ?? false,
             'full_page' => $formData['full_page'] ?? false,
@@ -1633,7 +1659,7 @@ class Menu extends BaseModel
      */
     public function showMenu(int $id): bool
     {
-        return $this->where('id', $id)->update(['hidden' => false]) !== false;
+        return $this->where('id', $id)->update(['hide' => false]) !== false;
     }
 
     /**
@@ -1643,7 +1669,7 @@ class Menu extends BaseModel
      */
     public function hideMenu(int $id): bool
     {
-        return $this->where('id', $id)->update(['hidden' => true]) !== false;
+        return $this->where('id', $id)->update(['hide' => true]) !== false;
     }
 
     /**
@@ -1658,8 +1684,8 @@ class Menu extends BaseModel
             return false;
         }
         
-        $newHidden = !$menu->hidden;
-        return $this->where('id', $id)->update(['hidden' => $newHidden]) !== false;
+        $newHide = !$menu->hide;
+        return $this->where('id', $id)->update(['hide' => $newHide]) !== false;
     }
 
     /**
@@ -1935,8 +1961,8 @@ class Menu extends BaseModel
             'total' => $this->where('deleted', false)->count(),
             'enabled' => $this->where('deleted', false)->where('status', 1)->count(),
             'disabled' => $this->where('deleted', false)->where('status', 0)->count(),
-            'hidden' => $this->where('deleted', false)->where('hidden', true)->count(),
-            'visible' => $this->where('deleted', false)->where('hidden', false)->count(),
+            'hide' => $this->where('deleted', false)->where('hide', true)->count(),
+            'visible' => $this->where('deleted', false)->where('hide', false)->count(),
             'deleted' => $this->where('deleted', true)->count()
         ];
     }

@@ -146,7 +146,7 @@ class MenuTransformService
 
             return $config;
         } catch (\Exception $e) {
-            throw new ApiException('菜单路由配置转换失败: ' . $e->getMessage(), Code::MENU_TRANSFORM_ERROR);
+            throw new ApiException( Code::MENU_TRANSFORM_ERROR, '菜单路由配置转换失败: ' . $e->getMessage());
         }
     }
 
@@ -201,7 +201,7 @@ class MenuTransformService
                 'icon' => $this->sanitizeString($formData['icon'] ?? ''),
                 'type' => $this->sanitizeString($formData['type'] ?? Menu::TYPE_DIRECTORY),
                 'permission' => $this->sanitizeString($formData['permission'] ?? ''),
-                'hidden' => $this->sanitizeBoolean($formData['hidden'] ?? false),
+                'hide' => $this->sanitizeBoolean($formData['hide'] ?? false),
                 'cacheable' => $this->sanitizeBoolean($formData['cacheable'] ?? true),
                 'fixed_tab' => $this->sanitizeBoolean($formData['fixed_tab'] ?? false),
                 'full_page' => $this->sanitizeBoolean($formData['full_page'] ?? false),
@@ -244,7 +244,7 @@ class MenuTransformService
                 'icon' => $dbData['icon'] ?? '',
                 'type' => $dbData['type'] ?? Menu::TYPE_DIRECTORY,
                 'permission' => $dbData['permission'] ?? '',
-                'hidden' => (bool)($dbData['hidden'] ?? false),
+                'hide' => (bool)($dbData['hide'] ?? false),
                 'cacheable' => (bool)($dbData['cacheable'] ?? true),
                 'fixed_tab' => (bool)($dbData['fixed_tab'] ?? false),
                 'full_page' => (bool)($dbData['full_page'] ?? false),
@@ -277,12 +277,13 @@ class MenuTransformService
         $meta = [
             'title' => $menuData['title'] ?? '',
             'icon' => $menuData['icon'] ?? '',
-            // 优先使用驼峰命名，兼容下划线命名
-            'keepAlive' => $menuData['keepAlive'] ?? (bool)($menuData['cache'] ?? true),
-            'isHide' => (bool)($menuData['hidden'] ?? false),
-            'fixedTab' => $menuData['fixedTab'] ?? (bool)($menuData['fixed_tab'] ?? false),
-            'isFullPage' => $menuData['fullPage'] ?? (bool)($menuData['full_page'] ?? false),
-            'showBadge' => $menuData['showBadge'] ?? (bool)($menuData['show_badge'] ?? false)
+            'keepAlive' => $menuData['keepAlive'] ??  true,
+            'isHide' =>  $menuData['isHide'] ?? false,
+            'isHideTab' =>  $menuData['isHideTab'] ?? false,
+            'fixedTab' => $menuData['fixedTab'] ??  false,
+            'isFullPage' => $menuData['isFullPage'] ??  false,
+            'showBadge' => $menuData['showBadge'] ??  false,
+            'showTextBadge' => $menuData['showTextBadge'] ??  false
         ];
 
         // 添加权限标识
@@ -519,11 +520,11 @@ class MenuTransformService
             'type' => $menuData['type'] ?? Menu::TYPE_DIRECTORY,
             'type_text' => Menu::TYPE_MAP[$menuData['type'] ?? Menu::TYPE_DIRECTORY] ?? '未知',
             'permission' => $menuData['permission'] ?? '',
-            'hidden' => (bool)($menuData['hidden'] ?? false),
+            'hide' => (bool)($menuData['hide'] ?? false),
             // 使用驼峰命名的访问器字段
             'keepAlive' => $menuData['keepAlive'] ?? (bool)($menuData['cache'] ?? true),
             'fixedTab' => $menuData['fixedTab'] ?? (bool)($menuData['fixed_tab'] ?? false),
-            'fullPage' => $menuData['fullPage'] ?? (bool)($menuData['full_page'] ?? false),
+            'isFullPage' => $menuData['isFullPage'] ?? (bool)($menuData['full_page'] ?? false),
             'linkUrl' => $menuData['linkUrl'] ?? ($menuData['link_url'] ?? ''),
             'iframe' => (bool)($menuData['iframe'] ?? false),
             'showBadge' => $menuData['showBadge'] ?? (bool)($menuData['show_badge'] ?? false),
@@ -687,7 +688,7 @@ class MenuTransformService
             'button_count' => 0,
             'link_count' => 0,
             'iframe_count' => 0,
-            'hidden_count' => 0,
+            'hide_count' => 0,
             'disabled_count' => 0,
             'max_depth' => 0
         ];
@@ -730,8 +731,8 @@ class MenuTransformService
             }
 
             // 统计状态
-            if ($menu['hidden'] ?? false) {
-                $stats['hidden_count']++;
+            if ($menu['hide'] ?? false) {
+                $stats['hide_count']++;
             }
             
             if (!($menu['status'] ?? true)) {

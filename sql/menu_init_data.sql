@@ -20,8 +20,8 @@
 
 -- 1. 仪表板模块
 INSERT INTO th_sys_menu (
-    id, parent_id, name, path, component, title, icon, type, 
-     hidden, keep_alive, fixed_tab, status, sort, created_at, updated_at
+    id, parent_id, name, path, component, title, icon, type,
+    hide, cache, fixed_tab, status, sort, created_at, updated_at
 ) VALUES 
 -- 仪表板父级菜单
 (1, 0, 'Dashboard', '/dashboard', '/index/index', '仪表板', '&#xe721;', 'D', 
@@ -33,8 +33,8 @@ FALSE, TRUE, FALSE, 1, 100, NOW(), NOW()),
 
 -- 2. 系统管理模块
 INSERT INTO th_sys_menu (
-    id, parent_id, name, path, component, title, icon, type, 
-     hidden, keep_alive, fixed_tab, status, sort, created_at, updated_at
+    id, parent_id, name, path, component, title, icon, type,
+    hide, cache, fixed_tab, status, sort, created_at, updated_at
 ) VALUES 
 -- 系统管理父级菜单
 (10, 0, 'System', '/system', '/index/index', '系统管理', '&#xe7b9;', 'D', 
@@ -58,8 +58,8 @@ FALSE, TRUE, FALSE,  1, 400, NOW(), NOW());
 
 -- 3. 结果页面模块
 INSERT INTO th_sys_menu (
-    id, parent_id, name, path, component, title, icon, type, 
-    hidden, keep_alive, fixed_tab, status, sort, created_at, updated_at
+    id, parent_id, name, path, component, title, icon, type,
+    hide, cache, fixed_tab, status, sort, created_at, updated_at
 ) VALUES 
 -- 结果页面父级菜单
 (20, 0, 'Result', '/result', '/index/index', '结果页面', '&#xe715;', 'D', 
@@ -75,8 +75,8 @@ INSERT INTO th_sys_menu (
 
 -- 4. 异常页面模块
 INSERT INTO th_sys_menu (
-    id, parent_id, name, path, component, title, icon, type, 
-    hidden, keep_alive, fixed_tab, status, sort, created_at, updated_at
+    id, parent_id, name, path, component, title, icon, type,
+    hide, cache, fixed_tab, status, sort, created_at, updated_at
 ) VALUES 
 -- 异常页面父级菜单
 (30, 0, 'Exception', '/exception', '/index/index', '异常页面', '&#xe820;', 'D', 
@@ -147,9 +147,7 @@ SELECT
     m.title,
     m.type,
     m.icon,
-    m.roles,
-    m.hidden,
-    m.cacheable,
+    m.hide,
     m.sort
 FROM th_sys_menu m 
 WHERE m.deleted = FALSE 

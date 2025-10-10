@@ -136,16 +136,14 @@ class MenuController
      */
     public function route(Request $request): Response
     {
-        $adminId = $request->adminId ?? 0;
-        if (empty($adminId)) {
-            return $this->error(Code::UNAUTHORIZED, '未登录');
-        }
-
-        // 获取管理员可访问的菜单树并转换为前端路由格式
-        $menuTree = $this->menuModel->getAdminMenuTree((int)$adminId);
-
-        $routes = $this->transformService->toRouteConfigTree($menuTree);
-        return R::data(['routes' => $routes]);
+        // 获取管理员ID
+        $adminId = (int)($request->adminId ?? 0);
+        
+        // 调用 Service 获取路由配置
+        $routes = $this->menuService->getAdminRoutes($adminId);
+        
+        // 返回统一响应
+        return R::success(['routes' => $routes], '获取路由配置成功');
     }
 
 
@@ -161,7 +159,6 @@ class MenuController
      */
     public function tree(Request $request): Response
     {
-        var_dump('获取菜单树形结构');
         // 获取查询参数
         $parentId = (int)$request->get('parent_id', 0);
         $onlyEnabled = $request->get('only_enabled', 'true') === 'true';
@@ -182,7 +179,6 @@ class MenuController
         }
 
         $routes = $this->formatTreeForApi($tree);
-        var_dump($routes);
         return R::data(['routes' => $routes]);
     }
 

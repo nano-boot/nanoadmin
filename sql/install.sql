@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS th_sys_menu (
     -- auth_list JSON DEFAULT NULL COMMENT '权限按钮列表（对应meta.authList）',
 
     -- === 显示控制 ===
-    hidden tinyint(1) DEFAULT 0 COMMENT '是否在菜单中隐藏（对应meta.isHide）',
+    hide tinyint(1) DEFAULT 0 COMMENT '是否在菜单中隐藏（对应meta.isHide）',
     hide_tab tinyint(1) DEFAULT 0 COMMENT '是否在标签页中隐藏：1-隐藏，0-显示（对应meta.isHideTab）',
     full_page tinyint(1) DEFAULT 0 COMMENT '是否全屏显示（对应meta.isFullPage）',
 

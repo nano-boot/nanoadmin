@@ -300,6 +300,25 @@ class MenuService
     }
 
     /**
+     * 获取管理员可访问的路由配置
+     * @param int $adminId 管理员ID
+     * @return array
+     * @throws ApiException
+     */
+    public function getAdminRoutes(int $adminId): array
+    {
+
+        // 使用注入的 Model 获取菜单树
+        $menuTree = $this->model->getAdminMenuTree($adminId);
+
+        // 转换为前端路由格式
+        $transformService = new MenuTransformService();
+        $routes = $transformService->toRouteConfigTree($menuTree);
+
+        return $routes;
+    }
+
+    /**
      * 批量更新菜单排序
      * @param array $sortData 排序数据
      * @return bool

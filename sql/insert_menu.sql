@@ -10,7 +10,7 @@
 INSERT INTO `th_sys_menu` (
     `id`, `name`, `title`, `path`, `component`, `icon`, `redirect`,
     `parent_id`, `sort`, `type`, `status`,
-    `hidden`, `hide_tab`, `cache`, `fixed_tab`, `active_path`
+    `hide`, `hide_tab`, `cache`, `fixed_tab`, `active_path`
 ) VALUES
 -- === 一级菜单 ===
 (1, 'Dashboard', '数据面板', '/dashboard', '/index/index', '&#xe721;', '',
@@ -56,7 +56,7 @@ INSERT INTO `th_sys_menu` (
 -- === 按钮权限 ===
 INSERT INTO `th_sys_menu` (
     `id`, `name`, `title`, `path`, `component`, `parent_id`,
-    `sort`, `type`, `status`, `hidden`, `active_path`
+    `sort`, `type`, `status`, `hide`, `active_path`
 ) VALUES
 -- 用户管理按钮权限
 (2001, 'AuthUserCreate', '创建用户', '/permission/user/create', '', 200,  1, 'B', 1, 1, ''),
@@ -128,7 +128,7 @@ ALTER TABLE `th_sys_menu` AUTO_INCREMENT = 8000;
    - auth_list: 操作权限，对应前端 meta.authList（JSON数组）
 
 3. 显示控制：
-   - is_hidden: 对应前端 meta.isHide
+   - is_hide: 对应前端 meta.isHide
    - is_hide_tab: 对应前端 meta.isHideTab
    - is_full_page: 对应前端 meta.isFullPage
    - keep_alive: 对应前端 meta.keepAlive
