@@ -161,7 +161,8 @@ class RoleService
         }
         
         // 检查角色是否被使用
-        if ($role->isUsed($id)) {
+        $adminCount = $role->admins()->count();
+        if ($adminCount > 0) {
             throw new ApiException(Code::DATA_IN_USE, '角色正在使用中，无法删除');
         }
         
@@ -206,41 +207,79 @@ class RoleService
     }
 
     /**
-     * 为角色分配权限
+     * 为角色分配权限（接收菜单ID和权限标识）
      * @param int $roleId 角色ID
-     * @param array $permissionIds 权限ID数组
+     * @param array $data { menuIds: int[], authMarks: string[] }
      * @return bool
      * @throws ApiException
      */
-    public function assignPermissions(int $roleId, array $permissionIds): bool
+    public function assignPermissions(int $roleId, array $data): bool
     {
-        $roleModel = ModelFactory::role();
-        
         // 检查角色是否存在
-        $role = $roleModel->find($roleId);
+        $role = $this->model->find($roleId);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
-        // 验证权限是否存在
-        if (!empty($permissionIds)) {
-            $permissionModel = ModelFactory::permission();
-            $existingPermissions = $permissionModel->whereIn('id', $permissionIds)->where('status', true)->column('id');
+        $menuIds = $data['menuIds'] ?? [];
+        $authMarks = $data['authMarks'] ?? [];
+        
+        // 验证菜单是否存在
+        if (!empty($menuIds)) {
+            $menuModel = ModelFactory::menu();
+            $existingMenuIds = $menuModel->whereIn('id', $menuIds)
+                ->where('status', true)
+                ->pluck('id')
+                ->toArray();
             
-            $invalidPermissionIds = array_diff($permissionIds, $existingPermissions);
-            if (!empty($invalidPermissionIds)) {
-                throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在: ' . implode(',', $invalidPermissionIds));
+            $invalidMenuIds = array_diff($menuIds, $existingMenuIds);
+            if (!empty($invalidMenuIds)) {
+                throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在: ' . implode(',', $invalidMenuIds));
             }
         }
         
-        // 分配权限
-        $result = $role->assignPermissions($permissionIds);
-        
-        if ($result === false) {
-            throw new ApiException(Code::SYSTEM_ERROR, '分配权限失败');
+        // 通过 authMark 查找权限ID
+        $permissionIds = [];
+        if (!empty($authMarks)) {
+            $permissionModel = ModelFactory::permission();
+            $permissions = $permissionModel->whereIn('mark', $authMarks)
+                ->where('status', true)
+                ->get();
+            
+            foreach ($permissions as $permission) {
+                $permissionIds[] = $permission->id;
+            }
+            
+            $foundMarks = $permissions->pluck('mark')->toArray();
+            $invalidMarks = array_diff($authMarks, $foundMarks);
+            if (!empty($invalidMarks)) {
+                throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在: ' . implode(',', $invalidMarks));
+            }
         }
         
-        return true;
+        try {
+            // 开始事务
+            \support\Db::beginTransaction();
+            
+            // 分配菜单
+            if (method_exists($role, 'assignMenus')) {
+                $role->assignMenus($menuIds);
+            }
+            
+            // 分配权限
+            if (method_exists($role, 'assignPermissions')) {
+                $role->assignPermissions($permissionIds);
+            }
+            
+            // 提交事务
+            \support\Db::commit();
+            
+            return true;
+        } catch (\Exception $e) {
+            // 回滚事务
+            \support\Db::rollBack();
+            throw new ApiException(Code::SYSTEM_ERROR, '分配权限失败: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -263,7 +302,10 @@ class RoleService
         // 验证菜单是否存在
         if (!empty($menuIds)) {
             $menuModel = ModelFactory::menu();
-            $existingMenus = $menuModel->whereIn('id', $menuIds)->where('status', true)->column('id');
+            $existingMenus = $menuModel->whereIn('id', $menuIds)
+                ->where('status', true)
+                ->pluck('id')
+                ->toArray();
             
             $invalidMenuIds = array_diff($menuIds, $existingMenus);
             if (!empty($invalidMenuIds)) {
@@ -282,22 +324,37 @@ class RoleService
     }
 
     /**
-     * 获取角色权限列表
+     * 获取角色权限列表（返回ID和标识用于前端选中）
      * @param int $roleId 角色ID
-     * @return array
+     * @return array { menuIds: int[], authMarks: string[] }
      * @throws ApiException
      */
     public function getRolePermissions(int $roleId): array
     {
-        $roleModel = ModelFactory::role();
-        
         // 检查角色是否存在
-        $role = $roleModel->find($roleId);
+        $role = $this->model->with(['menus', 'permissions'])->find($roleId);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
-        return $role->getAllPermissions();
+        // 收集菜单ID（不包含权限）
+        $menuIds = [];
+        foreach ($role->menus as $menu) {
+            $menuIds[] = $menu->id;
+        }
+        
+        // 收集权限标识（authMark格式：menu:action）
+        $authMarks = [];
+        foreach ($role->permissions as $permission) {
+            if (!empty($permission->mark)) {
+                $authMarks[] = $permission->mark;
+            }
+        }
+        
+        return [
+            'menuIds' => array_unique(array_values($menuIds)),
+            'authMarks' => array_unique(array_values($authMarks))
+        ];
     }
 
     /**
@@ -521,8 +578,8 @@ class RoleService
         $roleModel = ModelFactory::role();
         
         // 检查角色是否存在
-        $existingRoles = $roleModel->whereIn('id', $ids)->select();
-        $existingIds = $existingRoles->column('id');
+        $existingRoles = $roleModel->whereIn('id', $ids)->get();
+        $existingIds = $existingRoles->pluck('id')->toArray();
         $invalidIds = array_diff($ids, $existingIds);
         
         if (!empty($invalidIds)) {
@@ -531,7 +588,9 @@ class RoleService
         
         // 检查是否有角色正在使用
         foreach ($existingRoles as $role) {
-            if ($role->isUsed($role->id)) {
+            // 检查是否有管理员使用此角色
+            $adminCount = $role->admins()->count();
+            if ($adminCount > 0) {
                 throw new ApiException(Code::DATA_IN_USE, "角色 '{$role->name}' 正在使用中，无法删除");
             }
         }

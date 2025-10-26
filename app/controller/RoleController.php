@@ -106,33 +106,49 @@ class RoleController
     }
 
     /**
-     * 为角色分配权限
-     * POST /sys/roles/{id}/permissions
+     * 为角色分配权限（接收菜单ID和权限标识）
+     * POST /sys/role/{id}/permissions
      * @param Request $request
      * @return Response
      * @throws ApiException
      */
-    public function assignPermissions(Request $request): Response
+    public function assignPermissions($id, Request $request): Response
     {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
-            }
+        $id = (int)$id;
+        if ($id <= 0) {
+            return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
+        }   
+        // 获取菜单ID和权限标识
+        $menuIds = $request->post('menuIds', []);
+        $authMarks = $request->post('authMarks', []);
+        
+        // 验证数据格式
+        if (!is_array($menuIds)) {
+            return R::error('菜单ID列表格式错误', Code::PARAMETER_ERROR->value);
+        }
+        
+        if (!is_array($authMarks)) {
+            return R::error('权限标识列表格式错误', Code::PARAMETER_ERROR->value);
+        }
 
-            $permissionIds = $request->post('permission_ids', []);
-            
-            if (!is_array($permissionIds)) {
-                return R::error('权限ID列表格式错误', Code::PARAMETER_ERROR->value);
-            }
-
-            // 转换为整数数组
-            $permissionIds = array_map('intval', $permissionIds);
-            $permissionIds = array_filter($permissionIds, function($id) {
-                return $id > 0;
-            });
-            $result = $this->roleService->assignPermissions($id, $permissionIds);
-            return R::data($result, '分配权限成功');
+        // 转换菜单ID为整数数组
+        $menuIds = array_map('intval', $menuIds);
+        $menuIds = array_filter($menuIds, function($id) {
+            return $id > 0;
+        });
+        
+        // 过滤权限标识（确保是字符串）
+        $authMarks = array_filter($authMarks, function($mark) {
+            return is_string($mark) && !empty($mark);
+        });
+        
+        // 调用服务层
+        $result = $this->roleService->assignPermissions($id, [
+            'menuIds' => array_values($menuIds),
+            'authMarks' => array_values($authMarks)
+        ]);
+        
+        return R::data($result, '分配权限成功');
     }
 
     /**
@@ -169,13 +185,14 @@ class RoleController
     /**
      * 获取角色的权限列表
      * GET /sys/roles/{id}/permissions
+     * @param $id
      * @param Request $request
      * @return Response
      * @throws ApiException
      */
-    public function getPermissions(Request $request): Response
+    public function getPermissions($id): Response
     {
-            $id = (int)$request->get('id', 0);
+            $id = (int)$id;
             if ($id <= 0) {
                 return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
             }

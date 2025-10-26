@@ -179,7 +179,7 @@ class MenuController
         }
 
         $routes = $this->formatTreeForApi($tree);
-        return R::data(['routes' => $routes]);
+        return R::data($routes);
     }
 
     /**

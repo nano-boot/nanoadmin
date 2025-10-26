@@ -238,7 +238,7 @@ class Menu extends BaseModel
      */
     public function getFixedTabAttribute(): bool
     {
-        return (bool)$this->attributes['fixed_tab'];
+        return (bool)($this->attributes['fixed_tab'] ?? false);
     }
 
     /**
@@ -247,7 +247,7 @@ class Menu extends BaseModel
      */
     public function getIsFullPageAttribute(): bool
     {
-        return (bool)$this->attributes['full_page'];
+        return (bool)($this->attributes['full_page'] ?? false);
     }
 
     /**
@@ -256,7 +256,7 @@ class Menu extends BaseModel
      */
     public function getShowBadgeAttribute(): bool
     {
-        return (bool)$this->attributes['show_badge'];
+        return (bool)($this->attributes['show_badge'] ?? false);
     }
 
     /**

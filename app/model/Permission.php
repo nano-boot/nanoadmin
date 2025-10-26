@@ -2,14 +2,21 @@
 
 namespace plugin\theadmin\app\model;
 
-use think\Collection;
-use think\db\exception\DbException;
-use think\model\relation\BelongsToMany;
-use think\Paginator;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * 权限模型
- * @property mixed $roles
+ * @property int $id
+ * @property string $name
+ * @property string $mark
+ * @property string $resource
+ * @property string $action
+ * @property string $description
+ * @property int $status
+ * @property int $sort
+ * @property bool $deleted
+ * @property string $created_at
+ * @property string $updated_at
  */
 class Permission extends BaseModel
 {
@@ -17,29 +24,43 @@ class Permission extends BaseModel
      * 表名
      * @var string
      */
-    protected $name = 'sys_permission';
+    protected $table = 'sys_permission';
 
     /**
      * 主键
      * @var string
      */
-    protected $pk = 'id';
+    protected $primaryKey = 'id';
+
+    /**
+     * 可批量赋值的属性
+     * @var array
+     */
+    protected $fillable = [
+        'name',
+        'mark',
+        'resource',
+        'action',
+        'description',
+        'status',
+        'sort'
+    ];
 
     /**
      * 字段类型转换
      * @var array
      */
-    protected array $type = [
+    protected $casts = [
         'id' => 'integer',
-        'status' => 'boolean',
+        'status' => 'integer',
         'sort' => 'integer',
         'deleted' => 'boolean',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'created_at' => 'string',
+        'updated_at' => 'string'
     ];
 
     /**
-     * 关联角色
+     * 关联角色（多对多）
      * @return BelongsToMany
      */
     public function roles(): BelongsToMany
@@ -52,37 +73,53 @@ class Permission extends BaseModel
      * @param array $where 查询条件
      * @param int $page 页码
      * @param int $limit 每页数量
-     * @return Paginator
-     * @throws DbException
+     * @return array
      */
-    public function getListWithRoleCount(array $where = [], int $page = 1, int $limit = 15): Paginator
+    public function getListWithRoleCount(array $where = [], int $page = 1, int $limit = 15): array
     {
-        $query = $this->where($where);
-        
+        $query = $this->newQuery();
+
         // 支持权限名称搜索
         if (!empty($where['name'])) {
             $query->where('name', 'like', '%' . $where['name'] . '%');
         }
-        
-        // 支持权限代码搜索
-        if (!empty($where['code'])) {
-            $query->where('code', 'like', '%' . $where['code'] . '%');
+
+        // 支持权限标识搜索
+        if (!empty($where['mark'])) {
+            $query->where('mark', 'like', '%' . $where['mark'] . '%');
         }
-        
+
         // 支持资源类型筛选
         if (!empty($where['resource'])) {
             $query->where('resource', $where['resource']);
         }
-        
+
         // 支持操作类型筛选
         if (!empty($where['action'])) {
             $query->where('action', $where['action']);
         }
-        
-        return $query->order('sort asc, id desc')->paginate([
-            'list_rows' => $limit,
-            'page' => $page
-        ]);
+
+        // 支持状态筛选
+        if (isset($where['status'])) {
+            $query->where('status', $where['status']);
+        }
+
+        $total = $query->count();
+        $list = $query->orderBy('sort', 'asc')
+            ->orderBy('id', 'desc')
+            ->offset(($page - 1) * $limit)
+            ->limit($limit)
+            ->get()
+            ->toArray();
+
+        return [
+            'list' => $list,
+            'total' => $total,
+            'page' => $page,
+            'page_size' => $limit,
+            'last_page' => (int)ceil($total / $limit),
+            'has_more' => $page * $limit < $total
+        ];
     }
 
     /**
@@ -90,19 +127,19 @@ class Permission extends BaseModel
      * @param array $data 权限数据
      * @return static|false
      */
-    public function createPermission(array $data): Permission|bool|static
+    public function createPermission(array $data): Permission|bool
     {
-        // 检查权限代码是否已存在
-        if ($this->checkExists(['code' => $data['code']])) {
+        // 检查权限标识是否已存在
+        if ($this->where('mark', $data['mark'])->exists()) {
             return false;
         }
-        
+
         // 设置默认排序值
         if (!isset($data['sort'])) {
-            $data['sort'] = $this->getNextSort();
+            $data['sort'] = $this->getNextSort([]);
         }
-        
-        return $this->save($data) ? $this : false;
+
+        return $this->create($data);
     }
 
     /**
@@ -113,11 +150,17 @@ class Permission extends BaseModel
      */
     public function updatePermission(int $id, array $data): bool
     {
-        // 检查权限代码是否已存在（排除自己）
-        if (isset($data['code']) && $this->checkExists(['code' => $data['code']], $id)) {
-            return false;
+        // 检查权限标识是否已存在（排除自己）
+        if (isset($data['mark'])) {
+            $exists = $this->where('mark', $data['mark'])
+                ->where('id', '!=', $id)
+                ->exists();
+
+            if ($exists) {
+                return false;
+            }
         }
-        
+
         return $this->where('id', $id)->update($data) !== false;
     }
 
@@ -128,22 +171,24 @@ class Permission extends BaseModel
      */
     public function isUsed(int $id): bool
     {
-        // 检查是否有角色使用此权限
-        $roleCount = $this->roles()->where('permission_id', $id)->count();
-        
-        return $roleCount > 0;
+        $permission = $this->find($id);
+        if (!$permission) {
+            return false;
+        }
+
+        return $permission->roles()->count() > 0;
     }
 
     /**
-     * 验证权限代码格式
-     * @param string $code 权限代码
+     * 验证权限标识格式
+     * @param string $mark 权限标识
      * @return bool
      */
-    public static function validateCode(string $code): bool
+    public static function validateMark(string $mark): bool
     {
-        // 权限代码格式：resource:action 或 resource:action:detail
+        // 权限标识格式：resource:action 或 resource:action:detail
         // 例如：user:create, user:update, user:delete, user:view:profile
-        return preg_match('/^[a-zA-Z][a-zA-Z0-9_]*:[a-zA-Z][a-zA-Z0-9_]*(?::[a-zA-Z][a-zA-Z0-9_]*)?$/', $code);
+        return preg_match('/^[a-zA-Z][a-zA-Z0-9_]*:[a-zA-Z][a-zA-Z0-9_]*(?::[a-zA-Z][a-zA-Z0-9_]*)?$/', $mark);
     }
 
     /**
@@ -207,7 +252,7 @@ class Permission extends BaseModel
     {
         $roles = $this->roles;
         $list = [];
-        
+
         foreach ($roles as $role) {
             $list[] = [
                 'id' => $role->id,
@@ -215,7 +260,7 @@ class Permission extends BaseModel
                 'name' => $role->name
             ];
         }
-        
+
         return $list;
     }
 
@@ -234,27 +279,31 @@ class Permission extends BaseModel
     /**
      * 根据资源类型获取权限列表
      * @param string $resource 资源类型
-     * @return Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getByResource(string $resource): Collection
+    public function getByResource(string $resource)
     {
         return $this->where('resource', $resource)
-                   ->enabled()
-                   ->order('sort asc, id desc')
-                   ->select();
+            ->where('status', 1)
+            ->where('deleted', false)
+            ->orderBy('sort', 'asc')
+            ->orderBy('id', 'desc')
+            ->get();
     }
 
     /**
      * 根据操作类型获取权限列表
      * @param string $action 操作类型
-     * @return Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getByAction(string $action): Collection
+    public function getByAction(string $action)
     {
         return $this->where('action', $action)
-                   ->enabled()
-                   ->order('sort asc, id desc')
-                   ->select();
+            ->where('status', 1)
+            ->where('deleted', false)
+            ->orderBy('sort', 'asc')
+            ->orderBy('id', 'desc')
+            ->get();
     }
 
     /**
@@ -263,9 +312,11 @@ class Permission extends BaseModel
      */
     public function getAllResources(): array
     {
-        return $this->enabled()
-                   ->group('resource')
-                   ->column('resource');
+        return $this->where('status', 1)
+            ->where('deleted', false)
+            ->groupBy('resource')
+            ->pluck('resource')
+            ->toArray();
     }
 
     /**
@@ -274,9 +325,11 @@ class Permission extends BaseModel
      */
     public function getAllActions(): array
     {
-        return $this->enabled()
-                   ->group('action')
-                   ->column('action');
+        return $this->where('status', 1)
+            ->where('deleted', false)
+            ->groupBy('action')
+            ->pluck('action')
+            ->toArray();
     }
 
     /**
@@ -285,12 +338,17 @@ class Permission extends BaseModel
      */
     public function getPermissionTree(): array
     {
-        $permissions = $this->enabled()->order('sort asc, id desc')->select();
+        $permissions = $this->where('status', 1)
+            ->where('deleted', false)
+            ->orderBy('sort', 'asc')
+            ->orderBy('id', 'desc')
+            ->get();
+
         $tree = [];
-        
+
         foreach ($permissions as $permission) {
             $resource = $permission->resource;
-            
+
             if (!isset($tree[$resource])) {
                 $tree[$resource] = [
                     'resource' => $resource,
@@ -298,98 +356,107 @@ class Permission extends BaseModel
                     'children' => []
                 ];
             }
-            
+
             $tree[$resource]['children'][] = [
                 'id' => $permission->id,
-                'code' => $permission->code,
+                'mark' => $permission->mark,
                 'name' => $permission->name,
                 'resource' => $permission->resource,
                 'action' => $permission->action,
                 'description' => $permission->description
             ];
         }
-        
+
         return array_values($tree);
     }
 
     /**
      * 批量检查权限
-     * @param array $permissions 权限代码数组
+     * @param array $marks 权限标识数组
      * @param int $adminId 管理员ID（可选）
      * @return array 返回权限检查结果
      */
-    public function batchCheck(array $permissions, int $adminId = 0): array
+    public function batchCheck(array $marks, int $adminId = 0): array
     {
         $result = [];
-        
-        foreach ($permissions as $permissionCode) {
-            $result[$permissionCode] = false;
-            
+
+        foreach ($marks as $mark) {
+            $result[$mark] = false;
+
             // 检查权限是否存在且启用
-            $permission = $this->where('code', $permissionCode)->enabled()->find();
+            $permission = $this->where('mark', $mark)
+                ->where('status', 1)
+                ->where('deleted', false)
+                ->first();
+
             if (!$permission) {
                 continue;
             }
-            
+
             if ($adminId > 0) {
                 // 检查指定管理员是否有此权限
                 $admin = Admin::find($adminId);
-                if ($admin && $admin->hasPermission($permissionCode)) {
-                    $result[$permissionCode] = true;
+                if ($admin && $admin->hasPermission($mark)) {
+                    $result[$mark] = true;
                 }
             } else {
                 // 只检查权限是否存在
-                $result[$permissionCode] = true;
+                $result[$mark] = true;
             }
         }
-        
+
         return $result;
     }
 
     /**
      * 获取启用的权限列表（用于下拉选择）
-     * @return Collection
+     * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getEnabledList(): Collection
+    public function getEnabledList()
     {
-        return $this->enabled()->order('sort asc, id desc')->select();
+        return $this->where('status', 1)
+            ->where('deleted', false)
+            ->orderBy('sort', 'asc')
+            ->orderBy('id', 'desc')
+            ->get();
     }
 
     /**
-     * 根据权限代码获取权限信息
-     * @param string $code 权限代码
+     * 根据权限标识获取权限信息
+     * @param string $mark 权限标识
      * @return static|null
      */
-    public function getByCode(string $code): ?Permission
+    public function getByMark(string $mark): ?Permission
     {
-        return $this->where('code', $code)->find();
+        return $this->where('mark', $mark)->first();
     }
 
     /**
-     * 检查权限代码是否符合RESTful规范
-     * @param string $code 权限代码
+     * 检查权限标识是否符合RESTful规范
+     * @param string $mark 权限标识
      * @return bool
      */
-    public static function isRestfulCode(string $code): bool
+    public static function isRestfulMark(string $mark): bool
     {
         $restfulActions = ['index', 'show', 'create', 'store', 'edit', 'update', 'destroy'];
-        $parts = explode(':', $code);
-        
+        $parts = explode(':', $mark);
+
         if (count($parts) < 2) {
             return false;
         }
-        
+
         return in_array($parts[1], $restfulActions);
     }
 
     /**
-     * 生成RESTful权限代码
+     * 生成RESTful权限标识
      * @param string $resource 资源名称
      * @param string $action 操作名称
      * @return string
      */
-    public static function generateRestfulCode(string $resource, string $action): string
+    public static function generateRestfulMark(string $resource, string $action): string
     {
         return strtolower($resource) . ':' . strtolower($action);
     }
+
 }
