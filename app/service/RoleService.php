@@ -31,6 +31,8 @@ class RoleService
      *  - page: 页码
      *  - limit: 每页数量
      *  - keyword: 关键词（name/code/description 模糊搜索）
+     *  - name: 角色名称（模糊搜索）
+     *  - code: 角色代码（模糊搜索）
      *  - status: 状态（0/1）
      * @return array { list: array, pagination: array }
      */
@@ -43,6 +45,8 @@ class RoleService
         // 查询参数
         $keyword = trim((string)($params['keyword'] ?? ''));
         $status = $params['status'] ?? '';
+        $name = trim((string)($params['name'] ?? ''));
+        $code = trim((string)($params['code'] ?? ''));
 
         $query = Role::query()
             ->when($keyword !== '', function ($q) use ($keyword) {
@@ -51,6 +55,12 @@ class RoleService
                         ->orWhere('code', 'like', "%{$keyword}%")
                         ->orWhere('description', 'like', "%{$keyword}%");
                 });
+            })
+            ->when($name !== '', function ($q) use ($name) {
+                $q->where('name', 'like', "%{$name}%");
+            })
+            ->when($code !== '', function ($q) use ($code) {
+                $q->where('code', 'like', "%{$code}%");
             })
             ->when($status !== '', function ($q) use ($status) {
                 $q->where('status', (int)$status);

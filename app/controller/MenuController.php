@@ -152,34 +152,71 @@ class MenuController
 
 
     /**
-     * 获取菜单树形结构
+     * 获取菜单树形结构（支持搜索和过滤）
      * GET /admin/menu/tree
      * @param Request $request
      * @return Response
      */
     public function tree(Request $request): Response
     {
-        // 获取查询参数
-        $parentId = (int)$request->get('parent_id', 0);
-        $onlyEnabled = $request->get('only_enabled', 'true') === 'true';
-        $keyword = trim($request->get('keyword', ''));
-        if (!empty($keyword)) {
-            // 使用搜索服务进行搜索
-            $options = [
-                'search_fields' => ['name', 'title', 'path'],
-                'include_disabled' => !$onlyEnabled,
-                'include_hidden' => true,
-                'maintain_hierarchy' => true,
-                'parent_id' => $parentId > 0 ? $parentId : null
-            ];
-            $tree = $this->searchService->searchMenus($keyword, $options);
-        } else {
-            // 获取菜单树
-            $tree = $this->menuModel->getTree($parentId, $onlyEnabled);
+        try {
+            // 获取查询参数
+            $parentId = (int)$request->get('parent_id', 0);
+            $onlyEnabled = $request->get('only_enabled', 'true') === 'true';
+            $keyword = trim($request->get('keyword', ''));
+            $status = $request->get('status', '');
+            $type = $request->get('type', '');
+            $title = $request->get('title', '');
+            $name = $request->get('name', '');
+            $hidden = $request->get('hidden', '');
+      
+            // 判断是否有搜索或过滤条件
+            $hasSearchConditions = !empty($keyword) || $status !== '' || $type !== '' || $hidden !== '' || $title !== '' || $name !== '';
+            
+            if ($hasSearchConditions) {
+                // 有搜索或过滤条件，使用高级搜索
+                $searchParams = [
+                    'keyword' => $keyword,
+                    'search_fields' => ['name', 'title', 'path'],
+                    'menu_types' => !empty($type) ? [$type] : [],
+                    'status' => $status !== '' ? (bool)$status : null,
+                    'hidden' => $hidden !== '' ? (bool)$hidden : null,
+                    'parent_id' => $parentId > 0 ? $parentId : null,
+                    'maintain_hierarchy' => true
+                ];
+                
+                // 添加单独的 title 字段搜索
+                if (!empty($title)) {
+                    $searchParams['title'] = $title;
+                }
+                
+                // 添加单独的 name 字段搜索
+                if (!empty($name)) {
+                    $searchParams['name'] = $name;
+                }
+                
+                // 根据 only_enabled 参数调整 status 过滤
+                if ($onlyEnabled && $searchParams['status'] === null) {
+                    $searchParams['status'] = true;
+                }
+                
+                // 执行高级搜索
+                $tree = $this->searchService->advancedSearch($searchParams);
+            } else {
+                // 无搜索条件，直接获取树形结构
+                $tree = $this->menuModel->getTree($parentId, $onlyEnabled);
+            }
+            
+            // 格式化树形结构
+            $routes = $this->formatTreeForApi($tree);
+            
+            return R::data($routes);
+            
+        } catch (ApiException $e) {
+            return $this->error($e->getCode(), $e->getMessage());
+        } catch (\Exception $e) {
+            return $this->error(Code::SYSTEM_ERROR, '获取菜单树失败：' . $e->getMessage());
         }
-
-        $routes = $this->formatTreeForApi($tree);
-        return R::data($routes);
     }
 
     /**

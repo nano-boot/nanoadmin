@@ -261,7 +261,7 @@ class AdminService
         // 验证角色是否存在
         if (!empty($roleIds)) {
             $roleModel = ModelFactory::role();
-            $existingRoles = $roleModel->whereIn('id', $roleIds)->where('status', true)->column('id');
+            $existingRoles = $roleModel->whereIn('id', $roleIds)->where('status', true)->pluck('id')->toArray();
             
             $invalidRoleIds = array_diff($roleIds, $existingRoles);
             if (!empty($invalidRoleIds)) {
@@ -443,7 +443,7 @@ class AdminService
         $adminModel = $this->model;
         
         // 检查管理员是否存在
-        $existingAdmins = $adminModel->whereIn('id', $ids)->column('id');
+        $existingAdmins = $adminModel->whereIn('id', $ids)->pluck('id')->toArray();
         $invalidIds = array_diff($ids, $existingAdmins);
         
         if (!empty($invalidIds)) {

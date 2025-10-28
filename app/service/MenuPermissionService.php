@@ -7,9 +7,6 @@ use plugin\theadmin\app\model\Admin;
 use plugin\theadmin\app\model\Role;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
-use think\db\exception\DataNotFoundException;
-use think\db\exception\DbException;
-use think\db\exception\ModelNotFoundException;
 
 /**
  * 菜单权限验证服务
@@ -283,7 +280,7 @@ class MenuPermissionService
             }
 
             // 获取菜单详细信息
-            $menus = $this->menuModel->whereIn('id', $menuIds)->select();
+            $menus = $this->menuModel->whereIn('id', $menuIds)->get();
             
             // 获取管理员角色代码
             $admin = $this->adminModel->find($adminId);
@@ -532,9 +529,6 @@ class MenuPermissionService
      * 根据菜单ID列表构建菜单树
      * @param array $menuIds 菜单ID列表
      * @return array 菜单树
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     private function buildMenuTreeFromIds(array $menuIds): array
     {
@@ -549,8 +543,9 @@ class MenuPermissionService
         $menus = $this->menuModel->whereIn('id', $allMenuIds)
                                  ->where('status', 1)
                                  ->where('deleted', 0)
-                                 ->order('sort asc, id asc')
-                                 ->select();
+                                 ->orderBy('sort', 'asc')
+                                 ->orderBy('id', 'asc')
+                                 ->get();
 
         // 构建菜单映射
         $menuMap = [];
@@ -579,9 +574,6 @@ class MenuPermissionService
      * 获取所有父菜单ID（确保树形结构完整）
      * @param array $menuIds 菜单ID列表
      * @return array 包含所有父菜单的ID列表
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     private function getAllParentMenuIds(array $menuIds): array
     {
@@ -599,9 +591,6 @@ class MenuPermissionService
      * 获取指定菜单的所有父菜单ID
      * @param int $menuId 菜单ID
      * @return array 父菜单ID列表
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     private function getParentMenuIds(int $menuId): array
     {
@@ -675,7 +664,7 @@ class MenuPermissionService
             }
 
             // 计算总权限数量
-            $allMenus = $this->menuModel->where('status', 1)->where('deleted', 0)->select();
+            $allMenus = $this->menuModel->where('status', 1)->where('deleted', 0)->get();
             $totalPermissions = [];
             foreach ($allMenus as $menu) {
                 $menuArray = $menu->toArray();

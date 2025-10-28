@@ -445,8 +445,8 @@ class PermissionService
         $permissionModel = ModelFactory::permission();
         
         // 检查权限是否存在
-        $existingPermissions = $permissionModel->whereIn('id', $ids)->select();
-        $existingIds = $existingPermissions->column('id');
+        $existingPermissions = $permissionModel->whereIn('id', $ids)->get();
+        $existingIds = $existingPermissions->pluck('id')->toArray();
         $invalidIds = array_diff($ids, $existingIds);
         
         if (!empty($invalidIds)) {

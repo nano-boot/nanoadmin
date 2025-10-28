@@ -3,10 +3,7 @@
 namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\model\Menu;
-use think\Collection;
-use think\db\exception\DataNotFoundException;
-use think\db\exception\DbException;
-use think\db\exception\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * 菜单搜索和过滤服务
@@ -68,9 +65,6 @@ class MenuSearchService
      * 过滤菜单（按状态、类型等条件）
      * @param array $filters 过滤条件
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function filterMenus(array $filters = []): array
     {
@@ -133,7 +127,7 @@ class MenuSearchService
             }
         }
         
-        $menus = $query->order('sort asc, id asc')->select();
+        $menus = $query->orderBy('sort', 'asc')->orderBy('id', 'asc')->get();
         
         // 子菜单数量过滤（需要在查询后处理）
         if ($filters['has_children'] !== null) {
@@ -156,9 +150,6 @@ class MenuSearchService
      * @param int $parentId 父菜单ID
      * @param array $options 搜索选项
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function recursiveSearch(string $keyword, int $parentId = 0, array $options = []): array
     {
@@ -170,7 +161,7 @@ class MenuSearchService
         // 应用基础过滤条件
         $this->applyBasicFilters($query, $options);
         
-        $menus = $query->order('sort asc, id asc')->select();
+        $menus = $query->orderBy('sort', 'asc')->orderBy('id', 'asc')->get();
         
         foreach ($menus as $menu) {
             $menuArray = $menu->toArray();
@@ -206,9 +197,6 @@ class MenuSearchService
      * 高级搜索（支持多条件组合）
      * @param array $searchParams 搜索参数
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function advancedSearch(array $searchParams): array
     {
@@ -226,23 +214,33 @@ class MenuSearchService
             });
         }
         
+        // 单独的 title 字段搜索（模糊匹配）
+        if (!empty($searchParams['title'])) {
+            $query->where('title', 'like', '%' . $searchParams['title'] . '%');
+        }
+        
+        // 单独的 name 字段搜索（模糊匹配）
+        if (!empty($searchParams['name'])) {
+            $query->where('name', 'like', '%' . $searchParams['name'] . '%');
+        }
+        
         // 菜单类型过滤
         if (!empty($searchParams['menu_types'])) {
             $query->whereIn('type', $searchParams['menu_types']);
         }
         
         // 状态过滤
-        if (isset($searchParams['status'])) {
+        if (isset($searchParams['status']) && $searchParams['status'] !== null) {
             $query->where('status', $searchParams['status']);
         }
         
         // 隐藏状态过滤
-        if (isset($searchParams['hidden'])) {
+        if (isset($searchParams['hidden']) && $searchParams['hidden'] !== null) {
             $query->where('hidden', $searchParams['hidden']);
         }
         
-        // 父菜单过滤
-        if (isset($searchParams['parent_id'])) {
+        // 父菜单过滤 - 修复：只有 parent_id 不为 null 时才添加条件
+        if (isset($searchParams['parent_id']) && $searchParams['parent_id'] !== null) {
             $query->where('parent_id', $searchParams['parent_id']);
         }
         
@@ -277,13 +275,35 @@ class MenuSearchService
             $query->where('created_at', '<=', $searchParams['created_end']);
         }
         
-        $menus = $query->order('sort asc, id asc')->select();
+        $menus = $query->orderBy('sort', 'asc')->orderBy('id', 'asc')->get();
         
         // 是否保持层级结构
         $maintainHierarchy = $searchParams['maintain_hierarchy'] ?? true;
         
         if ($maintainHierarchy) {
-            return $this->buildTreeFromCollection($menus);
+            // 获取所有匹配菜单的ID
+            $matchedIds = $menus->pluck('id')->toArray();
+            
+            // 收集所有需要的父级菜单ID
+            $parentIds = [];
+            foreach ($menus as $menu) {
+                if ($menu->parent_id > 0) {
+                    $ancestors = $this->getParentMenuIds($menu->id);
+                    $parentIds = array_merge($parentIds, $ancestors);
+                }
+            }
+            $parentIds = array_unique($parentIds);
+            
+            // 如果有父级菜单需要补充，查询它们
+            if (!empty($parentIds)) {
+                $parentMenus = $this->menuModel->whereIn('id', $parentIds)->get();
+                
+                // 合并到结果集中
+                $menus = $menus->merge($parentMenus);
+            }
+            
+            // 构建树形结构，并标记哪些是搜索匹配的
+            return $this->buildTreeFromCollection($menus, $matchedIds);
         } else {
             return $this->formatCollectionResults($menus);
         }
@@ -310,7 +330,7 @@ class MenuSearchService
         // 应用基础过滤条件
         $this->applyBasicFilters($query, $options);
         
-        return $query->order('sort asc, id asc')->select();
+        return $query->orderBy('sort', 'asc')->orderBy('id', 'asc')->get();
     }
 
     /**
@@ -346,14 +366,11 @@ class MenuSearchService
      * @param Collection $matchedMenus 匹配的菜单
      * @param array $options 选项
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     private function buildHierarchicalResults(Collection $matchedMenus, array $options): array
     {
         // 获取所有匹配菜单的ID
-        $matchedIds = $matchedMenus->column('id');
+        $matchedIds = $matchedMenus->pluck('id')->toArray();
         
         // 获取所有相关的父菜单ID
         $allRelevantIds = $this->getAllRelevantMenuIds($matchedIds);
@@ -361,7 +378,7 @@ class MenuSearchService
         // 获取所有相关菜单
         $query = $this->menuModel->whereIn('id', $allRelevantIds);
         $this->applyBasicFilters($query, $options);
-        $allMenus = $query->order('sort asc, id asc')->select();
+        $allMenus = $query->orderBy('sort', 'asc')->orderBy('id', 'asc')->get();
         
         // 构建树形结构
         return $this->buildTreeFromCollection($allMenus, $matchedIds);
@@ -371,9 +388,6 @@ class MenuSearchService
      * 获取所有相关的菜单ID（包括父菜单）
      * @param array $menuIds 菜单ID数组
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     private function getAllRelevantMenuIds(array $menuIds): array
     {
@@ -392,9 +406,6 @@ class MenuSearchService
      * 获取菜单的所有父菜单ID
      * @param int $menuId 菜单ID
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     private function getParentMenuIds(int $menuId): array
     {
@@ -511,9 +522,6 @@ class MenuSearchService
      * 获取所有菜单（应用过滤条件）
      * @param array $options 选项
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     private function getAllMenusWithFilters(array $options): array
     {
@@ -527,7 +535,7 @@ class MenuSearchService
                 $query->where('parent_id', $options['parent_id']);
             }
             
-            $menus = $query->order('sort asc, id asc')->select();
+            $menus = $query->orderBy('sort', 'asc')->orderBy('id', 'asc')->get();
             return $this->formatCollectionResults($menus);
         }
     }
@@ -537,9 +545,6 @@ class MenuSearchService
      * @param string $keyword 搜索关键词
      * @param array $options 搜索选项
      * @return array
-     * @throws DataNotFoundException
-     * @throws DbException
-     * @throws ModelNotFoundException
      */
     public function searchWithStats(string $keyword, array $options = []): array
     {
@@ -656,7 +661,8 @@ class MenuSearchService
             ->where('name', 'like', '%' . $keyword . '%')
             ->where('status', true)
             ->limit($limit)
-            ->column('name');
+            ->pluck('name')
+            ->toArray();
         
         foreach ($nameMatches as $name) {
             $suggestions[] = [
@@ -671,7 +677,8 @@ class MenuSearchService
             ->where('title', 'like', '%' . $keyword . '%')
             ->where('status', true)
             ->limit($limit)
-            ->column('title');
+            ->pluck('title')
+            ->toArray();
         
         foreach ($titleMatches as $title) {
             $suggestions[] = [
@@ -687,7 +694,8 @@ class MenuSearchService
             ->where('path', '<>', '')
             ->where('status', true)
             ->limit($limit)
-            ->column('path');
+            ->pluck('path')
+            ->toArray();
         
         foreach ($pathMatches as $path) {
             $suggestions[] = [

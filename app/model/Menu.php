@@ -411,7 +411,7 @@ class Menu extends BaseModel
      */
     public function children(): HasMany
     {
-        return $this->hasMany(self::class, 'parent_id', 'id')->order('sort asc, id asc');
+        return $this->hasMany(self::class, 'parent_id', 'id')->orderBy('sort', 'asc')->orderBy('id', 'asc');
     }
 
     /**
@@ -1049,7 +1049,7 @@ class Menu extends BaseModel
     public function getDescendantIds(int $menuId): array
     {
         $ids = [];
-        $children = $this->where('parent_id', $menuId)->select();
+        $children = $this->where('parent_id', $menuId)->get();
         
         foreach ($children as $child) {
             $ids[] = $child->id;

@@ -36,6 +36,8 @@ class RoleController
             'limit' => (int)$request->get('limit', 20),
             'keyword' => $request->get('keyword', ''),
             'status' => $request->get('status', ''),
+            'name' => $request->get('name', ''),
+            'code' => $request->get('code', ''),
         ];
         $result = $this->roleService->getRoleList($params);
         return R::paginate($result, '获取角色列表成功');
