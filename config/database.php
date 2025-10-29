@@ -16,9 +16,9 @@ return [
             // 数据库名
             'database' => 'theadmin',
             // 数据库用户名
-            'username' => 'root',
+            'username' => 'theadmin',
             // 数据库密码
-            'password' => '123456',
+            'password' => 'r2XGDDELccnFpHBE',
             // 数据库连接参数
             'unix_socket' => '',
             // 数据库编码默认采用utf8

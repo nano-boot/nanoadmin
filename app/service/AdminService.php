@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\service;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
@@ -35,9 +36,9 @@ class AdminService
      *  - keyword: 关键词（username/real_name/email 模糊搜）
      *  - status: 状态（0/1）
      *  - role_id: 角色ID筛选
-     * @return array { list: array, pagination: array }
+     * @return LengthAwarePaginator
      */
-    public function getAdminList(array $params = []): array
+    public function getAdminList(array $params = []): LengthAwarePaginator
     {
         // 分页参数
         $page = max(1, (int)($params['page'] ?? 1));
@@ -68,19 +69,12 @@ class AdminService
 
         $paginator = $query->paginate($limit, ['*'], 'page', $page);
     
-        $list = $paginator->getCollection()->map(function ($admin) {
+        // 格式化数据
+        $paginator->getCollection()->transform(function ($admin) {
             return $this->formatAdminRow($admin);
-        })->toArray();
+        });
 
-        return [
-            'list' => $list,
-            'pagination' => [
-                'page' => $paginator->currentPage(),
-                'size' => $paginator->perPage(),
-                'total' => $paginator->total(),
-                'pages' => $paginator->lastPage(),
-            ]
-        ];
+        return $paginator;
     }
 
     /**

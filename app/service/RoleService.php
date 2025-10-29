@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\service;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
@@ -34,9 +35,9 @@ class RoleService
      *  - name: 角色名称（模糊搜索）
      *  - code: 角色代码（模糊搜索）
      *  - status: 状态（0/1）
-     * @return array { list: array, pagination: array }
+     * @return LengthAwarePaginator
      */
-    public function getRoleList(array $params = []): array
+    public function getRoleList(array $params = []): LengthAwarePaginator
     {
         // 分页参数
         $page = max(1, (int)($params['page'] ?? 1));
@@ -68,21 +69,16 @@ class RoleService
             ->orderBy('sort', 'asc')
             ->orderBy('id', 'asc');
 
-        $paginator = $query->paginate($limit, ['*'], 'page', $page);
-    
-        $list = $paginator->getCollection()->map(function ($role) {
-            return $this->formatRoleRow($role);
-        })->toArray();
+               // 格式化数据
+      
 
-        return [
-            'list' => $list,
-            'pagination' => [
-                'page' => $paginator->currentPage(),
-                'size' => $paginator->perPage(),
-                'total' => $paginator->total(),
-                'pages' => $paginator->lastPage(),
-            ]
-        ];
+        $paginator = $query->paginate($limit, ['*'], 'page', $page);
+
+        $paginator->getCollection()->transform(function ($role) {
+            return $this->formatRoleRow($role);
+        });
+
+        return $paginator;
     }
 
     /**
@@ -597,6 +593,7 @@ class RoleService
         }
         
         // 检查是否有角色正在使用
+        /** @var Role $role */
         foreach ($existingRoles as $role) {
             // 检查是否有管理员使用此角色
             $adminCount = $role->admins()->count();

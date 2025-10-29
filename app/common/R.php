@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\common;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use support\Response;
 
 /**
@@ -69,23 +70,16 @@ class R
     /**
      * 分页响应
      */
-    public static function paginate(array $paginateData, string $msg = '获取成功'): Response
+    public static function paginate(LengthAwarePaginator $paginator, string $msg = '获取成功'): Response
     {
-        $list = $paginateData['list'];
-        $p = $paginateData['pagination'];
-        $pagination = [
-            'total' => (int)($p['total'] ?? 0),
-            'per_page' => (int)($p['size'] ?? 0),
-            'current_page' => (int)($p['page'] ?? 1),
-            'last_page' => (int)($p['pages'] ?? 1),
-        ];
-
         return json([
             'code' => Code::SUCCESS->value,
             'msg' => $msg,
             'data' => [
-                'list' => $list,
-                'pagination' => $pagination,
+                'current' => $paginator->currentPage(),
+                'records' => $paginator->items(),
+                'size' => $paginator->perPage(),
+                'total' => $paginator->total(),
             ],
             'timestamp' => time(),
         ]) ;

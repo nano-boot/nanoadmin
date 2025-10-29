@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\contract;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use plugin\theadmin\app\model\Admin;
 
 /**
@@ -15,7 +16,7 @@ interface AdminServiceInterface
      * @param array $params 查询参数
      * @return array
      */
-    public function getAdminList(array $params): array;
+    public function getAdminList(array $params): LengthAwarePaginator;
 
     /**
      * 根据ID获取管理员信息
