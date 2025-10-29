@@ -163,6 +163,9 @@ class MenuSearchService
         
         $menus = $query->orderBy('sort', 'asc')->orderBy('id', 'asc')->get();
         
+        /**
+         * @var Menu $menu
+         */
         foreach ($menus as $menu) {
             $menuArray = $menu->toArray();
             $isMatch = false;
