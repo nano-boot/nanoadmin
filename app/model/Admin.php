@@ -4,7 +4,7 @@ namespace plugin\theadmin\app\model;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 
@@ -61,12 +61,39 @@ class Admin extends BaseModel
     ];
 
     /**
+     * 模型启动方法，注册模型事件
+     */
+    protected static function booted(): void
+    {
+        static::updating(function (Admin $admin) {
+            if ($admin->id === 1 && $admin->isDirty('username')) {
+                throw new ApiException(Code::FORBIDDEN, '系统默认管理员不允许修改用户名');
+            }
+        });
+
+        static::deleting(function (Admin $admin) {
+            if ($admin->id === 1) {
+                throw new ApiException(Code::FORBIDDEN, '系统默认管理员不允许删除');
+            }
+        });
+    }
+
+    /**
      * 关联角色
      * @return BelongsToMany
      */
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'sys_admin_role', 'admin_id', 'role_id');
+    }
+
+    /**
+     * 关联管理员角色中间表（用于高效查询角色ID）
+     * @return HasMany
+     */
+    public function adminRoles(): HasMany
+    {
+        return $this->hasMany(AdminRole::class, 'admin_id', 'id');
     }
 
     /**
@@ -201,14 +228,13 @@ class Admin extends BaseModel
      */
     public function assignRoles(array $roleIds): bool
     {
-        // 先删除现有角色关联
-        $this->roles()->detach();
-        
-        // 添加新的角色关联
-        if (!empty($roleIds)) {
-            $this->roles()->attach($roleIds);
+        if ($this->id === 1) {
+            // 系统默认管理员不允许修改角色信息
+            return false;
         }
         
+        // 同步角色关联
+        $this->roles()->sync($roleIds);
         return true;
     }
 

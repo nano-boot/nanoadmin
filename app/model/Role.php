@@ -3,6 +3,8 @@
 namespace plugin\theadmin\app\model;
 
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use plugin\theadmin\app\common\ApiException;
+use plugin\theadmin\app\common\Code;
 
 /**
  * 角色模型
@@ -42,6 +44,22 @@ class Role extends BaseModel
         'updated_at' => 'string'
     ];
 
+
+    protected static function booted(): void
+    {
+        static::updating(function (Role $role) {
+            if ($role->id === 1) {
+                if ($role->isDirty('status')) {
+                    $role->syncOriginalAttribute('status');
+                }
+            }
+        });
+        static::deleting(function (Role $role) {
+            if ($role->id === 1) {
+                throw new ApiException(Code::FORBIDDEN, '系统默认角色不允许删除');
+            }
+        });
+    }
     /**
      * 关联管理员
      * @return BelongsToMany

@@ -35,6 +35,7 @@ Route::group('/sys/admin', function () {
 // 角色管理相关路由（需要认证）
 Route::group('/sys/role', function () {
     Route::get('', [plugin\theadmin\app\controller\RoleController::class, 'list']);
+    Route::get('/select', [plugin\theadmin\app\controller\RoleController::class, 'selectList']);
     Route::post('', [plugin\theadmin\app\controller\RoleController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'update']);

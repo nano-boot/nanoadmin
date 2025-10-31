@@ -50,7 +50,7 @@ class AdminService
         $roleId = $params['role_id'] ?? null;
 
         $query = Admin::query()
-            ->with(['roles'])
+            ->with(['adminRoles:admin_id,role_id'])  // 预加载中间表，只查询需要的字段
             ->when($keyword !== '', function ($q) use ($keyword) {
                 $q->where(function ($sub) use ($keyword) {
                     $sub->where('username', 'like', "%{$keyword}%")
@@ -62,8 +62,8 @@ class AdminService
                 $q->where('status', (int)$status);
             })
             ->when(!empty($roleId), function ($q) use ($roleId) {
-                $q->whereHas('roles', function ($sub) use ($roleId) {
-                    $sub->where('id', $roleId);
+                $q->whereHas('adminRoles', function ($sub) use ($roleId) {
+                    $sub->where('role_id', $roleId);
                 });
             });
 
@@ -93,13 +93,7 @@ class AdminService
             'phone' => $admin->phone,
             'avatar' => $admin->avatar,
             'status' => $admin->status,
-            'roles' => $admin->roles->map(function ($role) {
-                return [
-                    'id' => $role->id,
-                    'name' => $role->name,
-                    'code' => $role->code
-                ];
-            })->toArray(),
+            'roles' => $admin->adminRoles->pluck('role_id')->toArray(),
             'last_login_time' => $admin->last_login_time,
             'last_login_ip' => $admin->last_login_ip,
             'created_at' => $admin->created_at,
@@ -154,6 +148,10 @@ class AdminService
             }
         }
         
+        // 提取角色信息
+        $roleIds = $data['roles'] ?? [];
+        unset($data['roles']);
+        
         // 设置默认值
         $data['status'] = $data['status'] ?? true;
         $data['deleted'] = false;
@@ -167,7 +165,13 @@ class AdminService
             throw new ApiException(Code::SYSTEM_ERROR, '创建管理员失败');
         }
         
-        return $admin;
+        // 分配角色
+        if (!empty($roleIds)) {
+            $this->validateAndAssignRoles($admin, $roleIds);
+        }
+        
+        // 重新加载管理员信息，包括角色关联
+        return $admin->fresh(['roles']);
     }
 
     /**
@@ -183,8 +187,26 @@ class AdminService
         if (!$admin) {
             throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
-        $admin->update($data);
-        return $admin->fresh();
+        
+        // 提取角色信息
+        $roleIds = null;
+        if (isset($data['roles'])) {
+            $roleIds = $data['roles'];
+            unset($data['roles']);
+        }
+        
+        // 更新管理员基本信息
+        if (!empty($data)) {
+            $admin->update($data);
+        }
+        
+        // 处理角色更新
+        if ($roleIds !== null) {
+            $this->validateAndAssignRoles($admin, $roleIds);
+        }
+        
+        // 重新加载管理员信息，包括角色关联
+        return $admin->fresh(['roles']);
     }
 
     /**
@@ -252,25 +274,49 @@ class AdminService
             throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
         
-        // 验证角色是否存在
+        // 使用统一的验证和分配方法
+        $this->validateAndAssignRoles($admin, $roleIds);
+        
+        return true;
+    }
+
+    /**
+     * 验证并分配角色（统一的角色分配逻辑）
+     * @param Admin $admin 管理员实例
+     * @param array $roleIds 角色ID数组
+     * @return void
+     * @throws ApiException
+     */
+    private function validateAndAssignRoles(Admin $admin, array $roleIds): void
+    {
+        // 验证角色是否存在且有效（一次性批量查询，提升性能）
         if (!empty($roleIds)) {
             $roleModel = ModelFactory::role();
-            $existingRoles = $roleModel->whereIn('id', $roleIds)->where('status', true)->pluck('id')->toArray();
+            $existingRoles = $roleModel
+                ->whereIn('id', $roleIds)
+                ->where('status', 1)
+                ->pluck('id')
+                ->toArray();
             
+            // 检查是否有无效的角色ID
             $invalidRoleIds = array_diff($roleIds, $existingRoles);
             if (!empty($invalidRoleIds)) {
-                throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在: ' . implode(',', $invalidRoleIds));
+                throw new ApiException(
+                    Code::ROLE_NOT_FOUND, 
+                    '角色不存在或已禁用: ' . implode(',', $invalidRoleIds)
+                );
             }
         }
         
-        // 分配角色
-        $result = $admin->assignRoles($roleIds);
-        
-        if ($result === false) {
-            throw new ApiException(Code::SYSTEM_ERROR, '分配角色失败');
+        // 调用模型的 assignRoles 方法（内部会检查 id=1 的限制）
+        try {
+            $admin->assignRoles($roleIds);
+        } catch (ApiException $e) {
+            // 直接抛出模型层的异常（如系统管理员限制）
+            throw $e;
+        } catch (\Exception $e) {
+            throw new ApiException(Code::SYSTEM_ERROR, '分配角色失败: ' . $e->getMessage());
         }
-        
-        return true;
     }
 
     /**

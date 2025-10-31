@@ -124,12 +124,10 @@ class AdminController
      * @return Response
      * @throws ApiException
      */
-    public function update(Request $request): Response
+    public function update($id, Request $request): Response
     {
-        $id = (int)$request->input('id', 0);
-
         $requestData = $request->only([
-            'username','nickname', 'password', 'phone', 'email', 'avatar', 'gender', 'status','admin'
+            'username','nickname', 'password', 'phone', 'email', 'avatar', 'gender', 'status','admin','roles'
         ]);
         $admin = $this->adminService->updateAdmin($id, $requestData);
 

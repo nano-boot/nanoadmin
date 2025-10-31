@@ -108,8 +108,7 @@ class RoleService
      */
     public function getRoleById(int $id): Role
     {
-        $roleModel = ModelFactory::role();
-        $role = $roleModel->with(['permissions', 'menus'])->find($id);
+        $role = $this->model->with(['permissions', 'menus'])->find($id);
         
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
@@ -158,10 +157,8 @@ class RoleService
      */
     public function deleteRole(int $id): bool
     {
-        $roleModel = ModelFactory::role();
-        
         // 检查角色是否存在
-        $role = $roleModel->find($id);
+        $role = $this->model->find($id);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -173,7 +170,7 @@ class RoleService
         }
         
         // 软删除
-        $result = $roleModel->destroy($id);
+        $result = $this->model->destroy($id);
         
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '删除角色失败');
@@ -191,16 +188,14 @@ class RoleService
      */
     public function toggleRoleStatus(int $id, bool $status): bool
     {
-        $roleModel = ModelFactory::role();
-        
         // 检查角色是否存在
-        $role = $roleModel->find($id);
+        $role = $this->model->find($id);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
         // 更新状态
-        $result = $roleModel->where('id', $id)->update([
+        $result = $this->model->where('id', $id)->update([
             'status' => $status,
             'updated_at' => date('Y-m-d H:i:s')
         ]);
@@ -221,6 +216,9 @@ class RoleService
      */
     public function assignPermissions(int $roleId, array $data): bool
     {
+        if ($roleId === 1) {
+            throw new ApiException(Code::FORBIDDEN, '系统默认角色不允许分配权限');
+        }
         // 检查角色是否存在
         $role = $this->model->find($roleId);
         if (!$role) {
@@ -297,10 +295,8 @@ class RoleService
      */
     public function assignMenus(int $roleId, array $menuIds): bool
     {
-        $roleModel = ModelFactory::role();
-        
         // 检查角色是否存在
-        $role = $roleModel->find($roleId);
+        $role = $this->model->find($roleId);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -371,10 +367,8 @@ class RoleService
      */
     public function getRoleMenus(int $roleId): array
     {
-        $roleModel = ModelFactory::role();
-        
         // 检查角色是否存在
-        $role = $roleModel->find($roleId);
+        $role = $this->model->find($roleId);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -391,8 +385,7 @@ class RoleService
     public function checkRolePermission(int $roleId, string $permission): bool
     {
         try {
-            $roleModel = ModelFactory::role();
-            $role = $roleModel->find($roleId);
+            $role = $this->model->find($roleId);
             
             if (!$role) {
                 return false;
@@ -413,8 +406,7 @@ class RoleService
     public function checkRoleMenu(int $roleId, int $menuId): bool
     {
         try {
-            $roleModel = ModelFactory::role();
-            $role = $roleModel->find($roleId);
+            $role = $this->model->find($roleId);
             
             if (!$role) {
                 return false;
@@ -435,16 +427,14 @@ class RoleService
      */
     public function copyRolePermissions(int $sourceRoleId, int $targetRoleId): bool
     {
-        $roleModel = ModelFactory::role();
-        
         // 检查源角色是否存在
-        $sourceRole = $roleModel->find($sourceRoleId);
+        $sourceRole = $this->model->find($sourceRoleId);
         if (!$sourceRole) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '源角色不存在');
         }
         
         // 检查目标角色是否存在
-        $targetRole = $roleModel->find($targetRoleId);
+        $targetRole = $this->model->find($targetRoleId);
         if (!$targetRole) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '目标角色不存在');
         }
@@ -468,16 +458,14 @@ class RoleService
      */
     public function copyRoleMenus(int $sourceRoleId, int $targetRoleId): bool
     {
-        $roleModel = ModelFactory::role();
-        
         // 检查源角色是否存在
-        $sourceRole = $roleModel->find($sourceRoleId);
+        $sourceRole = $this->model->find($sourceRoleId);
         if (!$sourceRole) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '源角色不存在');
         }
         
         // 检查目标角色是否存在
-        $targetRole = $roleModel->find($targetRoleId);
+        $targetRole = $this->model->find($targetRoleId);
         if (!$targetRole) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '目标角色不存在');
         }
@@ -500,10 +488,8 @@ class RoleService
      */
     public function getRoleStats(int $roleId): array
     {
-        $roleModel = ModelFactory::role();
-        
         // 检查角色是否存在
-        $role = $roleModel->find($roleId);
+        $role = $this->model->find($roleId);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -512,26 +498,12 @@ class RoleService
     }
 
     /**
-     * 获取启用的角色列表（用于下拉选择）
+     * 获取启用的角色列表用于下拉选择
      * @return array
      */
     public function getEnabledRoles(): array
     {
-        $roleModel = ModelFactory::role();
-        $roles = $roleModel->getEnabledList();
-        
-        $result = [];
-        foreach ($roles as $role) {
-            $result[] = [
-                'id' => $role->id,
-                'name' => $role->name,
-                'code' => $role->code,
-                'description' => $role->description,
-                'sort' => $role->sort
-            ];
-        }
-        
-        return $result;
+        return $this->model->getEnabledList()->select('id', 'name')->toArray();
     }
 
     /**
@@ -543,10 +515,8 @@ class RoleService
      */
     public function updateRoleSort(int $roleId, int $sort): bool
     {
-        $roleModel = ModelFactory::role();
-        
         // 检查角色是否存在
-        $role = $roleModel->find($roleId);
+        $role = $this->model->find($roleId);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
@@ -557,7 +527,7 @@ class RoleService
         }
         
         // 更新排序
-        $result = $roleModel->where('id', $roleId)->update([
+        $result = $this->model->where('id', $roleId)->update([
             'sort' => $sort,
             'updated_at' => date('Y-m-d H:i:s')
         ]);
@@ -581,10 +551,8 @@ class RoleService
             throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的角色');
         }
         
-        $roleModel = ModelFactory::role();
-        
         // 检查角色是否存在
-        $existingRoles = $roleModel->whereIn('id', $ids)->get();
+        $existingRoles = $this->model->whereIn('id', $ids)->get();
         $existingIds = $existingRoles->pluck('id')->toArray();
         $invalidIds = array_diff($ids, $existingIds);
         
@@ -603,7 +571,7 @@ class RoleService
         }
         
         // 批量软删除
-        $result = $roleModel->destroy($ids);
+        $result = $this->model->destroy($ids);
         
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '批量删除角色失败');

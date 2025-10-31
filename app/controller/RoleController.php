@@ -44,6 +44,17 @@ class RoleController
     }
 
     /**
+     * 获取角色下拉列表
+     * GET /sys/roles/select
+     * @return Response
+     * @throws ApiException
+     */
+    public function selectList(): Response
+    {
+        return R::data($this->roleService->getEnabledRoles());
+    }
+
+    /**
      * 获取角色详情
      * GET /sys/roles/{id}
      * @param Request $request
