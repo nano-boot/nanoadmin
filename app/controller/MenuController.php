@@ -138,12 +138,7 @@ class MenuController
     {
         // 获取管理员ID
         $adminId = (int)($request->adminId ?? 0);
-        
-        // 调用 Service 获取路由配置
-        $routes = $this->menuService->getAdminRoutes($adminId);
-        
-        // 返回统一响应
-        return R::success(['routes' => $routes], '获取路由配置成功');
+        return R::success($this->menuService->getAdminRoutes($adminId));
     }
 
 

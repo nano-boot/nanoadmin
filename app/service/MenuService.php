@@ -313,9 +313,7 @@ class MenuService
 
         // 转换为前端路由格式
         $transformService = new MenuTransformService();
-        $routes = $transformService->toRouteConfigTree($menuTree);
-
-        return $routes;
+        return $transformService->toRouteConfigTree($menuTree);
     }
 
     /**
