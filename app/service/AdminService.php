@@ -38,7 +38,7 @@ class AdminService
      *  - role_id: 角色ID筛选
      * @return LengthAwarePaginator
      */
-    public function getAdminList(array $params = []): LengthAwarePaginator
+    public function getPage(array $params = []): LengthAwarePaginator
     {
         // 分页参数
         $page = max(1, (int)($params['page'] ?? 1));

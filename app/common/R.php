@@ -130,7 +130,7 @@ class R
      */
     public static function parameterError(string $msg = '参数错误', $data = null): Response
     {
-        return self::error(Code::PARAMETER_ERROR, $msg, $data);
+        return self::error($msg, Code::PARAMETER_ERROR->value, $data);
     }
 
     /**
@@ -138,7 +138,7 @@ class R
      */
     public static function unauthorized(string $msg = '未授权访问'): Response
     {
-        return self::error(Code::UNAUTHORIZED, $msg);
+        return self::error($msg, Code::UNAUTHORIZED->value);
     }
 
     /**
@@ -146,7 +146,7 @@ class R
      */
     public static function forbidden(string $msg = '权限不足'): Response
     {
-        return self::error(Code::FORBIDDEN, $msg);
+        return self::error($msg, Code::FORBIDDEN->value);
     }
 
     /**
@@ -154,7 +154,7 @@ class R
      */
     public static function notFound(string $msg = '资源不存在'): Response
     {
-        return self::error(Code::NOT_FOUND, $msg);
+        return self::error($msg, Code::NOT_FOUND->value);
     }
 
     /**
@@ -162,6 +162,6 @@ class R
      */
     public static function systemError(string $msg = '系统错误'): Response
     {
-        return self::error(Code::SYSTEM_ERROR, $msg);
+        return self::error($msg, Code::SYSTEM_ERROR->value);
     }
 }

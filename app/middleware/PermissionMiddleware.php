@@ -5,7 +5,7 @@ namespace plugin\theadmin\app\middleware;
 use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
-use plugin\theadmin\app\common\ApiResponse;
+use plugin\theadmin\app\common\R;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\common\ApiException;
 
@@ -22,21 +22,21 @@ class PermissionMiddleware implements MiddlewareInterface
      */
     protected array $routePermissions = [
         // 管理员管理
-        'GET:/sys/admins' => 'admin.list',
-        'POST:/sys/admins' => 'admin.create',
-        'GET:/sys/admins/*' => 'admin.view',
-        'PUT:/sys/admins/*' => 'admin.update',
-        'DELETE:/sys/admins/*' => 'admin.delete',
-        'POST:/sys/admins/*/roles' => 'admin.assign_roles',
+        'GET:/sys/admin' => 'admin.list',
+        'POST:/sys/admin' => 'admin.create',
+        'GET:/sys/admin/*' => 'admin.view',
+        'PUT:/sys/admin/*' => 'admin.update',
+        'DELETE:/sys/admin/*' => 'admin.delete',
+        'POST:/sys/admin/*/roles' => 'admin.assign_roles',
 
         // 角色管理
-        'GET:/sys/roles' => 'role.list',
-        'POST:/sys/roles' => 'role.create',
-        'GET:/sys/roles/*' => 'role.view',
-        'PUT:/sys/roles/*' => 'role.update',
-        'DELETE:/sys/roles/*' => 'role.delete',
-        'POST:/sys/roles/*/permissions' => 'role.assign_permissions',
-        'POST:/sys/roles/*/menus' => 'role.assign_menus',
+        'GET:/sys/role' => 'role.list',
+        'POST:/sys/role' => 'role.create',
+        'GET:/sys/role/*' => 'role.view',
+        'PUT:/sys/role/*' => 'role.update',
+        'DELETE:/sys/role/*' => 'role.delete',
+        'POST:/sys/role/*/permissions' => 'role.assign_permissions',
+        'POST:/sys/role/*/menus' => 'role.assign_menus',
 
         // 权限管理
         'GET:/sys/permissions' => 'permission.list',
@@ -46,12 +46,12 @@ class PermissionMiddleware implements MiddlewareInterface
         'DELETE:/sys/permissions/*' => 'permission.delete',
 
         // 菜单管理
-        'GET:/sys/menus' => 'menu.list',
-        'POST:/sys/menus' => 'menu.create',
-        'GET:/sys/menus/*' => 'menu.view',
-        'PUT:/sys/menus/*' => 'menu.update',
-        'DELETE:/sys/menus/*' => 'menu.delete',
-        'POST:/sys/menus/sort' => 'menu.sort',
+        'GET:/sys/menu' => 'menu.list',
+        'POST:/sys/menu' => 'menu.create',
+        'GET:/sys/menu/*' => 'menu.view',
+        'PUT:/sys/menu/*' => 'menu.update',
+        'DELETE:/sys/menu/*' => 'menu.delete',
+        'POST:/sys/menu/sort' => 'menu.sort',
     ];
 
     /**
@@ -62,10 +62,10 @@ class PermissionMiddleware implements MiddlewareInterface
         '/sys/auth/login',
         '/sys/auth/logout',
         '/sys/auth/refresh',
-        '/sys/auth/profile',
+        '/sys/auth/info',
         '/sys/auth/permissions',
         '/sys/auth/menus',
-        '/sys/menus/routes',
+        '/sys/menu/route',
         '/sys/install',
     ];
 
@@ -229,8 +229,7 @@ class PermissionMiddleware implements MiddlewareInterface
      */
     protected function forbiddenResponse(string $message, int $code): Response
     {
-        $response = ApiResponse::error($code, $message);
-        return new Response(403, ['Content-Type' => 'application/json'], json_encode($response));
+        return R::forbidden($message);
     }
 
     /**

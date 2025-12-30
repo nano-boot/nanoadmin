@@ -37,7 +37,7 @@ class RoleService
      *  - status: 状态（0/1）
      * @return LengthAwarePaginator
      */
-    public function getRoleList(array $params = []): LengthAwarePaginator
+    public function getPage(array $params = []): LengthAwarePaginator
     {
         // 分页参数
         $page = max(1, (int)($params['page'] ?? 1));

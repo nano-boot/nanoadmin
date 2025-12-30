@@ -19,7 +19,7 @@ Route::group('/sys/auth', function () {
 
 // 管理员管理相关路由（需要认证）
 Route::group('/sys/admin', function () {
-    Route::get('', [plugin\theadmin\app\controller\AdminController::class, 'list']);
+    Route::get('', [plugin\theadmin\app\controller\AdminController::class, 'page']);
     Route::post('', [plugin\theadmin\app\controller\AdminController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'update']);
@@ -34,7 +34,7 @@ Route::group('/sys/admin', function () {
 
 // 角色管理相关路由（需要认证）
 Route::group('/sys/role', function () {
-    Route::get('', [plugin\theadmin\app\controller\RoleController::class, 'list']);
+    Route::get('', [plugin\theadmin\app\controller\RoleController::class, 'page']);
     Route::get('/select', [plugin\theadmin\app\controller\RoleController::class, 'selectList']);
     Route::post('', [plugin\theadmin\app\controller\RoleController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'show']);
@@ -50,7 +50,7 @@ Route::group('/sys/role', function () {
 
 // 权限管理相关路由（需要认证）
 Route::group('/sys/permissions', function () {
-    Route::get('', [plugin\theadmin\app\controller\PermissionController::class, 'index']);
+    Route::get('', [plugin\theadmin\app\controller\PermissionController::class, 'page']);
     Route::post('', [plugin\theadmin\app\controller\PermissionController::class, 'store']);
     Route::get('/{id}', [plugin\theadmin\app\controller\PermissionController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\PermissionController::class, 'update']);

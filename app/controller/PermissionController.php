@@ -4,7 +4,7 @@ namespace plugin\theadmin\app\controller;
 
 use support\Request;
 use support\Response;
-use plugin\theadmin\app\common\ApiResponse;
+use plugin\theadmin\app\common\R;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\service\PermissionService;
@@ -27,7 +27,7 @@ class PermissionController
      * @param Request $request
      * @return Response
      */
-    public function index(Request $request)
+    public function page(Request $request)
     {
         try {
             $params = [
@@ -40,16 +40,12 @@ class PermissionController
 
             $result = $this->permissionService->getPermissionList($params);
 
-            $response = ApiResponse::paginate($result, '获取权限列表成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::paginate($result, '获取权限列表成功');
 
         } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error($e->getCode(), $e->getMessage());
         } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取权限列表失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error(Code::SYSTEM_ERROR, '获取权限列表失败：' . $e->getMessage());
         }
     }
 
@@ -65,22 +61,17 @@ class PermissionController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '权限ID无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error(Code::PARAMETER_ERROR, '权限ID无效');
             }
 
             $permission = $this->permissionService->getPermissionById($id);
 
-            $response = ApiResponse::success($permission, '获取权限详情成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::success($permission, '获取权限详情成功');
 
         } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error($e->getCode(), $e->getMessage());
         } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '获取权限详情失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error(Code::SYSTEM_ERROR, '获取权限详情失败：' . $e->getMessage());
         }
     }
 
@@ -104,22 +95,17 @@ class PermissionController
             // 参数验证
             $validation = $this->validatePermissionData($data, true);
             if ($validation !== true) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, $validation);
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error(Code::PARAMETER_ERROR, $validation);
             }
 
             $permission = $this->permissionService->createPermission($data);
 
-            $response = ApiResponse::created($permission, '创建权限成功');
-            return new Response(201, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::created($permission, '创建权限成功');
 
         } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error($e->getCode(), $e->getMessage());
         } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '创建权限失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error(Code::SYSTEM_ERROR, '创建权限失败：' . $e->getMessage());
         }
     }
 
@@ -135,8 +121,7 @@ class PermissionController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '权限ID无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error(Code::PARAMETER_ERROR, '权限ID无效');
             }
 
             $data = [
@@ -150,22 +135,16 @@ class PermissionController
             // 参数验证
             $validation = $this->validatePermissionData($data, false);
             if ($validation !== true) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, $validation);
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::error(Code::PARAMETER_ERROR, $validation);
             }
 
             $permission = $this->permissionService->updatePermission($id, $data);
-
-            $response = ApiResponse::updated($permission, '更新权限成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
+                return R::updated($permission, '更新权限成功');
 
         } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error($e->getCode(), $e->getMessage());
         } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '更新权限失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
+            return R::error(Code::SYSTEM_ERROR, '更新权限失败：' . $e->getMessage());
         }
     }
 
@@ -181,21 +160,21 @@ class PermissionController
             $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '权限ID无效');
+                $response = R::error(Code::PARAMETER_ERROR, '权限ID无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
             $this->permissionService->deletePermission($id);
 
-            $response = ApiResponse::deleted('删除权限成功');
+            $response = R::deleted('删除权限成功');
             return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
 
         } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
+            $response = R::error($e->getCode(), $e->getMessage());
             $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '删除权限失败：' . $e->getMessage());
+            $response = R::error(Code::SYSTEM_ERROR, '删除权限失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }
@@ -212,7 +191,7 @@ class PermissionController
             $ids = $request->post('ids', []);
             
             if (!is_array($ids) || empty($ids)) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '请选择要删除的权限');
+                $response = R::error(Code::PARAMETER_ERROR, '请选择要删除的权限');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
@@ -223,21 +202,21 @@ class PermissionController
             });
 
             if (empty($ids)) {
-                $response = ApiResponse::error(Code::PARAMETER_ERROR, '权限ID列表无效');
+                $response = R::error(Code::PARAMETER_ERROR, '权限ID列表无效');
                 return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
             }
 
             $result = $this->permissionService->batchDeletePermissions($ids);
 
-            $response = ApiResponse::success($result, '批量删除权限成功');
+            $response = R::success($result, '批量删除权限成功');
             return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
 
         } catch (ApiException $e) {
-            $response = ApiResponse::error($e->getCode(), $e->getMessage());
+            $response = R::error($e->getCode(), $e->getMessage());
             $httpCode = Code::getHttpCodeByCode($e->getCode());
             return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
         } catch (\Exception $e) {
-            $response = ApiResponse::error(Code::SYSTEM_ERROR, '批量删除权限失败：' . $e->getMessage());
+            $response = R::error(Code::SYSTEM_ERROR, '批量删除权限失败：' . $e->getMessage());
             return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
         }
     }

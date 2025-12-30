@@ -13,7 +13,7 @@ use plugin\theadmin\app\service\RoleService;
 /**
  * 角色控制器
  */
-class RoleController
+class RoleController extends BaseController
 {
     private RoleService $roleService;
 
@@ -24,24 +24,23 @@ class RoleController
     }
 
     /**
-     * 获取角色列表
-     * GET /sys/roles
-     * @param Request $request
-     * @return Response
+     * 获取服务实例
+     * @return RoleService
      */
-    public function list(Request $request): Response
+    protected function getService(): RoleService
     {
-        $params = [
-            'page' => (int)$request->get('page', 1),
-            'limit' => (int)$request->get('limit', 20),
-            'keyword' => $request->get('keyword', ''),
-            'status' => $request->get('status', ''),
-            'name' => $request->get('name', ''),
-            'code' => $request->get('code', ''),
-        ];
-        $result = $this->roleService->getRoleList($params);
-        return R::paginate($result, '获取角色列表成功');
+        return $this->roleService;
     }
+
+    /**
+     * 获取模型名称
+     * @return string
+     */
+    protected function getModelName(): string
+    {
+        return 'Role';
+    }
+
 
     /**
      * 获取角色下拉列表
@@ -54,23 +53,6 @@ class RoleController
         return R::data($this->roleService->getEnabledRoles());
     }
 
-    /**
-     * 获取角色详情
-     * GET /sys/roles/{id}
-     * @param Request $request
-     * @return Response
-     * @throws ApiException
-     */
-    public function show(Request $request): Response
-    {
-        $id = (int)$request->get('id', 0);
-        if ($id <= 0) {
-            $response = R::error('角色ID无效',Code::PARAMETER_ERROR->value);
-            return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-        }
-        $role = $this->roleService->getRoleById($id);
-        return R::data($role, '获取角色详情成功');
-    }
 
     /**
      * 创建角色
@@ -79,11 +61,9 @@ class RoleController
      * @return Response
      * @throws ApiException
      */
-    public function store(Request $request): Response
+    public function store(Request $request, array $fields = []): Response
     {
-        return R::data($this->roleService->createRole($request->only([
-            'code', 'name', 'description', 'sort', 'status']
-        )));
+        return parent::store($request, ['code', 'name', 'description', 'sort', 'status']);
     }
 
     /**
@@ -94,29 +74,12 @@ class RoleController
      * @return Response
      * @throws ApiException
      */
-    public function update(Request $request, int $id): Response
+    public function update(Request $request, int $id, array $fields = []): Response
     {
         $this->roleService->updateRole($id, $request->only(['name', 'description', 'sort', 'status']));
         return R::ok();
     }
 
-    /**
-     * 删除角色
-     * DELETE /sys/roles/{id}
-     * @param Request $request
-     * @return Response
-     * @throws ApiException
-     */
-    public function destroy(Request $request): Response
-    {
-
-        $id = (int)$request->get('id', 0);
-        if ($id <= 0) {
-            return R::error(Code::PARAMETER_ERROR);
-        }
-        $this->roleService->deleteRole($id);
-        return R::deleted('删除角色成功');
-    }
 
     /**
      * 为角色分配权限（接收菜单ID和权限标识）
@@ -233,34 +196,6 @@ class RoleController
         return R::list($menus, '获取角色菜单成功');
     }
 
-    /**
-     * 批量删除角色
-     * DELETE /sys/roles/batch
-     * @param Request $request
-     * @return Response
-     * @throws ApiException
-     */
-    public function batchDestroy(Request $request): Response
-    {
-            $ids = $request->post('ids', []);
-            
-            if (!is_array($ids) || empty($ids)) {
-                return R::error('请选择要删除的角色', Code::PARAMETER_ERROR->value);
-            }
-
-            // 转换为整数数组
-            $ids = array_map('intval', $ids);
-            $ids = array_filter($ids, function($id) {
-                return $id > 0;
-            });
-
-            if (empty($ids)) {
-                return R::error('角色ID列表无效', Code::PARAMETER_ERROR->value);
-            }
-
-            $result = $this->roleService->batchDeleteRoles($ids);
-            return R::data($result, '批量删除角色成功');
-    }
 
     /**
      * 验证角色数据

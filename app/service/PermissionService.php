@@ -6,7 +6,7 @@ use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
 use plugin\theadmin\app\model\Permission;
-use think\Paginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * 权限服务类
@@ -16,9 +16,9 @@ class PermissionService
     /**
      * 获取权限列表
      * @param array $params 查询参数
-     * @return Paginator
+     * @return LengthAwarePaginator
      */
-    public function getPermissionList(array $params = []): Paginator
+    public function getPermissionList(array $params = []): LengthAwarePaginator
     {
         $permissionModel = ModelFactory::permission();
         
@@ -52,7 +52,19 @@ class PermissionService
             $searchParams['action'] = $params['action'];
         }
         
-        return $permissionModel->getListWithRoleCount(array_merge($where, $searchParams), $page, $limit);
+        $result = $permissionModel->getListWithRoleCount(array_merge($where, $searchParams), $page, $limit);
+
+        // 创建LengthAwarePaginator实例
+        return new LengthAwarePaginator(
+            $result['list'],           // items
+            $result['total'],          // total
+            $result['page_size'],      // per page
+            $result['page'],           // current page
+            [                          // options
+                'path' => request()->url(),
+                'pageName' => 'page',
+            ]
+        );
     }
 
     /**
