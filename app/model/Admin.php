@@ -24,10 +24,25 @@ use plugin\theadmin\app\common\Code;
 class Admin extends BaseModel
 {
     /**
+     * 初始化搜索字段配置
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        // 设置管理员模型的搜索字段配置
+        static::setSearchLikeFields(['username', 'nickname']);
+        static::setSearchEqualFields(['phone', 'email', 'status', 'gender', 'deleted']);
+        static::setSearchKeywordFields(['username', 'nickname', 'phone']);
+        static::setSearchRangeFields(['last_login_time']);
+    }
+
+    /**
      * 表名
      * @var string
      */
     protected $table = 'sys_admin';
+
 
     /**
      * 主键
@@ -48,6 +63,12 @@ class Admin extends BaseModel
      * @var array
      */
     protected $hidden = ['password'];
+
+    /**
+     * 自动追加的字段
+     * @var array
+     */
+    protected $appends = ['roles'];
 
     /**
      * 字段类型转换
@@ -90,7 +111,7 @@ class Admin extends BaseModel
     }
 
     /**
-     * 关联管理员角色中间表（用于高效查询角色ID）
+     * 关联管理员角色中间表
      * @return HasMany
      */
     public function adminRoles(): HasMany
@@ -109,59 +130,22 @@ class Admin extends BaseModel
 
     public function handleSearch(Builder $query, array $params): Builder
     {
-        return $query
-            ->when(Arr::get($params, 'username'), static function (Builder $query, $username) {
-                $query->where('username', 'like', '%' . $username . '%');
-            })
-            ->when(Arr::get($params, 'phone'), static function (Builder $query, $phone) {
-                $query->where('phone', $phone);
-            })
-            ->when(Arr::get($params, 'email'), static function (Builder $query, $email) {
-                $query->where('email', $email);
-            })
-            ->when(Arr::exists($params, 'status'), static function (Builder $query) use ($params) {
-                $query->where('status', Arr::get($params, 'status'));
-            })
-            // 性别筛选
-            ->when(Arr::exists($params, 'gender'), static function (Builder $query) use ($params) {
-                $query->where('gender', Arr::get($params, 'gender'));
-            })
-            ->when(Arr::exists($params, 'nickname'), static function (Builder $query) use ($params) {
-                $query->where('nickname', 'like', '%' . Arr::get($params, 'nickname') . '%');
-            })
-            ->when(Arr::exists($params, 'created_at'), static function (Builder $query) use ($params) {
-                $query->whereBetween('created_at', [
-                    Arr::get($params, 'created_at')[0] . ' 00:00:00',
-                    Arr::get($params, 'created_at')[1] . ' 23:59:59',
-                ]);
-            })
-            // 最后登录时间范围筛选
-            ->when(Arr::exists($params, 'last_login_time'), static function (Builder $query) use ($params) {
-                $query->whereBetween('last_login_time', [
-                    Arr::get($params, 'last_login_time')[0] . ' 00:00:00',
-                    Arr::get($params, 'last_login_time')[1] . ' 23:59:59',
-                ]);
-            })
-            // ID列表筛选
-            ->when(Arr::get($params, 'admin_ids'), static function (Builder $query, $adminIds) {
-                $query->whereIn('id', $adminIds);
-            })
-            // 角色筛选（通过关联表）
-            ->when(Arr::get($params, 'role_id'), static function (Builder $query, $roleId) {
-                $query->whereHas('roles', static function (Builder $query) use ($roleId) {
-                    $query->where('role_id', $roleId);
-                });
-            })
-            // 软删除筛选（默认只查询未删除的记录）
-            ->when(!Arr::exists($params, 'deleted') || Arr::get($params, 'deleted') === false, static function (Builder $query) {
-                $query->where('deleted', false);
-            })
-            // 如果明确要查询已删除的记录
-            ->when(Arr::exists($params, 'deleted') && Arr::get($params, 'deleted') === true, static function (Builder $query) {
-                $query->where('deleted', true);
-            })
-            // 关联角色信息
-            ->with(['adminRoles:admin_id,role_id']);
+        // 先使用 BaseModel 提供的通用筛选
+        $searchParams = $params;
+        $query = parent::handleSearch($query, $searchParams);
+
+        // 管理员特有筛选：按角色筛选（保留原有行为）
+        if (Arr::get($searchParams, 'role_id')) {
+            $roleId = Arr::get($searchParams, 'role_id');
+            $query->whereHas('roles', static function (Builder $q) use ($roleId) {
+                $q->where('role_id', $roleId);
+            });
+        }
+
+        // 关联管理员角色信息以便前端使用（保持原有 eager load）
+        $query->with(['adminRoles:admin_id,role_id']);
+
+        return $query;
     }
 
     /**
@@ -349,6 +333,19 @@ class Admin extends BaseModel
     }
 
     /**
+     * 获取角色ID数组访问器
+     * @return array
+     */
+    public function getRolesAttribute(): array
+    {
+        if ($this->relationLoaded('adminRoles')) {
+            return $this->adminRoles->pluck('role_id')->toArray();
+        }
+
+        return $this->adminRoles()->pluck('role_id')->toArray();
+    }
+
+    /**
      * 创建管理员
      * @param array $data 管理员数据
      * @return static|false
@@ -359,7 +356,7 @@ class Admin extends BaseModel
         if ($this->where('username', $data['username'])->exists()) {
             return false;
         }
-        
+
         // 密码将通过修改器自动加密，无需手动处理
         return $this->create($data);
     }

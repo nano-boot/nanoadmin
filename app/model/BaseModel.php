@@ -5,6 +5,7 @@ namespace plugin\theadmin\app\model;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Builder;
 use support\Model;
+use Illuminate\Support\Arr;
 
 /**
  * 基础模型类
@@ -26,6 +27,107 @@ abstract class BaseModel extends Model
         'created_at' => 'datetime:Y-m-d H:i:s',
         'updated_at' => 'datetime:Y-m-d H:i:s',
     ];
+
+    /**
+     * 搜索字段分组（LIKE 类型），子类可覆盖
+     * @var array
+     */
+    protected static array $searchLikeFields = [];
+
+    /**
+     * 搜索字段分组（等值类型），子类可覆盖
+     * @var array
+     */
+    protected static array $searchEqualFields = [];
+
+    /**
+     * keyword 关键字搜索作用的字段（会对这些字段做 OR LIKE），子类可覆盖
+     * @var array
+     */
+    protected static array $searchKeywordFields = [];
+
+    /**
+     * 配置化的范围 (between) 字段列表，子类可覆盖
+     * 例如: ['created_at', 'last_login_time']
+     * @var array
+     */
+    protected static array $searchRangeFields = [];
+
+    /**
+     * 获取范围字段列表
+     * @return array
+     */
+    public static function getSearchRangeFields(): array
+    {
+        return static::$searchRangeFields ?? [];
+    }
+
+    /**
+     * 设置范围字段列表
+     * @param array $fields
+     * @return void
+     */
+    public static function setSearchRangeFields(array $fields): void
+    {
+        static::$searchRangeFields = $fields;
+    }
+
+    /**
+     * 获取 LIKE 类型的搜索字段
+     * @return array
+     */
+    public static function getSearchLikeFields(): array
+    {
+        return static::$searchLikeFields ?? [];
+    }
+
+    /**
+     * 设置 LIKE 类型的搜索字段
+     * @param array $fields
+     * @return void
+     */
+    public static function setSearchLikeFields(array $fields): void
+    {
+        static::$searchLikeFields = $fields;
+    }
+
+    /**
+     * 获取等值搜索字段
+     * @return array
+     */
+    public static function getSearchEqualFields(): array
+    {
+        return static::$searchEqualFields ?? [];
+    }
+
+    /**
+     * 设置等值搜索字段
+     * @param array $fields
+     * @return void
+     */
+    public static function setSearchEqualFields(array $fields): void
+    {
+        static::$searchEqualFields = $fields;
+    }
+
+    /**
+     * 获取 keyword 搜索作用字段
+     * @return array
+     */
+    public static function getSearchKeywordFields(): array
+    {
+        return static::$searchKeywordFields ?? [];
+    }
+
+    /**
+     * 设置 keyword 搜索作用字段
+     * @param array $fields
+     * @return void
+     */
+    public static function setSearchKeywordFields(array $fields): void
+    {
+        static::$searchKeywordFields = $fields;
+    }
 
     /**
      * 全局查询范围 - 排除软删除
@@ -68,6 +170,71 @@ abstract class BaseModel extends Model
     
     public function handleSearch(Builder $query, array $params): Builder
     {
+        // 通用的搜索字段分组（可由子类覆盖静态属性）
+        $likeFields = static::getSearchLikeFields();
+        $equalFields = static::getSearchEqualFields();
+        $keywordFields = static::getSearchKeywordFields();
+        $rangeFields = static::getSearchRangeFields();
+        
+        $searchParams = $params;
+        unset($searchParams['page'], $searchParams['limit']);
+
+        $keyword = Arr::get($searchParams, 'keyword', null);
+        if (!is_null($keyword) && $keyword !== '') {
+            $query->where(function (Builder $q) use ($keyword, $keywordFields) {
+                foreach ($keywordFields as $field) {
+                    $q->orWhere($field, 'like', '%' . $keyword . '%');
+                }
+            });
+        }
+
+        // like 类型字段（分别按字段做 LIKE 查询）
+        foreach ($likeFields as $field) {
+            $value = Arr::get($searchParams, $field);
+            if (!is_null($value) && $value !== '') {
+                $query->where($field, 'like', '%' . $value . '%');
+            }
+        }
+
+        // 等值字段（存在即按等值过滤）
+        foreach ($equalFields as $field) {
+            if (Arr::exists($searchParams, $field)) {
+                $query->where($field, Arr::get($searchParams, $field));
+            }
+        }
+
+        // ID 列表筛选，优先识别通用 'ids'，其次识别 '{table}_ids'
+        $ids = Arr::get($searchParams, 'ids', null);
+        if (is_null($ids)) {
+            $tableIdsKey = $this->getTable() . '_ids';
+            $ids = Arr::get($searchParams, $tableIdsKey, null);
+        }
+        if (!is_null($ids)) {
+            $query->whereIn('id', $ids);
+        }
+
+        foreach ($rangeFields as $field) {
+            if (!Arr::exists($searchParams, $field)) {
+                continue;
+            }
+
+            $value = Arr::get($searchParams, $field);
+            if (is_array($value) && count($value) === 2 && $value[0] !== '' && $value[1] !== '') {
+                $start = $value[0];
+                $end = $value[1];
+                $query->whereBetween($field, [$start, $end]);
+            }
+        }
+
+        // 排序参数支持：优先使用 sort_field + sort_order，然后使用 order（raw）
+        $sortField = Arr::get($searchParams, 'sort_field', null);
+        $sortOrder = Arr::get($searchParams, 'sort_order', 'desc');
+        if (!is_null($sortField) && trim($sortField) !== '') {
+            $query->orderBy($sortField, $sortOrder);
+        } elseif ($rawOrder = Arr::get($searchParams, 'order', null)) {
+            $query->orderByRaw($rawOrder);
+        }
+
         return $query;
     }
 

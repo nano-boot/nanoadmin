@@ -53,50 +53,10 @@ class AdminService extends BaseService
      */
     public function getPage(array $params = []): LengthAwarePaginator
     {
-        // 处理 keyword 参数，转为模型 handleSearch 能处理的格式
-        if (!empty($params['keyword'])) {
-            $keyword = trim((string)$params['keyword']);
-            // 将 keyword 转换为多个搜索字段
-            $params['username'] = $keyword;
-            $params['phone'] = $keyword;
-            $params['nickname'] = $keyword;
-            unset($params['keyword']);
-        }
-
-        // 调用父类的分页查询
-        $paginator = parent::getPage($params);
-
-        // 格式化数据
-        $paginator->getCollection()->transform(function ($admin) {
-            return $this->formatAdminRow($admin);
-        });
-
-        return $paginator;
+        // 调用父类的分页查询（已包含 adminRoles 关联加载）
+        return parent::getPage($params);
     }
 
-    /**
-     * 将管理员模型格式化为数组行
-     * @param Admin $admin
-     * @return array
-     */
-    private function formatAdminRow($admin): array
-    {
-        return [
-            'id' => $admin->id,
-            'username' => $admin->username,
-            'gender' => $admin->gender,
-            'nickname' => $admin->nickname,
-            'email' => $admin->email,
-            'phone' => $admin->phone,
-            'avatar' => $admin->avatar,
-            'status' => $admin->status,
-            'roles' => $admin->adminRoles->pluck('role_id')->toArray(),
-            'last_login_time' => $admin->last_login_time,
-            'last_login_ip' => $admin->last_login_ip,
-            'created_at' => $admin->created_at,
-            'updated_at' => $admin->updated_at
-        ];
-    }
 
     /**
      * 根据ID获取管理员详情

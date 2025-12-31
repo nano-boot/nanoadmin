@@ -48,9 +48,7 @@ abstract class BaseService
     {
         $page = max(1, (int)($params['page'] ?? 1));
         $limit = min(1000, max(1, (int)($params['limit'] ?? 15)));
-        $searchParams = $params;
-        unset($searchParams['page'], $searchParams['limit']);
-        $query = $this->model->handleSearch($this->model->query(), $searchParams);
+        $query = $this->model->handleSearch($this->model->query(), $params);
         return $query->paginate($limit, ['*'], 'page', $page);
     }
 
