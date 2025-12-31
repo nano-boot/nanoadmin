@@ -11,21 +11,33 @@ use plugin\theadmin\app\model\Admin;
 /**
  * 管理员服务类
  */
-class AdminService
+class AdminService extends BaseService
 {
-    /**
-     * 管理员模型实例
-     * @var Admin
-     */
-    private Admin $model;
-
     /**
      * 构造函数
      * @param Admin $model 管理员模型实例
      */
     public function __construct(Admin $model)
     {
-        $this->model = $model;
+        parent::__construct($model);
+    }
+
+    /**
+     * 获取记录不存在时的错误代码
+     * @return Code
+     */
+    protected function getNotFoundCode(): Code
+    {
+        return Code::ADMIN_NOT_FOUND;
+    }
+
+    /**
+     * 获取记录不存在时的错误消息
+     * @return string
+     */
+    protected function getNotFoundMessage(): string
+    {
+        return '管理员不存在';
     }
 
     /**
@@ -36,39 +48,24 @@ class AdminService
      *  - keyword: 关键词（username/real_name/email 模糊搜）
      *  - status: 状态（0/1）
      *  - role_id: 角色ID筛选
+     *  - 其他参数: 根据模型的 handleSearch 方法处理
      * @return LengthAwarePaginator
      */
     public function getPage(array $params = []): LengthAwarePaginator
     {
-        // 分页参数
-        $page = max(1, (int)($params['page'] ?? 1));
-        $limit = max(1, (int)($params['limit'] ?? 15));
+        // 处理 keyword 参数，转为模型 handleSearch 能处理的格式
+        if (!empty($params['keyword'])) {
+            $keyword = trim((string)$params['keyword']);
+            // 将 keyword 转换为多个搜索字段
+            $params['username'] = $keyword;
+            $params['phone'] = $keyword;
+            $params['nickname'] = $keyword;
+            unset($params['keyword']);
+        }
 
-        // 查询参数
-        $keyword = trim((string)($params['keyword'] ?? ''));
-        $status = $params['status'] ?? '';
-        $roleId = $params['role_id'] ?? null;
+        // 调用父类的分页查询
+        $paginator = parent::getPage($params);
 
-        $query = Admin::query()
-            ->with(['adminRoles:admin_id,role_id'])  // 预加载中间表，只查询需要的字段
-            ->when($keyword !== '', function ($q) use ($keyword) {
-                $q->where(function ($sub) use ($keyword) {
-                    $sub->where('username', 'like', "%{$keyword}%")
-                        ->orWhere('phone', 'like', "%{$keyword}%")
-                        ->orWhere('nickname', 'like', "%{$keyword}%");
-                });
-            })
-            ->when($status !== '', function ($q) use ($status) {
-                $q->where('status', (int)$status);
-            })
-            ->when(!empty($roleId), function ($q) use ($roleId) {
-                $q->whereHas('adminRoles', function ($sub) use ($roleId) {
-                    $sub->where('role_id', $roleId);
-                });
-            });
-
-        $paginator = $query->paginate($limit, ['*'], 'page', $page);
-    
         // 格式化数据
         $paginator->getCollection()->transform(function ($admin) {
             return $this->formatAdminRow($admin);
@@ -109,14 +106,7 @@ class AdminService
      */
     public function getAdminById(int $id): Admin
     {
-        $adminModel = $this->model;
-        $admin = $adminModel->with('roles')->find($id);
-        
-        if (!$admin) {
-            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
-        }
-        
-        return $admin;
+        return $this->model->with('roles')->find($id) ?? throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
     }
 
     /**
@@ -127,49 +117,47 @@ class AdminService
      */
     public function createAdmin(array $data): Admin
     {
-        $adminModel = $this->model;
-        
         // 检查用户名是否已存在
-        if ($adminModel->where('username', $data['username'])->first()) {
+        if ($this->model->where('username', $data['username'])->first()) {
             throw new ApiException(Code::DUPLICATE_NAME, '用户名已存在');
         }
-        
+
         // 检查手机号是否已存在（如果提供了手机号）
         if (!empty($data['phone'])) {
-            if ($adminModel->where('phone', $data['phone'])->first()) {
+            if ($this->model->where('phone', $data['phone'])->first()) {
                 throw new ApiException(Code::DUPLICATE_NAME, '手机号已存在');
             }
         }
-        
+
         // 检查邮箱是否已存在（如果提供了邮箱）
         if (!empty($data['email'])) {
-            if ($adminModel->where('email', $data['email'])->first()) {
+            if ($this->model->where('email', $data['email'])->first()) {
                 throw new ApiException(Code::DUPLICATE_NAME, '邮箱已存在');
             }
         }
-        
+
         // 提取角色信息
         $roleIds = $data['roles'] ?? [];
         unset($data['roles']);
-        
+
         // 设置默认值
         $data['status'] = $data['status'] ?? true;
         $data['deleted'] = false;
         $data['created_at'] = date('Y-m-d H:i:s');
         $data['updated_at'] = date('Y-m-d H:i:s');
-        
-        // 创建管理员
-        $admin = $adminModel->createAdmin($data);
-        
+
+        // 创建管理员（使用模型的方法，因为需要密码加密）
+        $admin = $this->model->createAdmin($data);
+
         if (!$admin) {
             throw new ApiException(Code::SYSTEM_ERROR, '创建管理员失败');
         }
-        
+
         // 分配角色
         if (!empty($roleIds)) {
             $this->validateAndAssignRoles($admin, $roleIds);
         }
-        
+
         // 重新加载管理员信息，包括角色关联
         return $admin->fresh(['roles']);
     }
@@ -183,28 +171,21 @@ class AdminService
      */
     public function updateAdmin(int $id, array $data): Admin
     {
-        $admin = $this->model->find($id);
-        if (!$admin) {
-            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
-        }
-        
         // 提取角色信息
         $roleIds = null;
         if (isset($data['roles'])) {
             $roleIds = $data['roles'];
             unset($data['roles']);
         }
-        
+
         // 更新管理员基本信息
-        if (!empty($data)) {
-            $admin->update($data);
-        }
-        
+        $admin = parent::update($id, $data);
+
         // 处理角色更新
         if ($roleIds !== null) {
             $this->validateAndAssignRoles($admin, $roleIds);
         }
-        
+
         // 重新加载管理员信息，包括角色关联
         return $admin->fresh(['roles']);
     }
@@ -218,13 +199,10 @@ class AdminService
     public function deleteAdmin(int $id): bool
     {
         $admin = $this->model->find($id);
-        if (!$admin) {
-            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
-        }
-        if ($admin->id == 1) {
+        if ($admin && $admin->id == 1) {
             throw new ApiException(Code::FORBIDDEN, '不允许删除超级管理员');
         }
-        return $this->model->destroy($id);
+        return parent::delete($id);
     }
 
     /**
@@ -476,28 +454,12 @@ class AdminService
      */
     public function batchDeleteAdmins(array $ids): int
     {
-        if (empty($ids)) {
-            throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的管理员');
+        // 检查是否包含超级管理员
+        if (in_array(1, $ids)) {
+            throw new ApiException(Code::FORBIDDEN, '不允许删除超级管理员');
         }
-        
-        $adminModel = $this->model;
-        
-        // 检查管理员是否存在
-        $existingAdmins = $adminModel->whereIn('id', $ids)->pluck('id')->toArray();
-        $invalidIds = array_diff($ids, $existingAdmins);
-        
-        if (!empty($invalidIds)) {
-            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在: ' . implode(',', $invalidIds));
-        }
-        
-        // 批量软删除
-        $result = $adminModel->destroy($ids);
-        
-        if ($result === false) {
-            throw new ApiException(Code::SYSTEM_ERROR, '批量删除管理员失败');
-        }
-        
-        return $result;
+
+        return parent::batchDelete($ids);
     }
 
     /**

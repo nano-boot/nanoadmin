@@ -3,6 +3,7 @@
 namespace plugin\theadmin\app\model;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Builder;
 use support\Model;
 
 /**
@@ -62,6 +63,12 @@ abstract class BaseModel extends Model
     public function scopeSort($query, string $field = 'sort', string $order = 'asc'): void
     {
         $query->orderBy($field, $order);
+    }
+
+    
+    public function handleSearch(Builder $query, array $params): Builder
+    {
+        return $query;
     }
 
     /**

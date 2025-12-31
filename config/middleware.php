@@ -9,6 +9,6 @@ return [
     '' => [
         CorsMiddleware::class,
         AuthMiddleware::class,
-        PermissionMiddleware::class,
+        // PermissionMiddleware::class,
     ],
 ];

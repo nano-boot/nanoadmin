@@ -22,35 +22,35 @@ class PermissionMiddleware implements MiddlewareInterface
      */
     protected array $routePermissions = [
         // 管理员管理
-        'GET:/sys/admin' => 'admin.list',
+        'GET:/sys/admin' => 'admin.page',
         'POST:/sys/admin' => 'admin.create',
         'GET:/sys/admin/*' => 'admin.view',
         'PUT:/sys/admin/*' => 'admin.update',
-        'DELETE:/sys/admin/*' => 'admin.delete',
+        // 'DELETE:/sys/admin/*' => 'admin.delete',
         'POST:/sys/admin/*/roles' => 'admin.assign_roles',
 
         // 角色管理
-        'GET:/sys/role' => 'role.list',
+        'GET:/sys/role' => 'role.page',
         'POST:/sys/role' => 'role.create',
         'GET:/sys/role/*' => 'role.view',
         'PUT:/sys/role/*' => 'role.update',
-        'DELETE:/sys/role/*' => 'role.delete',
+        // 'DELETE:/sys/role/*' => 'role.delete',
         'POST:/sys/role/*/permissions' => 'role.assign_permissions',
         'POST:/sys/role/*/menus' => 'role.assign_menus',
 
         // 权限管理
-        'GET:/sys/permissions' => 'permission.list',
+        'GET:/sys/permissions' => 'permission.page',
         'POST:/sys/permissions' => 'permission.create',
         'GET:/sys/permissions/*' => 'permission.view',
         'PUT:/sys/permissions/*' => 'permission.update',
-        'DELETE:/sys/permissions/*' => 'permission.delete',
+        // 'DELETE:/sys/permissions/*' => 'permission.delete',
 
         // 菜单管理
-        'GET:/sys/menu' => 'menu.list',
+        'GET:/sys/menu' => 'menu.page',
         'POST:/sys/menu' => 'menu.create',
         'GET:/sys/menu/*' => 'menu.view',
         'PUT:/sys/menu/*' => 'menu.update',
-        'DELETE:/sys/menu/*' => 'menu.delete',
+        // 'DELETE:/sys/menu/*' => 'menu.delete',
         'POST:/sys/menu/sort' => 'menu.sort',
     ];
 

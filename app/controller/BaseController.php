@@ -3,6 +3,7 @@
 namespace plugin\theadmin\app\controller;
 
 use plugin\theadmin\app\common\R;
+use plugin\theadmin\app\service\BaseService;
 use support\Request;
 use support\Response;
 use plugin\theadmin\app\common\ApiException;
@@ -118,9 +119,9 @@ abstract class BaseController
 
     /**
      * 获取服务实例
-     * @return mixed
+     * @return BaseService
      */
-    abstract protected function getService();
+    abstract protected function getService(): BaseService;
 
     /**
      * 获取模型名称（用于方法名拼接）

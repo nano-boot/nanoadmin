@@ -2,7 +2,9 @@
 
 namespace plugin\theadmin\app\model;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Arr;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 
@@ -85,6 +87,37 @@ class Role extends BaseModel
     public function menus(): BelongsToMany
     {
         return $this->belongsToMany(Menu::class, 'sys_role_menu', 'role_id', 'menu_id');
+    }
+
+    public function handleSearch(Builder $query, array $params): Builder
+    {
+        return $query
+            // 角色名称模糊搜索
+            ->when(Arr::get($params, 'name'), static function (Builder $query, $name) {
+                $query->where('name', 'like', '%' . $name . '%');
+            })
+            ->when(Arr::get($params, 'code'), static function (Builder $query, $code) {
+                $query->whereIn('code', Arr::wrap($code));
+            })
+           
+            ->when(Arr::exists($params, 'status'), static function (Builder $query) use ($params) {
+                $query->where('status', Arr::get($params, 'status'));
+            })
+            // ID列表筛选
+            ->when(Arr::get($params, 'role_ids'), static function (Builder $query, $roleIds) {
+                $query->whereIn('id', $roleIds);
+            })
+            // 软删除筛选（默认只查询未删除的记录）
+            ->when(!Arr::exists($params, 'deleted') || Arr::get($params, 'deleted') === false, static function (Builder $query) {
+                $query->where('deleted', false);
+            })
+            // 如果明确要查询已删除的记录
+            ->when(Arr::exists($params, 'deleted') && Arr::get($params, 'deleted') === true, static function (Builder $query) {
+                $query->where('deleted', true);
+            })
+            // 默认按排序值升序，ID降序排列
+            ->orderBy('sort', 'asc')
+            ->orderBy('id', 'desc');
     }
 
     /**

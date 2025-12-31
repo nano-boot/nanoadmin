@@ -11,20 +11,33 @@ use plugin\theadmin\app\model\Role;
 /**
  * 角色服务类
  */
-class RoleService
+class RoleService extends BaseService
 {
-    /**
-     * 模型
-     */
-    private Role $model;
-
     /**
      * 构造函数
      * @param Role $model
      */
     public function __construct(Role $model)
     {
-        $this->model = $model;
+        parent::__construct($model);
+    }
+
+    /**
+     * 获取记录不存在时的错误代码
+     * @return Code
+     */
+    protected function getNotFoundCode(): Code
+    {
+        return Code::ROLE_NOT_FOUND;
+    }
+
+    /**
+     * 获取记录不存在时的错误消息
+     * @return string
+     */
+    protected function getNotFoundMessage(): string
+    {
+        return '角色不存在';
     }
     /**
      * 获取角色列表
@@ -39,41 +52,20 @@ class RoleService
      */
     public function getPage(array $params = []): LengthAwarePaginator
     {
-        // 分页参数
-        $page = max(1, (int)($params['page'] ?? 1));
-        $limit = max(1, (int)($params['limit'] ?? 15));
+        // 处理 keyword 参数，转为模型 handleSearch 能处理的格式
+        if (!empty($params['keyword'])) {
+            $keyword = trim((string)$params['keyword']);
+            // 将 keyword 转换为多个搜索字段
+            $params['name'] = $keyword;
+            $params['code'] = $keyword;
+            $params['description'] = $keyword;
+            unset($params['keyword']);
+        }
 
-        // 查询参数
-        $keyword = trim((string)($params['keyword'] ?? ''));
-        $status = $params['status'] ?? '';
-        $name = trim((string)($params['name'] ?? ''));
-        $code = trim((string)($params['code'] ?? ''));
+        // 调用父类的分页查询
+        $paginator = parent::getPage($params);
 
-        $query = Role::query()
-            ->when($keyword !== '', function ($q) use ($keyword) {
-                $q->where(function ($sub) use ($keyword) {
-                    $sub->where('name', 'like', "%{$keyword}%")
-                        ->orWhere('code', 'like', "%{$keyword}%")
-                        ->orWhere('description', 'like', "%{$keyword}%");
-                });
-            })
-            ->when($name !== '', function ($q) use ($name) {
-                $q->where('name', 'like', "%{$name}%");
-            })
-            ->when($code !== '', function ($q) use ($code) {
-                $q->where('code', 'like', "%{$code}%");
-            })
-            ->when($status !== '', function ($q) use ($status) {
-                $q->where('status', (int)$status);
-            })
-            ->orderBy('sort', 'asc')
-            ->orderBy('id', 'asc');
-
-               // 格式化数据
-      
-
-        $paginator = $query->paginate($limit, ['*'], 'page', $page);
-
+        // 格式化数据
         $paginator->getCollection()->transform(function ($role) {
             return $this->formatRoleRow($role);
         });
@@ -108,13 +100,7 @@ class RoleService
      */
     public function getRoleById(int $id): Role
     {
-        $role = $this->model->with(['permissions', 'menus'])->find($id);
-        
-        if (!$role) {
-            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
-        }
-        
-        return $role;
+        return $this->model->with(['permissions', 'menus'])->find($id) ?? throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
     }
 
     /**
@@ -127,26 +113,22 @@ class RoleService
     {
         // 设置排序值
         if (!isset($data['sort'])) {
-            $data['sort'] = $this->getNextSort();
+            $data['sort'] = $this->model->getNextSort();
         }
         // 创建角色
-        return $this->model->create($data);
+        return parent::create($data);
     }
 
     /**
      * 更新角色
      * @param int $id 角色ID
      * @param array $data 更新数据
-     * @return bool
+     * @return Role
      * @throws ApiException
      */
-    public function updateRole(int $id, array $data): bool
+    public function updateRole(int $id, array $data): Role
     {
-        $role = $this->model->find($id);
-        if (!$role) {
-            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
-        }
-        return $role->update($data);
+        return parent::update($id, $data);
     }
 
     /**
@@ -157,26 +139,16 @@ class RoleService
      */
     public function deleteRole(int $id): bool
     {
-        // 检查角色是否存在
-        $role = $this->model->find($id);
-        if (!$role) {
-            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
-        }
-        
         // 检查角色是否被使用
-        $adminCount = $role->admins()->count();
-        if ($adminCount > 0) {
-            throw new ApiException(Code::DATA_IN_USE, '角色正在使用中，无法删除');
+        $role = $this->model->find($id);
+        if ($role) {
+            $adminCount = $role->admins()->count();
+            if ($adminCount > 0) {
+                throw new ApiException(Code::DATA_IN_USE, '角色正在使用中，无法删除');
+            }
         }
-        
-        // 软删除
-        $result = $this->model->destroy($id);
-        
-        if ($result === false) {
-            throw new ApiException(Code::SYSTEM_ERROR, '删除角色失败');
-        }
-        
-        return true;
+
+        return parent::delete($id);
     }
 
     /**
@@ -542,42 +514,22 @@ class RoleService
     /**
      * 批量删除角色
      * @param array $ids 角色ID数组
-     * @return bool
+     * @return int 删除数量
      * @throws ApiException
      */
-    public function batchDeleteRoles(array $ids): bool
+    public function batchDeleteRoles(array $ids): int
     {
-        if (empty($ids)) {
-            throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的角色');
-        }
-        
-        // 检查角色是否存在
-        $existingRoles = $this->model->whereIn('id', $ids)->get();
-        $existingIds = $existingRoles->pluck('id')->toArray();
-        $invalidIds = array_diff($ids, $existingIds);
-        
-        if (!empty($invalidIds)) {
-            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在: ' . implode(',', $invalidIds));
-        }
-        
         // 检查是否有角色正在使用
+        $existingRoles = $this->model->whereIn('id', $ids)->get();
         /** @var Role $role */
         foreach ($existingRoles as $role) {
-            // 检查是否有管理员使用此角色
             $adminCount = $role->admins()->count();
             if ($adminCount > 0) {
                 throw new ApiException(Code::DATA_IN_USE, "角色 '{$role->name}' 正在使用中，无法删除");
             }
         }
-        
-        // 批量软删除
-        $result = $this->model->destroy($ids);
-        
-        if ($result === false) {
-            throw new ApiException(Code::SYSTEM_ERROR, '批量删除角色失败');
-        }
-        
-        return true;
+
+        return parent::batchDelete($ids);
     }
 
     /**
