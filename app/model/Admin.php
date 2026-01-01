@@ -68,7 +68,7 @@ class Admin extends BaseModel
      * 自动追加的字段
      * @var array
      */
-    protected $appends = ['roles'];
+    protected $appends = ['role_ids'];
 
     /**
      * 字段类型转换
@@ -77,14 +77,14 @@ class Admin extends BaseModel
     protected $casts = [
         'id' => 'integer',
         'deleted' => 'boolean',
-        'last_login_time' => 'string',
+        'last_login_time' => 'datetime:Y-m-d H:i:s',
         'last_login_ip' => 'string',
-        'created_at' => 'string',
-        'updated_at' => 'string'
+        'created_at' => 'datetime:Y-m-d',
+        'updated_at' => 'datetime:Y-m-d'
     ];
 
     /**
-     * 模型启动方法，注册模型事件
+     * 注册模型事件
      */
     protected static function booted(): void
     {
@@ -130,19 +130,15 @@ class Admin extends BaseModel
 
     public function handleSearch(Builder $query, array $params): Builder
     {
-        // 先使用 BaseModel 提供的通用筛选
-        $searchParams = $params;
-        $query = parent::handleSearch($query, $searchParams);
+        $query = parent::handleSearch($query, $params);
 
-        // 管理员特有筛选：按角色筛选（保留原有行为）
-        if (Arr::get($searchParams, 'role_id')) {
-            $roleId = Arr::get($searchParams, 'role_id');
+        // 按角色筛选
+        if (Arr::get($params, 'role_id')) {
+            $roleId = Arr::get($params, 'role_id');
             $query->whereHas('roles', static function (Builder $q) use ($roleId) {
                 $q->where('role_id', $roleId);
             });
         }
-
-        // 关联管理员角色信息以便前端使用（保持原有 eager load）
         $query->with(['adminRoles:admin_id,role_id']);
 
         return $query;
@@ -336,28 +332,12 @@ class Admin extends BaseModel
      * 获取角色ID数组访问器
      * @return array
      */
-    public function getRolesAttribute(): array
+    public function getRoleIdsAttribute(): array
     {
         if ($this->relationLoaded('adminRoles')) {
             return $this->adminRoles->pluck('role_id')->toArray();
         }
 
         return $this->adminRoles()->pluck('role_id')->toArray();
-    }
-
-    /**
-     * 创建管理员
-     * @param array $data 管理员数据
-     * @return static|false
-     */
-    public function createAdmin(array $data): Admin|bool
-    {
-        // 检查用户名是否已存在
-        if ($this->where('username', $data['username'])->exists()) {
-            return false;
-        }
-
-        // 密码将通过修改器自动加密，无需手动处理
-        return $this->create($data);
     }
 }

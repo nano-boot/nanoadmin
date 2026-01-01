@@ -57,7 +57,7 @@ class AdminController extends BaseController
      * @param Request $request
      * @return Response
      */
-    public function store(Request $request, array $fields = []): Response
+    public function create(Request $request, array $fields = []): Response
     {
         // 获取请求数据
         $requestData = [
@@ -71,7 +71,7 @@ class AdminController extends BaseController
             'gender' => $request->post('gender', ''),
         ];
 
-        return parent::store($request, array_keys($requestData));
+        return parent::create($request, array_keys($requestData));
     }
 
     /**
@@ -84,7 +84,7 @@ class AdminController extends BaseController
     public function update(Request $request, int $id, array $fields = []): Response
     {
         $requestData = $request->only([
-            'username','nickname', 'password', 'phone', 'email', 'avatar', 'gender', 'status','admin','roles'
+            'username','nickname', 'password', 'phone', 'email', 'avatar', 'gender', 'status','admin','role_ids'
         ]);
         $admin = $this->adminService->updateAdmin($id, $requestData);
 

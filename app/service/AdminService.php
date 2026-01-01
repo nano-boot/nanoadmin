@@ -75,39 +75,14 @@ class AdminService extends BaseService
      * @return Admin
      * @throws ApiException
      */
-    public function createAdmin(array $data): Admin
+    public function create(array $data): Admin
     {
-        // 检查用户名是否已存在
-        if ($this->model->where('username', $data['username'])->first()) {
-            throw new ApiException(Code::DUPLICATE_NAME, '用户名已存在');
-        }
-
-        // 检查手机号是否已存在（如果提供了手机号）
-        if (!empty($data['phone'])) {
-            if ($this->model->where('phone', $data['phone'])->first()) {
-                throw new ApiException(Code::DUPLICATE_NAME, '手机号已存在');
-            }
-        }
-
-        // 检查邮箱是否已存在（如果提供了邮箱）
-        if (!empty($data['email'])) {
-            if ($this->model->where('email', $data['email'])->first()) {
-                throw new ApiException(Code::DUPLICATE_NAME, '邮箱已存在');
-            }
-        }
-
         // 提取角色信息
-        $roleIds = $data['roles'] ?? [];
-        unset($data['roles']);
-
-        // 设置默认值
-        $data['status'] = $data['status'] ?? true;
-        $data['deleted'] = false;
-        $data['created_at'] = date('Y-m-d H:i:s');
-        $data['updated_at'] = date('Y-m-d H:i:s');
+        $roleIds = $data['role_ids'] ?? [];
+        unset($data['role_ids']);
 
         // 创建管理员（使用模型的方法，因为需要密码加密）
-        $admin = $this->model->createAdmin($data);
+        $admin = $this->model->create($data);
 
         if (!$admin) {
             throw new ApiException(Code::SYSTEM_ERROR, '创建管理员失败');
@@ -133,9 +108,9 @@ class AdminService extends BaseService
     {
         // 提取角色信息
         $roleIds = null;
-        if (isset($data['roles'])) {
-            $roleIds = $data['roles'];
-            unset($data['roles']);
+        if (isset($data['role_ids'])) {
+            $roleIds = $data['role_ids'];
+            unset($data['role_ids']);
         }
 
         // 更新管理员基本信息
@@ -156,12 +131,8 @@ class AdminService extends BaseService
      * @return bool
      * @throws ApiException
      */
-    public function deleteAdmin(int $id): bool
+    public function delete(int $id): bool
     {
-        $admin = $this->model->find($id);
-        if ($admin && $admin->id == 1) {
-            throw new ApiException(Code::FORBIDDEN, '不允许删除超级管理员');
-        }
         return parent::delete($id);
     }
 

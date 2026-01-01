@@ -49,11 +49,11 @@ abstract class BaseController
      * @param array $fields 创建时允许的字段
      * @return Response
      */
-    public function store(Request $request, array $fields = []): Response
+    public function create(Request $request, array $fields = []): Response
     {
         try {
             $requestData = $request->only($fields);
-            $data = $this->getService()->{'create' . $this->getModelName()}($requestData);
+            $data = $this->getService()->{'create'}($requestData);
             return R::created($data, '创建' . $this->getModelName() . '成功');
         } catch (ApiException $e) {
             return R::error($e->getMessage(), $e->getCode());
@@ -89,13 +89,13 @@ abstract class BaseController
      */
     public function destroy(int $id): Response
     {
-        try {
-            $this->getService()->{'delete' . $this->getModelName()}($id);
-            return R::deleted('删除' . $this->getModelName() . '成功');
+        try { 
+            $this->getService()->{'delete'}($id);
+            return R::deleted('删除成功');
         } catch (ApiException $e) {
             return R::error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
-            return R::error('删除' . $this->getModelName() . '失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+            return R::error('删除失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
         }
     }
 

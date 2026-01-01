@@ -18,7 +18,16 @@ abstract class BaseModel extends Model
      * @var string
      */
     protected $dateFormat = 'Y-m-d H:i:s';
-    
+
+    /**
+     * 属性默认值
+     * @var array
+     */
+    protected $attributes = [
+        'status' => true,
+        'deleted' => false,
+    ];
+
     /**
      * 需要转换的属性类型
      * @var array
@@ -52,6 +61,28 @@ abstract class BaseModel extends Model
      * @var array
      */
     protected static array $searchRangeFields = [];
+
+     /**
+     * 设置通用的模型事件
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (BaseModel $model) {
+            $now = date('Y-m-d H:i:s');
+            if (!isset($model->created_at)) {
+                $model->created_at = $now;
+            }
+            if (!isset($model->updated_at)) {
+                $model->updated_at = $now;
+            }
+        });
+
+        static::updating(function (BaseModel $model) {
+            $model->updated_at = date('Y-m-d H:i:s');
+        });
+    }
 
     /**
      * 获取范围字段列表
