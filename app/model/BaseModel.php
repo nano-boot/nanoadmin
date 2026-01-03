@@ -33,8 +33,11 @@ abstract class BaseModel extends Model
      * @var array
      */
     protected $casts = [
-        'created_at' => 'datetime:Y-m-d H:i:s',
-        'updated_at' => 'datetime:Y-m-d H:i:s',
+        'status' => 'integer',
+        'sort' => 'integer',
+        'deleted' => 'boolean',
+        'created_at' => 'datetime:Y-m-d',
+        'updated_at' => 'datetime:Y-m-d',
     ];
 
     /**
@@ -56,8 +59,7 @@ abstract class BaseModel extends Model
     protected static array $searchKeywordFields = [];
 
     /**
-     * 配置化的范围 (between) 字段列表，子类可覆盖
-     * 例如: ['created_at', 'last_login_time']
+     * 配置化的范围字段列表
      * @var array
      */
     protected static array $searchRangeFields = [];
@@ -206,10 +208,9 @@ abstract class BaseModel extends Model
         $equalFields = static::getSearchEqualFields();
         $keywordFields = static::getSearchKeywordFields();
         $rangeFields = static::getSearchRangeFields();
-        
         $searchParams = $params;
         unset($searchParams['page'], $searchParams['limit']);
-
+    
         $keyword = Arr::get($searchParams, 'keyword', null);
         if (!is_null($keyword) && $keyword !== '') {
             $query->where(function (Builder $q) use ($keyword, $keywordFields) {

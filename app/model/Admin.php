@@ -70,18 +70,7 @@ class Admin extends BaseModel
      */
     protected $appends = ['role_ids'];
 
-    /**
-     * 字段类型转换
-     * @var array
-     */
-    protected $casts = [
-        'id' => 'integer',
-        'deleted' => 'boolean',
-        'last_login_time' => 'datetime:Y-m-d H:i:s',
-        'last_login_ip' => 'string',
-        'created_at' => 'datetime:Y-m-d',
-        'updated_at' => 'datetime:Y-m-d'
-    ];
+  
 
     /**
      * 注册模型事件

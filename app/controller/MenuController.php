@@ -70,7 +70,7 @@ class MenuController
             // 获取查询参数
             $params = [
                 'page' => (int)$request->get('page', 1),
-                'limit' => (int)$request->get('limit', 15),
+                'size' => (int)$request->get('size', 15),
                 'keyword' => trim($request->get('keyword', '')),
                 'status' => $request->get('status', ''),
                 'type' => $request->get('type', ''),
@@ -147,8 +147,8 @@ class MenuController
 
 
     /**
-     * 获取菜单树形结构（支持搜索和过滤）
-     * GET /admin/menu/tree
+     * 获取菜单树形结构
+     * GET /admin/menu
      * @param Request $request
      * @return Response
      */
@@ -158,55 +158,65 @@ class MenuController
             // 获取查询参数
             $parentId = (int)$request->get('parent_id', 0);
             $onlyEnabled = $request->get('only_enabled', 'true') === 'true';
+
+            // 构建标准化的搜索参数
+            $searchParams = [];
+            if ($parentId > 0) {
+                $searchParams['parent_id'] = $parentId;
+            }
+
+            // 添加其他搜索参数（使用标准化字段名）
             $keyword = trim($request->get('keyword', ''));
+            if (!empty($keyword)) {
+                $searchParams['keyword'] = $keyword;
+            }
+
             $status = $request->get('status', '');
+            if ($status !== '') {
+                $searchParams['status'] = (bool)$status;
+            }
+
             $type = $request->get('type', '');
-            $title = $request->get('title', '');
-            $name = $request->get('name', '');
+            if (!empty($type)) {
+                $searchParams['type'] = $type;
+            }
+
             $hidden = $request->get('hidden', '');
-      
-            // 判断是否有搜索或过滤条件
-            $hasSearchConditions = !empty($keyword) || $status !== '' || $type !== '' || $hidden !== '' || $title !== '' || $name !== '';
-            
+            if ($hidden !== '') {
+                $searchParams['hidden'] = (bool)$hidden;
+            }
+
+            $title = trim($request->get('title', ''));
+            if (!empty($title)) {
+                $searchParams['title'] = $title;
+            }
+
+            $name = trim($request->get('name', ''));
+            if (!empty($name)) {
+                $searchParams['name'] = $name;
+            }
+
+            // 根据 only_enabled 参数调整 status 过滤
+            if ($onlyEnabled && !isset($searchParams['status'])) {
+                $searchParams['status'] = true;
+            }
+
+            // 判断是否有搜索条件
+            $hasSearchConditions = !empty(array_filter($searchParams));
+
             if ($hasSearchConditions) {
-                // 有搜索或过滤条件，使用高级搜索
-                $searchParams = [
-                    'keyword' => $keyword,
-                    'search_fields' => ['name', 'title', 'path'],
-                    'menu_types' => !empty($type) ? [$type] : [],
-                    'status' => $status !== '' ? (bool)$status : null,
-                    'hidden' => $hidden !== '' ? (bool)$hidden : null,
-                    'parent_id' => $parentId > 0 ? $parentId : null,
-                    'maintain_hierarchy' => true
-                ];
-                
-                // 添加单独的 title 字段搜索
-                if (!empty($title)) {
-                    $searchParams['title'] = $title;
-                }
-                
-                // 添加单独的 name 字段搜索
-                if (!empty($name)) {
-                    $searchParams['name'] = $name;
-                }
-                
-                // 根据 only_enabled 参数调整 status 过滤
-                if ($onlyEnabled && $searchParams['status'] === null) {
-                    $searchParams['status'] = true;
-                }
-                
-                // 执行高级搜索
+                // 有搜索条件，使用高级搜索服务
                 $tree = $this->searchService->advancedSearch($searchParams);
             } else {
                 // 无搜索条件，直接获取树形结构
                 $tree = $this->menuModel->getTree($parentId, $onlyEnabled);
             }
-            
+
             // 格式化树形结构
             $routes = $this->formatTreeForApi($tree);
-            
+
             return R::data($routes);
-            
+
         } catch (ApiException $e) {
             return $this->error($e->getCode(), $e->getMessage());
         } catch (\Exception $e) {

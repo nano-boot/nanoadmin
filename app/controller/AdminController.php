@@ -2,7 +2,6 @@
 
 namespace plugin\theadmin\app\controller;
 
-use DI\Attribute\Inject;
 use plugin\theadmin\app\common\R;
 use support\Request;
 use support\Response;
@@ -69,8 +68,8 @@ class AdminController extends BaseController
             'avatar' => $request->post('avatar', ''),
             'status' => (int)$request->post('status', 1),
             'gender' => $request->post('gender', ''),
+            'role_ids' => $request->post('role_ids', []),
         ];
-
         return parent::create($request, array_keys($requestData));
     }
 

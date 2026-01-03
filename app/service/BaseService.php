@@ -46,8 +46,10 @@ abstract class BaseService
      */
     public function getPage(array $params = []): LengthAwarePaginator
     {
+
         $page = max(1, (int)($params['page'] ?? 1));
         $limit = min(1000, max(1, (int)($params['limit'] ?? 15)));
+      
         $query = $this->model->handleSearch($this->model->query(), $params);
         return $query->paginate($limit, ['*'], 'page', $page);
     }

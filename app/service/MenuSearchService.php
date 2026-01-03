@@ -203,80 +203,11 @@ class MenuSearchService
      */
     public function advancedSearch(array $searchParams): array
     {
-        $query = $this->menuModel->newQuery();
-        
-        // 关键词搜索
-        if (!empty($searchParams['keyword'])) {
-            $keyword = $searchParams['keyword'];
-            $searchFields = $searchParams['search_fields'] ?? ['name', 'title', 'path'];
-            
-            $query->where(function($q) use ($keyword, $searchFields) {
-                foreach ($searchFields as $field) {
-                    $q->orWhere($field, 'like', '%' . $keyword . '%');
-                }
-            });
-        }
-        
-        // 单独的 title 字段搜索（模糊匹配）
-        if (!empty($searchParams['title'])) {
-            $query->where('title', 'like', '%' . $searchParams['title'] . '%');
-        }
-        
-        // 单独的 name 字段搜索（模糊匹配）
-        if (!empty($searchParams['name'])) {
-            $query->where('name', 'like', '%' . $searchParams['name'] . '%');
-        }
-        
-        // 菜单类型过滤
-        if (!empty($searchParams['menu_types'])) {
-            $query->whereIn('type', $searchParams['menu_types']);
-        }
-        
-        // 状态过滤
-        if (isset($searchParams['status']) && $searchParams['status'] !== null) {
-            $query->where('status', $searchParams['status']);
-        }
-        
-        // 隐藏状态过滤
-        if (isset($searchParams['hidden']) && $searchParams['hidden'] !== null) {
-            $query->where('hidden', $searchParams['hidden']);
-        }
-        
-        // 父菜单过滤 - 修复：只有 parent_id 不为 null 时才添加条件
-        if (isset($searchParams['parent_id']) && $searchParams['parent_id'] !== null) {
-            $query->where('parent_id', $searchParams['parent_id']);
-        }
-        
-        // 权限标识过滤
-        if (!empty($searchParams['permission'])) {
-            $query->where('permission', 'like', '%' . $searchParams['permission'] . '%');
-        }
-        
-        // 路径过滤
-        if (!empty($searchParams['path'])) {
-            $query->where('path', 'like', '%' . $searchParams['path'] . '%');
-        }
-        
-        // 组件过滤
-        if (!empty($searchParams['component'])) {
-            $query->where('component', 'like', '%' . $searchParams['component'] . '%');
-        }
-        
-        // 排序范围过滤
-        if (isset($searchParams['sort_min'])) {
-            $query->where('sort', '>=', $searchParams['sort_min']);
-        }
-        if (isset($searchParams['sort_max'])) {
-            $query->where('sort', '<=', $searchParams['sort_max']);
-        }
-        
-        // 创建时间范围过滤
-        if (!empty($searchParams['created_start'])) {
-            $query->where('created_at', '>=', $searchParams['created_start']);
-        }
-        if (!empty($searchParams['created_end'])) {
-            $query->where('created_at', '<=', $searchParams['created_end']);
-        }
+        // 使用 Menu 模型的标准搜索逻辑（会自动使用配置的搜索字段）
+        $query = $this->menuModel->handleSearch($this->menuModel->newQuery(), $searchParams);
+
+     
+  
         
         $menus = $query->orderBy('sort', 'asc')->orderBy('id', 'asc')->get();
         

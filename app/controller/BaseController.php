@@ -52,9 +52,7 @@ abstract class BaseController
     public function create(Request $request, array $fields = []): Response
     {
         try {
-            $requestData = $request->only($fields);
-            $data = $this->getService()->{'create'}($requestData);
-            return R::created($data, '创建' . $this->getModelName() . '成功');
+            return R::created($this->getService()->{'create'}($request->only($fields)));
         } catch (ApiException $e) {
             return R::error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {

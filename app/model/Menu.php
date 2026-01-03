@@ -127,6 +127,19 @@ class Menu extends BaseModel
     ];
 
     /**
+     * 模型启动事件
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        // 配置搜索字段
+        static::setSearchLikeFields(['title']);
+        static::setSearchEqualFields(['status', 'type']);
+        static::setSearchKeywordFields(['title']);
+    }
+
+    /**
      * 追加到模型数组表单的访问器
      * @var array
      */

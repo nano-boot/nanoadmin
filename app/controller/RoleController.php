@@ -61,9 +61,9 @@ class RoleController extends BaseController
      * @return Response
      * @throws ApiException
      */
-    public function store(Request $request, array $fields = []): Response
+    public function create(Request $request, array $fields = []): Response
     {
-        return parent::store($request, ['code', 'name', 'description', 'sort', 'status']);
+        return parent::create($request, ['code', 'name', 'description', 'sort', 'status']);
     }
 
     /**

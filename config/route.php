@@ -36,7 +36,7 @@ Route::group('/sys/admin', function () {
 Route::group('/sys/role', function () {
     Route::get('', [plugin\theadmin\app\controller\RoleController::class, 'page']);
     Route::get('/select', [plugin\theadmin\app\controller\RoleController::class, 'selectList']);
-    Route::post('', [plugin\theadmin\app\controller\RoleController::class, 'store']);
+    Route::post('', [plugin\theadmin\app\controller\RoleController::class, 'create']);
     Route::get('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\RoleController::class, 'update']);
     Route::delete('/batch', [plugin\theadmin\app\controller\RoleController::class, 'batchDestroy']);
@@ -63,7 +63,6 @@ Route::group('/sys/permissions', function () {
 Route::group('/sys/menu', function () {
     Route::get('', [plugin\theadmin\app\controller\MenuController::class, 'tree']);
     Route::post('', [plugin\theadmin\app\controller\MenuController::class, 'store']);
-    Route::post('/tree', [plugin\theadmin\app\controller\MenuController::class, 'tree']);
     Route::get('/route', [plugin\theadmin\app\controller\MenuController::class, 'route']);
     Route::get('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\MenuController::class, 'update']);

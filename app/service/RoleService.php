@@ -42,27 +42,11 @@ class RoleService extends BaseService
     /**
      * 获取角色列表
      * @param array $params 查询参数
-     *  - page: 页码
-     *  - limit: 每页数量
-     *  - keyword: 关键词（name/code/description 模糊搜索）
-     *  - name: 角色名称（模糊搜索）
-     *  - code: 角色代码（模糊搜索）
-     *  - status: 状态（0/1）
+  
      * @return LengthAwarePaginator
      */
     public function getPage(array $params = []): LengthAwarePaginator
     {
-        // 处理 keyword 参数，转为模型 handleSearch 能处理的格式
-        if (!empty($params['keyword'])) {
-            $keyword = trim((string)$params['keyword']);
-            // 将 keyword 转换为多个搜索字段
-            $params['name'] = $keyword;
-            $params['code'] = $keyword;
-            $params['description'] = $keyword;
-            unset($params['keyword']);
-        }
-
-        // 调用父类的分页查询
         $paginator = parent::getPage($params);
 
         // 格式化数据
