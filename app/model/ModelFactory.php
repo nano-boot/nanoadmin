@@ -51,6 +51,15 @@ class ModelFactory
     }
 
     /**
+     * 获取File模型实例
+     * @return File
+     */
+    public static function file(): File
+    {
+        return self::getInstance(File::class);
+    }
+
+    /**
      * 获取模型实例
      * @param string $className 模型类名
      * @return mixed

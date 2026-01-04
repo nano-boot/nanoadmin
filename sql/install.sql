@@ -188,3 +188,30 @@ CREATE TABLE IF NOT EXISTS th_sys_role_menu (
     INDEX idx_role_id (role_id),
     INDEX idx_menu_id (menu_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色菜单关联表';
+
+-- 8. 文件表
+CREATE TABLE IF NOT EXISTS th_sys_file (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '文件ID',
+    original_name VARCHAR(255) NOT NULL COMMENT '原始文件名',
+    file_name VARCHAR(255) NOT NULL COMMENT '存储文件名',
+    file_path VARCHAR(500) NOT NULL COMMENT '文件存储路径',
+    file_size BIGINT NOT NULL DEFAULT 0 COMMENT '文件大小（字节）',
+    file_ext VARCHAR(20) DEFAULT '' COMMENT '文件扩展名',
+    mime_type VARCHAR(100) DEFAULT '' COMMENT 'MIME类型',
+    file_hash VARCHAR(128) DEFAULT '' COMMENT '文件哈希值（MD5/SHA256）',
+    storage_type VARCHAR(20) DEFAULT 'local' COMMENT '存储类型（local本地存储 cloud云存储）',
+    bucket_name VARCHAR(100) DEFAULT '' COMMENT '存储桶名称（云存储时使用）',
+    created_by BIGINT DEFAULT 0 COMMENT '创建者ID',
+    updated_by BIGINT DEFAULT 0 COMMENT '更新者ID',
+    status TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+
+    INDEX idx_original_name (original_name),
+    INDEX idx_file_hash (file_hash),
+    INDEX idx_storage_type (storage_type),
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at),
+    INDEX idx_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件表';

@@ -71,3 +71,16 @@ Route::group('/sys/menu', function () {
     Route::post('/sort', [plugin\theadmin\app\controller\MenuController::class, 'sort']);
 
 });
+
+// 文件管理相关路由（需要认证）
+Route::group('/sys/files', function () {
+    Route::get('', [plugin\theadmin\app\controller\FileController::class, 'index']);
+    Route::post('', [plugin\theadmin\app\controller\FileController::class, 'upload']);
+    Route::post('/batch', [plugin\theadmin\app\controller\FileController::class, 'batchUpload']);
+    Route::get('/stats', [plugin\theadmin\app\controller\FileController::class, 'stats']);
+    Route::get('/{id}', [plugin\theadmin\app\controller\FileController::class, 'show']);
+    Route::put('/{id}', [plugin\theadmin\app\controller\FileController::class, 'update']);
+    Route::get('/{id}/download', [plugin\theadmin\app\controller\FileController::class, 'download']);
+    Route::delete('/batch', [plugin\theadmin\app\controller\FileController::class, 'batchDestroy']);
+    Route::delete('/{id}', [plugin\theadmin\app\controller\FileController::class, 'destroy']);
+});
