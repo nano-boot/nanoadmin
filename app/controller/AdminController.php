@@ -132,7 +132,7 @@ class AdminController extends BaseController
             // 验证ID参数
             $validator = new AdminValidator();
             $id = $validator->validateId($request->get('id', 0));
-            
+
             $roles = $this->adminService->getAdminRoles($id);
             return R::success($roles, '获取管理员角色成功');
 
@@ -140,6 +140,92 @@ class AdminController extends BaseController
             return R::error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
             return R::error('获取管理员角色失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
+    }
+
+    /**
+     * 更新当前用户密码
+     * PUT /sys/admin/password
+     * @param Request $request
+     * @return Response
+     */
+    public function updateCurrentPassword(Request $request): Response
+    {
+        try {
+            // 获取当前登录用户
+            $currentUser = $request->admin;
+            if (!$currentUser) {
+                return R::error('用户未登录', 401);
+            }
+
+            // 验证请求数据
+            $requestData = $request->only([
+                'old_password', 'password', 'confirm_password'
+            ]);
+
+        
+
+            // 验证旧密码是否正确
+            $admin = $this->adminService->getById($currentUser->id);
+            if (!$admin->verifyPassword($requestData['old_password'])) {
+                return R::error('旧密码不正确', 422);
+            }
+
+            // 更新密码
+            $this->adminService->resetAdminPassword($currentUser->id, $requestData['password']);
+
+            return R::success(null, '密码修改成功');
+
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('密码修改失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
+    }
+
+    /**
+     * 更新当前用户资料
+     * PUT /sys/admin/info
+     * @param Request $request
+     * @return Response
+     */
+    public function updateProfile(Request $request): Response
+    {
+        try {
+            // 获取当前登录用户
+            $currentUser = $request->admin;
+            if (!$currentUser) {
+                return R::error('用户未登录', 401);
+            }
+
+            // 验证请求数据
+            $validator = new AdminValidator();
+            $requestData = $request->only([
+                'nickname', 'phone', 'email', 'avatar', 'gender'
+            ]);
+
+            // 验证数据格式
+      
+
+            // 更新用户资料
+            $admin = $this->adminService->updateAdmin($currentUser->id, $requestData);
+
+            return R::success([
+                'id' => $admin->id,
+                'username' => $admin->username,
+                'nickname' => $admin->nickname,
+                'email' => $admin->email,
+                'phone' => $admin->phone,
+                'avatar' => $admin->avatar,
+                'status' => $admin->status,
+                'gender' => $admin->gender,
+                'roles' => $admin->roles->pluck('name')->toArray()
+            ], '更新用户资料成功');
+
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('更新用户资料失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
         }
     }
 

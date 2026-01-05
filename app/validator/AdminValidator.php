@@ -16,12 +16,14 @@ class AdminValidator extends ValidatorBase
     protected $rule = [
         'username' => 'require|string|min:3|max:20|regex:/^[a-zA-Z0-9_]+$/|unique:sys_admin,username',
         'password' => 'requireWithout:id|string|min:6|max:20',
+        'old_password' => 'require|string|min:6|max:20',
+        'confirm_password' => 'require|string|confirm:password',
         'nickname' => 'string|min:2|max:50',
-        'phone' => 'string|regex:/^1[3-9]\d{9}$/|unique:sys_admin,phone',
-        'email' => 'email|max:100|unique:sys_admin,email',
+        'phone' => 'nullable|string|regex:/^1[3-9]\d{9}$/|unique:sys_admin,phone',
+        'email' => 'nullable|email|max:100|unique:sys_admin,email',
         'avatar' => 'nullable|string|max:255',
         'status' => 'integer|in:0,1',
-        'gender' => 'integer|in:0,1,2',
+        'gender' => 'nullable|integer|in:0,1,2',
         'role_ids' => 'array',
         'role_ids.*' => 'integer|gt:0',
         'ids' => 'require|array|min:1',
@@ -85,7 +87,9 @@ class AdminValidator extends ValidatorBase
         'show' => ['id'],
         'delete' => ['id'],
         'list' => ['page', 'limit', 'keyword', 'status'],
-        'update_password' => ['id', 'password']
+        'update_password' => ['id', 'password'],
+        'update_profile' => ['nickname', 'phone', 'email', 'avatar', 'gender'],
+        'update_current_password' => ['old_password', 'password', 'confirm_password']
     ];
 
     /**
@@ -96,6 +100,7 @@ class AdminValidator extends ValidatorBase
         // 为登录场景移除唯一性验证
         return $this->remove('username', 'unique');
     }
+
 
     /**
      * 验证登录参数
@@ -174,7 +179,7 @@ class AdminValidator extends ValidatorBase
     {
         // 动态修改唯一性规则，排除当前记录
         $rules = $this->rule;
-        
+
         if (isset($data['username'])) {
             $rules['username'] = str_replace(
                 'unique:plugin\theadmin\app\model\Admin,username',
@@ -182,7 +187,7 @@ class AdminValidator extends ValidatorBase
                 $rules['username']
             );
         }
-        
+
         if (isset($data['phone'])) {
             $rules['phone'] = str_replace(
                 'unique:plugin\theadmin\app\model\Admin,phone',
@@ -190,7 +195,7 @@ class AdminValidator extends ValidatorBase
                 $rules['phone']
             );
         }
-        
+
         if (isset($data['email'])) {
             $rules['email'] = str_replace(
                 'unique:plugin\theadmin\app\model\Admin,email',
@@ -202,7 +207,7 @@ class AdminValidator extends ValidatorBase
         // 临时设置规则并验证
         $originalRule = $this->rule;
         $this->rule = $rules;
-        
+
         try {
             $validatedData = $this->validateData($data, 'update');
             $this->rule = $originalRule; // 恢复原始规则
@@ -212,4 +217,5 @@ class AdminValidator extends ValidatorBase
             throw $e;
         }
     }
+
 }

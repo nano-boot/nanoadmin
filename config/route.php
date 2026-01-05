@@ -17,14 +17,15 @@ Route::group('/sys/auth', function () {
 });
 
 
-// 管理员管理相关路由（需要认证）
+// 管理员管理相关路由
 Route::group('/sys/admin', function () {
     Route::get('', [plugin\theadmin\app\controller\AdminController::class, 'page']);
     Route::post('', [plugin\theadmin\app\controller\AdminController::class, 'create']);
+    Route::put('/info', [plugin\theadmin\app\controller\AdminController::class, 'updateProfile']);
+    Route::put('/password', [plugin\theadmin\app\controller\AdminController::class, 'updateCurrentPassword']);
     Route::get('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'show']);
     Route::put('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'update']);
 
-    // 将批量删除路由放在单个删除路由之前
     Route::delete('/batch', [plugin\theadmin\app\controller\AdminController::class, 'batchDestroy']);
     Route::delete('/{id}', [plugin\theadmin\app\controller\AdminController::class, 'destroy']);
 
@@ -32,7 +33,7 @@ Route::group('/sys/admin', function () {
     Route::get('/{id}/roles', [plugin\theadmin\app\controller\AdminController::class, 'getRoles']);
 });
 
-// 角色管理相关路由（需要认证）
+// 角色管理相关路由
 Route::group('/sys/role', function () {
     Route::get('', [plugin\theadmin\app\controller\RoleController::class, 'page']);
     Route::get('/select', [plugin\theadmin\app\controller\RoleController::class, 'selectList']);
@@ -48,7 +49,7 @@ Route::group('/sys/role', function () {
 
 });
 
-// 权限管理相关路由（需要认证）
+// 权限管理相关路由
 Route::group('/sys/permissions', function () {
     Route::get('', [plugin\theadmin\app\controller\PermissionController::class, 'page']);
     Route::post('', [plugin\theadmin\app\controller\PermissionController::class, 'store']);
@@ -59,7 +60,7 @@ Route::group('/sys/permissions', function () {
 
 });
 
-// 菜单管理相关路由（需要认证）
+// 菜单管理相关路由
 Route::group('/sys/menu', function () {
     Route::get('', [plugin\theadmin\app\controller\MenuController::class, 'tree']);
     Route::post('', [plugin\theadmin\app\controller\MenuController::class, 'store']);
@@ -72,7 +73,7 @@ Route::group('/sys/menu', function () {
 
 });
 
-// 文件管理相关路由（需要认证）
+// 文件管理相关路由
 Route::group('/sys/files', function () {
     Route::get('', [plugin\theadmin\app\controller\FileController::class, 'index']);
     Route::post('', [plugin\theadmin\app\controller\FileController::class, 'upload']);
