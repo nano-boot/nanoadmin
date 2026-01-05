@@ -23,7 +23,7 @@ class AdminValidator extends ValidatorBase
         'email' => 'nullable|email|max:100|unique:sys_admin,email',
         'avatar' => 'nullable|string|max:255',
         'status' => 'integer|in:0,1',
-        'gender' => 'nullable|integer|in:0,1,2',
+        'gender' => 'integer|in:0,1,2',
         'role_ids' => 'array',
         'role_ids.*' => 'integer|gt:0',
         'ids' => 'require|array|min:1',

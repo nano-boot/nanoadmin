@@ -49,10 +49,10 @@ abstract class BaseController
      * @param array $fields 创建时允许的字段
      * @return Response
      */
-    public function create(Request $request, array $fields = []): Response
+    public function create(Request $request): Response
     {
         try {
-            return R::created($this->getService()->{'create'}($request->only($fields)));
+            return R::created($this->getService()->{'create'}($request->post()));
         } catch (ApiException $e) {
             return R::error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
@@ -67,12 +67,11 @@ abstract class BaseController
      * @param array $fields 更新时允许的字段
      * @return Response
      */
-    public function update(Request $request, int $id, array $fields = []): Response
+    public function update(Request $request, int $id): Response
     {
         try {
-            $requestData = $request->only($fields);
-            $data = $this->getService()->{'update' . $this->getModelName()}($id, $requestData);
-            return R::data($data, '更新' . $this->getModelName() . '成功');
+            $data = $this->getService()->{'update'}($id, $request->post());
+            return R::data($data, '更新成功');
         } catch (ApiException $e) {
             return R::error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {

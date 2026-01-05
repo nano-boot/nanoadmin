@@ -104,7 +104,7 @@ class AdminService extends BaseService
      * @return Admin
      * @throws ApiException
      */
-    public function updateAdmin(int $id, array $data): Admin
+    public function update(int $id, array $data): Admin
     {
         // 提取角色信息
         $roleIds = null;

@@ -49,48 +49,6 @@ class AdminController extends BaseController
         return 'Admin';
     }
 
-
-    /**
-     * 创建管理员
-     * POST /sys/admins
-     * @param Request $request
-     * @return Response
-     */
-    public function create(Request $request, array $fields = []): Response
-    {
-        // 获取请求数据
-        $requestData = [
-            'username' => $request->post('username', ''),
-            'password' => $request->post('password', ''),
-            'nickname' => $request->post('nickname', ''),
-            'phone' => $request->post('phone', ''),
-            'email' => $request->post('email', ''),
-            'avatar' => $request->post('avatar', ''),
-            'status' => (int)$request->post('status', 1),
-            'gender' => $request->post('gender', ''),
-            'role_ids' => $request->post('role_ids', []),
-        ];
-        return parent::create($request, array_keys($requestData));
-    }
-
-    /**
-     * 更新管理员
-     * PUT /sys/admins/{id}
-     * @param Request $request
-     * @return Response
-     * @throws ApiException
-     */
-    public function update(Request $request, int $id, array $fields = []): Response
-    {
-        $requestData = $request->only([
-            'username','nickname', 'password', 'phone', 'email', 'avatar', 'gender', 'status','admin','role_ids'
-        ]);
-        $admin = $this->adminService->updateAdmin($id, $requestData);
-
-        return R::data($admin, '更新管理员成功');
-    }
-
-
     /**
      * 为管理员分配角色
      * POST /sys/admins/{id}/roles
@@ -197,18 +155,10 @@ class AdminController extends BaseController
             if (!$currentUser) {
                 return R::error('用户未登录', 401);
             }
-
-            // 验证请求数据
-            $validator = new AdminValidator();
-            $requestData = $request->only([
-                'nickname', 'phone', 'email', 'avatar', 'gender'
-            ]);
-
-            // 验证数据格式
       
 
             // 更新用户资料
-            $admin = $this->adminService->updateAdmin($currentUser->id, $requestData);
+            $admin = $this->adminService->update($currentUser->id, $request->post());
 
             return R::success([
                 'id' => $admin->id,
