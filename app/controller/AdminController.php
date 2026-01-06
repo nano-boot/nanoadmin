@@ -106,18 +106,11 @@ class AdminController extends BaseController
     public function updateCurrentPassword(Request $request): Response
     {
         try {
-            // 获取当前登录用户
             $currentUser = $request->admin;
-            if (!$currentUser) {
-                return R::error('用户未登录', 401);
-            }
 
-            // 验证请求数据
             $requestData = $request->only([
                 'old_password', 'password', 'confirm_password'
             ]);
-
-        
 
             // 验证旧密码是否正确
             $admin = $this->adminService->getById($currentUser->id);
@@ -125,7 +118,6 @@ class AdminController extends BaseController
                 return R::error('旧密码不正确', 422);
             }
 
-            // 更新密码
             $this->adminService->resetAdminPassword($currentUser->id, $requestData['password']);
 
             return R::success(null, '密码修改成功');

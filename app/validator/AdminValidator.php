@@ -94,9 +94,9 @@ class AdminValidator extends ValidatorBase
         'show' => ['id'],
         'delete' => ['id'],
         'list' => ['page', 'limit', 'keyword', 'status'],
-        'update_password' => ['id', 'password'],
+        'updatePassword' => ['id', 'password'],
         'updateProfile' => ['nickname', 'phone', 'email', 'avatar', 'gender'],
-        'update_current_password' => ['old_password', 'password', 'confirm_password']
+        'updateCurrentPassword' => ['old_password', 'password', 'confirm_password']
     ];
 
     /**
