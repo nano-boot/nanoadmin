@@ -20,6 +20,7 @@ class AdminController extends BaseController
      * @var AdminService
      */
     private AdminService $adminService;
+    private AdminValidator $adminValidator;
 
     /**
      * 构造函数 - 使用依赖注入
@@ -27,7 +28,7 @@ class AdminController extends BaseController
      */
     public function __construct(AdminService $adminService)
     {
-        new AdminValidator();
+        $this->adminValidator = new AdminValidator();
         $this->adminService = $adminService;
     }
 
@@ -149,16 +150,21 @@ class AdminController extends BaseController
      */
     public function updateProfile(Request $request): Response
     {
-        try {
+
             // 获取当前登录用户
             $currentUser = $request->admin;
             if (!$currentUser) {
                 return R::error('用户未登录', 401);
             }
-      
+           
+            // 验证请求数据
+            //  $validatedData = $this->adminValidator->validated('update_profile');
+            $requestData = $request->only(['nickname', 'phone', 'email', 'avatar', 'gender']);
+            $adminValidator = new AdminValidator();
+            $validatedData = $adminValidator->validateProfileUpdateData($requestData, $currentUser->id);
 
             // 更新用户资料
-            $admin = $this->adminService->update($currentUser->id, $request->post());
+            $admin = $this->adminService->update($currentUser->id, $validatedData);
 
             return R::success([
                 'id' => $admin->id,
@@ -172,11 +178,7 @@ class AdminController extends BaseController
                 'roles' => $admin->roles->pluck('name')->toArray()
             ], '更新用户资料成功');
 
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('更新用户资料失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+
     }
 
 

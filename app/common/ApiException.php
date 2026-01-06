@@ -57,6 +57,7 @@ class ApiException extends Exception
         return $this->errorCode;
     }
 
+
     /**
      * 获取HTTP状态码
      */

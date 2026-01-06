@@ -116,16 +116,20 @@ class TheHandler extends Handler
      */
     private function buildJsonResponse(Throwable $exception, string $defaultMessage): array
     {
-        $json = [
+        $json = $exception instanceof ApiException ? [
+            'code' => $exception->getErrorCode(),
+            'msg' => $exception->getMessage(),
+            'data' => $exception->getData(),
+        ] : [
             'code' => $exception->getCode(),
             'msg' => $defaultMessage,
             'data' => [],
         ];
-        
+
         if ($this->debug) {
             $this->addDebugInfo($json, $exception);
         }
-        
+
         return $json;
     }
 

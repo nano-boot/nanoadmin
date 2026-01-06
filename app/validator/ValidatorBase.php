@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace plugin\theadmin\app\validator;
 
 use plugin\theadmin\app\model\Admin;
+use plugin\theadmin\app\common\ApiException;
+use plugin\theadmin\app\common\Code;
 use think\Validate;
 use support\Request;
 
@@ -40,19 +42,20 @@ class ValidatorBase extends Validate
     public function __construct() {
         parent::__construct();
         $this->supportRequest = request();
+    
+        // // 自动设置场景
+        // if ($this->scene){
+        //     // 智能获取场景名
+        //     $scene = $this->getSceneName();
+  
+        //     if (!$this->hasScene($scene)){
+        //         return;
+        //     }
+        //     $this->scene($scene);
+        // }
         
-        // 自动设置场景
-        if ($this->scene){
-            // 智能获取场景名
-            $scene = $this->getSceneName();
-            if (!$this->hasScene($scene)){
-                return;
-            }
-            $this->scene($scene);
-        }
-        
-        // 执行验证
-        $this->failException()->check(request()->all() + request()->route->param());
+        // // 执行验证
+        // $this->failException()->check(request()->all() + request()->route->param());
     }
 
     /**
@@ -249,4 +252,34 @@ class ValidatorBase extends Validate
             throw new \Exception('验证唯一性时发生错误: ' . $e->getMessage());
         }
     }
+
+    /**
+     * 验证数据
+     *
+     * @param array $data 要验证的数据
+     * @param string|null $scene 验证场景
+     * @return array 验证通过的数据
+     * @throws ApiException
+     */
+    public function validateData(array $data, ?string $scene = null): array
+    {
+        try {
+            // 设置验证场景
+            if ($scene) {
+                $this->scene($scene);
+            }
+
+            // 执行验证并返回验证后的数据
+            return $this->checked($data);
+        } catch (\think\exception\ValidateException $e) {
+            // 将验证异常转换为API异常
+            $error = $e->getError();
+            $message = is_array($error) ? implode(', ', $error) : $error;
+            throw new ApiException(
+                Code::VALIDATION_ERROR,
+                $message
+            );
+        }
+    }
+    
 }
