@@ -61,6 +61,8 @@ class FileService extends BaseService
      * 上传文件
      * @param mixed $uploadedFile 上传的文件
      * @param array $params 其他参数
+     *  - storage_type: 存储类型（local/cloud）
+     *  - bucket_name: 存储桶名称
      * @return File
      * @throws ApiException
      */
@@ -82,10 +84,13 @@ class FileService extends BaseService
             return $existingFile;
         }
 
-        // 保存文件到本地
-        $filePath = $this->saveFileToLocal($uploadedFile, $fileInfo['file_name']);
+        // 根据文件类型确定存储路径
+        $storagePath = $this->getStoragePath($uploadedFile);
 
-        // 更新文件路径
+        // 保存文件到本地
+        $filePath = $this->saveFileToLocal($uploadedFile, $fileInfo['file_name'], $storagePath);
+
+        // 更新文件路径（完整存储路径）
         $fileInfo['file_path'] = $filePath;
 
         // 创建文件记录
@@ -250,24 +255,27 @@ class FileService extends BaseService
         $fileSize = $file->getSize();
         $mimeType = $file->getUploadMimeType();
 
-        // 生成唯一文件名
-        $fileName = date('Ymd') . '/' . uniqid() . '.' . $fileExt;
+        // 生成唯一文件名（纯文件名）
+        $fileName = uniqid() . '.' . $fileExt;
 
         // 计算文件哈希
         $fileHash = hash_file('sha256', $file->getRealPath());
 
+        // 获取当前用户ID
+        $currentUserId = $this->getCurrentUserId();
+
         return [
             'original_name' => $originalName,
             'file_name' => $fileName,
-            'file_path' => '',
+            'file_path' => '', 
             'file_size' => $fileSize,
             'file_ext' => $fileExt,
             'mime_type' => $mimeType,
             'file_hash' => $fileHash,
             'storage_type' => $params['storage_type'] ?? 'local',
             'bucket_name' => $params['bucket_name'] ?? '',
-            'created_by' => $params['created_by'] ?? 0,
-            'updated_by' => $params['updated_by'] ?? 0,
+            'created_by' => $currentUserId,
+            'updated_by' => $currentUserId,
             'download_count' => 0,
             'status' => 1
         ];
@@ -277,12 +285,16 @@ class FileService extends BaseService
      * 保存文件到本地
      * @param mixed $file
      * @param string $fileName
+     * @param string $customPath 自定义存储路径
      * @return string
      * @throws ApiException
      */
-    private function saveFileToLocal($file, string $fileName): string
+    private function saveFileToLocal($file, string $fileName, string $customPath = ''): string
     {
-        $uploadPath = public_path('uploads');
+        // 使用自定义路径或默认路径
+        $baseUploadPath = public_path('uploads');
+        $dirPath = trim($customPath, '/');
+        $uploadPath = $dirPath ? $baseUploadPath . '/' . $dirPath : $baseUploadPath;
 
         // 确保目录存在
         if (!is_dir($uploadPath)) {
@@ -300,7 +312,7 @@ class FileService extends BaseService
         // 移动文件
         $file->move($fullPath);
 
-        return $fileName;
+        return $dirPath . '/' . $fileName;
     }
 
     /**
@@ -315,5 +327,45 @@ class FileService extends BaseService
             return unlink($fullPath);
         }
         return true;
+    }
+
+    /**
+     * 根据文件类型获取存储路径
+     * @param mixed $file
+     * @return string
+     */
+    private function getStoragePath($file): string
+    {
+        $mimeType = $file->getUploadMimeType();
+
+        // 根据MIME类型分类存储路径，包含日期目录
+        $datePath = date('Y/m/d');
+
+        if (str_starts_with($mimeType, 'image/')) {
+            return 'images/' . $datePath;
+        } elseif (str_starts_with($mimeType, 'video/')) {
+            return 'videos/' . $datePath;
+        } elseif (str_starts_with($mimeType, 'audio/')) {
+            return 'audios/' . $datePath;
+        } elseif (str_starts_with($mimeType, 'application/') &&
+                 in_array($file->getUploadExtension(), ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'])) {
+            return 'documents/' . $datePath;
+        } elseif (str_starts_with($mimeType, 'application/') &&
+                 in_array($file->getUploadExtension(), ['zip', 'rar', '7z', 'tar', 'gz'])) {
+            return 'archives/' . $datePath;
+        } else {
+            return 'files/' . $datePath;
+        }
+    }
+
+    /**
+     * 获取当前用户ID
+     * @return int
+     */
+    private function getCurrentUserId(): int
+    {
+        // 从请求上下文中获取当前登录用户ID
+        $request = request();
+        return $request->adminId ?? 0;
     }
 }
