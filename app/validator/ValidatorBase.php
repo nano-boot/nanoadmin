@@ -39,23 +39,23 @@ class ValidatorBase extends Validate
      */
     protected Request $supportRequest;
 
-    public function __construct() {
+    public function __construct($auto = false) {
         parent::__construct();
         $this->supportRequest = request();
-    
-        // // 自动设置场景
-        // if ($this->scene){
-        //     // 智能获取场景名
-        //     $scene = $this->getSceneName();
-  
-        //     if (!$this->hasScene($scene)){
-        //         return;
-        //     }
-        //     $this->scene($scene);
-        // }
-        
-        // // 执行验证
-        // $this->failException()->check(request()->all() + request()->route->param());
+        if($auto){
+            // 自动设置场景
+            if ($this->scene){
+                // 智能获取场景名
+                $scene = $this->getSceneName();
+
+                if (!$this->hasScene($scene)){
+                    return;
+                }
+                $this->scene($scene);
+            }
+            // 执行验证
+            $this->failException()->check(request()->all() + request()->route->param());
+        }
     }
 
     /**
@@ -251,6 +251,22 @@ class ValidatorBase extends Validate
         } catch (\Exception $e) {
             throw new \Exception('验证唯一性时发生错误: ' . $e->getMessage());
         }
+    }
+
+    
+    /**
+     * 获取经过验证的请求数据
+     *
+     * @param string $scene 验证场景
+     * @return array
+     */
+    public function validated(?string $scene = null): array
+    {
+        if(!$scene){
+            $scene = $this->getSceneName();
+        }
+        var_dump($scene);
+        return $this->validateData($this->all(), $scene);
     }
 
     /**

@@ -20,15 +20,10 @@ class AdminController extends BaseController
      * @var AdminService
      */
     private AdminService $adminService;
-    private AdminValidator $adminValidator;
 
-    /**
-     * 构造函数 - 使用依赖注入
-     * @param AdminService $adminService 管理员服务实例
-     */
     public function __construct(AdminService $adminService)
     {
-        $this->adminValidator = new AdminValidator();
+        new AdminValidator(true);
         $this->adminService = $adminService;
     }
 
@@ -158,13 +153,13 @@ class AdminController extends BaseController
             }
            
             // 验证请求数据
-            //  $validatedData = $this->adminValidator->validated('update_profile');
-            $requestData = $request->only(['nickname', 'phone', 'email', 'avatar', 'gender']);
-            $adminValidator = new AdminValidator();
-            $validatedData = $adminValidator->validateProfileUpdateData($requestData, $currentUser->id);
+            //  $validatedData = $this->adminValidator->validated();
+            // $requestData = $request->only(['nickname', 'phone', 'email', 'avatar', 'gender']);
+            // $adminValidator = new AdminValidator();
+            // $validatedData = $adminValidator->validateProfileUpdateData($requestData, $currentUser->id);
 
             // 更新用户资料
-            $admin = $this->adminService->update($currentUser->id, $validatedData);
+            $admin = $this->adminService->update($currentUser->id, $request->post());
 
             return R::success([
                 'id' => $admin->id,

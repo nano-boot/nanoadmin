@@ -13,26 +13,33 @@ namespace plugin\theadmin\app\validator;
  */
 class AdminValidator extends ValidatorBase
 {
-    protected $rule = [
-        'username' => 'require|string|min:3|max:20|regex:/^[a-zA-Z0-9_]+$/|unique:sys_admin,username',
-        'password' => 'requireWithout:id|string|min:6|max:20',
-        'old_password' => 'require|string|min:6|max:20',
-        'confirm_password' => 'require|string|confirm:password',
-        'nickname' => 'string|min:2|max:50',
-        'phone' => 'string|regex:/^1[3-9]\d{9}$/|unique:sys_admin,phone',
-        'email' => 'email|max:100|unique:sys_admin,email',
-        'avatar' => 'string|max:255',
-        'status' => 'integer|in:0,1',
-        'gender' => 'integer|in:0,1,2',
-        'role_ids' => 'array',
-        'role_ids.*' => 'integer|gt:0',
-        'ids' => 'require|array|min:1',
-        'ids.*' => 'integer|gt:0',
-        'id' => 'require|integer|gt:0',
-        'page' => 'integer|min:1',
-        'limit' => 'integer|min:1|max:100',
-        'keyword' => 'string|max:100'
-    ];
+    protected function rules()
+    {  
+        $id = '';
+        if($this->supportRequest->admin){
+            $id = $this->supportRequest->admin->id;
+        }
+        return [
+            'username' => 'require|string|min:3|max:20|regex:/^[a-zA-Z0-9_]+$/|unique:sys_admin,username',
+            'password' => 'requireWithout:id|string|min:6|max:20',
+            'old_password' => 'require|string|min:6|max:20',
+            'confirm_password' => 'require|string|confirm:password',
+            'nickname' => 'string|min:2|max:50',
+            'phone' => "string|regex:/^1[3-9]\d{9}$/|unique:sys_admin,phone,$id",
+            'email' => "email|max:100|unique:sys_admin,email,$id",
+            'avatar' => 'string|max:255',
+            'status' => 'integer|in:0,1',
+            'gender' => 'integer|in:0,1,2',
+            'role_ids' => 'array',
+            'role_ids.*' => 'integer|gt:0',
+            'ids' => 'require|array|min:1',
+            'ids.*' => 'integer|gt:0',
+            'id' => 'require|integer|gt:0',
+            'page' => 'integer|min:1',
+            'limit' => 'integer|min:1|max:100',
+            'keyword' => 'string|max:100'
+        ];
+    }   
 
     protected $message = [
         'username.required' => '用户名不能为空',
@@ -88,7 +95,7 @@ class AdminValidator extends ValidatorBase
         'delete' => ['id'],
         'list' => ['page', 'limit', 'keyword', 'status'],
         'update_password' => ['id', 'password'],
-        'update_profile' => ['nickname', 'phone', 'email', 'avatar', 'gender'],
+        'updateProfile' => ['nickname', 'phone', 'email', 'avatar', 'gender'],
         'update_current_password' => ['old_password', 'password', 'confirm_password']
     ];
 
@@ -144,22 +151,6 @@ class AdminValidator extends ValidatorBase
         return $this->validateData($data, 'batch_delete');
     }
 
-    /**
-     * 获取经过验证的请求数据
-     *
-     * @param string $scene 验证场景
-     * @return array
-     */
-    public function validated(?string $scene = null): array
-    {
-        // $data = $this->all();
-        // return $this->validateData($data, $scene);
-        // 强制设置场景，确保使用指定的场景
-        if ($scene) {
-            $this->scene($scene);
-        }
-        return $this->checked($this->all());
-    }
 
     /**
      * 获取指定字段的验证数据
@@ -216,49 +207,6 @@ class AdminValidator extends ValidatorBase
 
         try {
             $validatedData = $this->validateData($data, 'update');
-            $this->rule = $originalRule; // 恢复原始规则
-            return $validatedData;
-        } catch (\Exception $e) {
-            $this->rule = $originalRule; // 确保恢复原始规则
-            throw $e;
-        }
-    }
-
-    /**
-     * 验证个人资料更新数据（排除当前用户的唯一性检查）
-     *
-     * @param array $data 要验证的数据
-     * @param int $userId 当前用户ID
-     * @return array
-     * @throws \Exception
-     */
-    public function validateProfileUpdateData(array $data, int $userId): array
-    {
-        // 动态修改唯一性规则，排除当前用户记录
-        $rules = $this->rule;
-
-        if (isset($data['phone'])) {
-            $rules['phone'] = str_replace(
-                'unique:sys_admin,phone',
-                'unique:sys_admin,phone,' . $userId,
-                $rules['phone']
-            );
-        }
-
-        if (isset($data['email'])) {
-            $rules['email'] = str_replace(
-                'unique:sys_admin,email',
-                'unique:sys_admin,email,' . $userId,
-                $rules['email']
-            );
-        }
-
-        // 临时设置规则并验证
-        $originalRule = $this->rule;
-        $this->rule = $rules;
-
-        try {
-            $validatedData = $this->validateData($data, 'update_profile');
             $this->rule = $originalRule; // 恢复原始规则
             return $validatedData;
         } catch (\Exception $e) {
