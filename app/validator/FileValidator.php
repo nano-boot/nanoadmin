@@ -24,7 +24,7 @@ class FileValidator extends ValidatorBase
         'file_type' => 'string|in:image,document,video,audio,archive',
         'storage_type' => 'string|in:local,cloud',
         'created_by' => 'integer|gt:0',
-        'file' => 'require|file|max:102400', // 最大100MB
+        'file' => 'require|max:102400', // 最大100MB
         'files' => 'array|min:1|max:10', // 最多10个文件
         'files.*' => 'file|max:102400',
         'bucket_name' => 'string|max:100',

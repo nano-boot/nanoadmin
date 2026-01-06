@@ -42,7 +42,7 @@ class File extends BaseModel
      * 表名
      * @var string
      */
-    protected $table = 'th_sys_file';
+    protected $table = 'sys_file';
 
     /**
      * 主键
@@ -57,7 +57,7 @@ class File extends BaseModel
     protected $fillable = [
         'original_name', 'file_name', 'file_path', 'file_size', 'file_ext',
         'mime_type', 'file_hash', 'storage_type', 'bucket_name',
-        'created_by', 'updated_by', 'download_count', 'status'
+        'created_by', 'updated_by', 'status'
     ];
 
     /**

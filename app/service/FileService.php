@@ -232,7 +232,7 @@ class FileService extends BaseService
             'application/zip', 'application/x-rar-compressed', 'text/plain'
         ];
 
-        if (!in_array($file->getMimeType(), $allowedMimes)) {
+        if (!in_array($file->getUploadMimeType(), $allowedMimes)) {
             throw new ApiException(Code::PARAMETER_ERROR, '不支持的文件类型');
         }
     }
@@ -245,10 +245,10 @@ class FileService extends BaseService
      */
     private function generateFileInfo($file, array $params = []): array
     {
-        $originalName = $file->getClientOriginalName();
-        $fileExt = strtolower($file->getClientOriginalExtension());
+        $originalName = $file->getUploadName();
+        $fileExt = strtolower($file->getUploadExtension());
         $fileSize = $file->getSize();
-        $mimeType = $file->getMimeType();
+        $mimeType = $file->getUploadMimeType();
 
         // 生成唯一文件名
         $fileName = date('Ymd') . '/' . uniqid() . '.' . $fileExt;
@@ -298,9 +298,7 @@ class FileService extends BaseService
         }
 
         // 移动文件
-        if (!$file->move($dir, basename($fullPath))) {
-            throw new ApiException(Code::SYSTEM_ERROR, '文件保存失败');
-        }
+        $file->move($fullPath);
 
         return $fileName;
     }
