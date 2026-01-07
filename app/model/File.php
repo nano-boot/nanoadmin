@@ -33,7 +33,7 @@ class File extends BaseModel
 
         // 设置文件模型的搜索字段配置
         static::setSearchLikeFields(['original_name']);
-        static::setSearchEqualFields(['file_ext', 'mime_type', 'storage_type', 'status', 'created_by']);
+        static::setSearchEqualFields(['file_ext', 'mime_type', 'file_type', 'status', 'created_by']);
         static::setSearchKeywordFields(['original_name']);
         static::setSearchRangeFields(['created_at', 'file_size']);
     }
@@ -55,7 +55,7 @@ class File extends BaseModel
      * @var array
      */
     protected $fillable = [
-        'original_name', 'file_name', 'file_path', 'file_size', 'file_ext',
+        'original_name', 'file_name', 'file_path', 'file_size', 'file_ext', 'file_type',
         'mime_type', 'file_hash', 'storage_type', 'bucket_name',
         'created_by', 'updated_by', 'status'
     ];
@@ -94,13 +94,23 @@ class File extends BaseModel
      * 文件URL访问器
      * @return string
      */
-    public function getFileUrlAttribute(): string
+    public function getFilePathAttribute($value): string
     {
         if ($this->storage_type === 'local') {
-            return '/uploads/' . $this->file_path;
+            if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+                return $value;
+            }
+    
+            $domain = domain();
+    
+            if (str_starts_with($value, '/')) {
+                return $domain . '/uploads' . $value;
+            }
+    
+            return $domain . '/uploads/' . $value;
         } elseif ($this->storage_type === 'cloud') {
             // 云存储URL，需要根据具体云存储服务配置
-            return $this->bucket_name . '/' . $this->file_path;
+            return $this->bucket_name . '/' . $value;
         }
         return '';
     }
@@ -133,26 +143,10 @@ class File extends BaseModel
     {
         $query = parent::handleSearch($query, $params);
 
-        // 按文件类型筛选
+        // 按文件类型筛选 - 直接使用数据库字段
         if (Arr::get($params, 'file_type')) {
             $fileType = Arr::get($params, 'file_type');
-            switch ($fileType) {
-                case 'image':
-                    $query->whereIn('file_ext', ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']);
-                    break;
-                case 'document':
-                    $query->whereIn('file_ext', ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt']);
-                    break;
-                case 'video':
-                    $query->whereIn('file_ext', ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv']);
-                    break;
-                case 'audio':
-                    $query->whereIn('file_ext', ['mp3', 'wav', 'flac', 'aac', 'ogg']);
-                    break;
-                case 'archive':
-                    $query->whereIn('file_ext', ['zip', 'rar', '7z', 'tar', 'gz']);
-                    break;
-            }
+            $query->where('file_type', $fileType);
         }
 
         return $query;

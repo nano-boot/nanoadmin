@@ -76,6 +76,11 @@ class CreateFileTable extends Migrator
             'default' => '',
             'comment' => '文件哈希值（SHA256）'
         ])
+        ->addColumn('file_type', 'enum', [
+            'values' => ['image', 'video', 'document', 'audio', 'archive', 'other'],
+            'default' => 'other',
+            'comment' => '文件类型枚举'
+        ])
         ->addColumn('storage_type', 'string', [
             'limit' => 20,
             'default' => 'local',
@@ -117,6 +122,7 @@ class CreateFileTable extends Migrator
         ])
         ->addIndex(['original_name'])
         ->addIndex(['file_hash'])
+        ->addIndex(['file_type'])
         ->addIndex(['storage_type'])
         ->addIndex(['created_by'])
         ->addIndex(['status'])

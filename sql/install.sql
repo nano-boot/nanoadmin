@@ -199,6 +199,7 @@ CREATE TABLE IF NOT EXISTS th_sys_file (
     file_ext VARCHAR(20) DEFAULT '' COMMENT '文件扩展名',
     mime_type VARCHAR(100) DEFAULT '' COMMENT 'MIME类型',
     file_hash VARCHAR(128) DEFAULT '' COMMENT '文件哈希值（MD5/SHA256）',
+    file_type ENUM('image', 'video', 'document', 'audio', 'archive', 'other') DEFAULT 'other' COMMENT '文件类型枚举',
     storage_type VARCHAR(20) DEFAULT 'local' COMMENT '存储类型（local本地存储 cloud云存储）',
     bucket_name VARCHAR(100) DEFAULT '' COMMENT '存储桶名称（云存储时使用）',
     created_by BIGINT DEFAULT 0 COMMENT '创建者ID',
@@ -210,6 +211,7 @@ CREATE TABLE IF NOT EXISTS th_sys_file (
 
     INDEX idx_original_name (original_name),
     INDEX idx_file_hash (file_hash),
+    INDEX idx_file_type (file_type),
     INDEX idx_storage_type (storage_type),
     INDEX idx_status (status),
     INDEX idx_created_at (created_at),

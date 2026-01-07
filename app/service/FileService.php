@@ -63,6 +63,7 @@ class FileService extends BaseService
      * @param array $params 其他参数
      *  - storage_type: 存储类型（local/cloud）
      *  - bucket_name: 存储桶名称
+     *  - base_path: 自定义基础路径，默认 'd' (default)
      * @return File
      * @throws ApiException
      */
@@ -85,7 +86,7 @@ class FileService extends BaseService
         }
 
         // 根据文件类型确定存储路径
-        $storagePath = $this->getStoragePath($uploadedFile);
+        $storagePath = $this->getStoragePath();
 
         // 保存文件到本地
         $filePath = $this->saveFileToLocal($uploadedFile, $fileInfo['file_name'], $storagePath);
@@ -264,14 +265,18 @@ class FileService extends BaseService
         // 获取当前用户ID
         $currentUserId = $this->getCurrentUserId();
 
+        // 确定文件类型（优先使用传入的参数，否则自动检测）
+        $fileType = $params['file_type'] ?? $this->getFileTypeByExtension($fileExt);
+        var_dump($fileType);
         return [
             'original_name' => $originalName,
             'file_name' => $fileName,
-            'file_path' => '', 
+            'file_path' => '',
             'file_size' => $fileSize,
             'file_ext' => $fileExt,
             'mime_type' => $mimeType,
             'file_hash' => $fileHash,
+            'file_type' => $fileType,
             'storage_type' => $params['storage_type'] ?? 'local',
             'bucket_name' => $params['bucket_name'] ?? '',
             'created_by' => $currentUserId,
@@ -330,38 +335,50 @@ class FileService extends BaseService
     }
 
     /**
-     * 根据文件类型获取存储路径
-     * @param mixed $file
+     * 获取文件存储路径
+     * @param string $basePath 基础路径，默认 'd' (default)
      * @return string
      */
-    private function getStoragePath($file): string
+    private function getStoragePath(string $basePath = 'd'): string
     {
-        $mimeType = $file->getUploadMimeType();
-
-        // 根据MIME类型分类存储路径，包含日期目录
-        $datePath = date('Y/m/d');
-
-        if (str_starts_with($mimeType, 'image/')) {
-            return 'images/' . $datePath;
-        } elseif (str_starts_with($mimeType, 'video/')) {
-            return 'videos/' . $datePath;
-        } elseif (str_starts_with($mimeType, 'audio/')) {
-            return 'audios/' . $datePath;
-        } elseif (str_starts_with($mimeType, 'application/') &&
-                 in_array($file->getUploadExtension(), ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'])) {
-            return 'documents/' . $datePath;
-        } elseif (str_starts_with($mimeType, 'application/') &&
-                 in_array($file->getUploadExtension(), ['zip', 'rar', '7z', 'tar', 'gz'])) {
-            return 'archives/' . $datePath;
-        } else {
-            return 'files/' . $datePath;
-        }
+        return $basePath . '/' . date('Y/m/d');
     }
+
 
     /**
      * 获取当前用户ID
      * @return int
      */
+    /**
+     * 根据文件扩展名获取文件类型
+     */
+    private function getFileTypeByExtension(string $ext): string
+    {
+        $ext = strtolower($ext);
+        var_dump($ext);
+        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'])) {
+            return 'image';
+        }
+
+        if (in_array($ext, ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'])) {
+            return 'video';
+        }
+
+        if (in_array($ext, ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'])) {
+            return 'document';
+        }
+
+        if (in_array($ext, ['mp3', 'wav', 'flac', 'aac', 'ogg'])) {
+            return 'audio';
+        }
+
+        if (in_array($ext, ['zip', 'rar', '7z', 'tar', 'gz'])) {
+            return 'archive';
+        }
+
+        return 'other';
+    }
+
     private function getCurrentUserId(): int
     {
         // 从请求上下文中获取当前登录用户ID

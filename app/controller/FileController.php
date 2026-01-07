@@ -56,17 +56,10 @@ class FileController extends BaseController
      */
     public function page(Request $request): Response
     {
-        try {
-            $params = $request->get();
+        $params = $request->get();
             $validator = new FileValidator();
             $validatedParams = $validator->validateListParams($params);
             return R::paginate($this->fileService->getPage($validatedParams));
-
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('获取文件列表失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
     }
 
     /**
@@ -117,6 +110,7 @@ class FileController extends BaseController
                 'storage_type' => $request->post('storage_type', 'local'),
                 'bucket_name' => $request->post('bucket_name', ''),
                 'created_by' => $request->post('created_by', 0),
+                'file_type' => $request->post('file_type', null), // 可选的文件类型参数
             ];
 
             $file = $this->fileService->uploadFile($uploadedFile, $params);

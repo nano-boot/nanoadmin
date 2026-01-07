@@ -91,7 +91,7 @@ class FileValidator extends ValidatorBase
      * 验证场景
      */
     protected $scene = [
-        'upload' => ['file'],
+        'upload' => ['file', 'file_type'],
         'batch_upload' => ['files'],
         'download' => ['id'],
         'delete' => ['id'],
