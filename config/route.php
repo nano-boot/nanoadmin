@@ -75,7 +75,7 @@ Route::group('/sys/menu', function () {
 
 // 文件管理相关路由
 Route::group('/sys/files', function () {
-    Route::get('', [plugin\theadmin\app\controller\FileController::class, 'index']);
+    Route::get('', [plugin\theadmin\app\controller\FileController::class, 'page']);
     Route::post('', [plugin\theadmin\app\controller\FileController::class, 'upload']);
     Route::post('/batch', [plugin\theadmin\app\controller\FileController::class, 'batchUpload']);
     Route::get('/stats', [plugin\theadmin\app\controller\FileController::class, 'stats']);

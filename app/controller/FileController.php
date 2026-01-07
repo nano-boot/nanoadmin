@@ -54,15 +54,13 @@ class FileController extends BaseController
      * @param Request $request
      * @return Response
      */
-    public function index(Request $request): Response
+    public function page(Request $request): Response
     {
         try {
             $params = $request->get();
             $validator = new FileValidator();
             $validatedParams = $validator->validateListParams($params);
-
-            $result = $this->fileService->getPage($validatedParams);
-            return R::success($result, '获取文件列表成功');
+            return R::paginate($this->fileService->getPage($validatedParams));
 
         } catch (ApiException $e) {
             return R::error($e->getMessage(), $e->getCode());
