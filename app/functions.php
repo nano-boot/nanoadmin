@@ -28,3 +28,27 @@ if (!function_exists('record')) {
         }
     }
 }
+
+if(!function_exists('domain')){
+    function domain():string
+    {
+        // 优先使用环境变量中的域名
+        if ($envDomain = env('APP_URL')) {
+            return $envDomain;
+        }
+        
+        try {
+            $request = request();
+            $host = $request->host();
+            $scheme = $request->header('x-forwarded-proto')
+                     ?: $request->header('x-forwarded-protocol')
+                     ?: $request->header('x-scheme')
+                     ?: 'http'; 
+
+            return $scheme . '://' . $host;
+        } catch (\Exception $e) {
+            // 如果获取失败，返回默认值
+            return '';
+        }
+    }
+}

@@ -329,4 +329,27 @@ class Admin extends BaseModel
 
         return $this->adminRoles()->pluck('role_id')->toArray();
     }
+
+    /**
+     * 获取头像访问器 - 直接返回带域名的完整URL
+     * @return string
+     */
+    public function getAvatarAttribute($value): string
+    {
+        if (empty($value)) {
+            return ''; // 默认头像
+        }
+
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+
+        $domain = domain(); 
+
+        if (str_starts_with($value, '/')) {
+            return $domain . $value;
+        }
+
+        return $domain . '/' . $value;
+    }
 }
