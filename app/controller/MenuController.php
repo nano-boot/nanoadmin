@@ -159,63 +159,55 @@ class MenuController
             $parentId = (int)$request->get('parent_id', 0);
             $onlyEnabled = $request->get('only_enabled', 'true') === 'true';
 
-            // 构建标准化的搜索参数
-            $searchParams = [];
-            if ($parentId > 0) {
-                $searchParams['parent_id'] = $parentId;
-            }
-
-            // 添加其他搜索参数（使用标准化字段名）
+            // ✅ 先收集真实的搜索条件（排除 status 和 parent_id，它们不属于"搜索"）
             $keyword = trim($request->get('keyword', ''));
-            if (!empty($keyword)) {
-                $searchParams['keyword'] = $keyword;
-            }
+            $status  = $request->get('status', '');
+            $type    = $request->get('type', '');
+            $hidden  = $request->get('hidden', '');
+            $title   = trim($request->get('title', ''));
+            $name    = trim($request->get('name', ''));
 
-            $status = $request->get('status', '');
-            if ($status !== '') {
-                $searchParams['status'] = (bool)$status;
-            }
-
-            $type = $request->get('type', '');
-            if (!empty($type)) {
-                $searchParams['type'] = $type;
-            }
-
-            $hidden = $request->get('hidden', '');
-            if ($hidden !== '') {
-                $searchParams['hidden'] = (bool)$hidden;
-            }
-
-            $title = trim($request->get('title', ''));
-            if (!empty($title)) {
-                $searchParams['title'] = $title;
-            }
-
-            $name = trim($request->get('name', ''));
-            if (!empty($name)) {
-                $searchParams['name'] = $name;
-            }
-
-            // 根据 only_enabled 参数调整 status 过滤
-            if ($onlyEnabled && !isset($searchParams['status'])) {
-                $searchParams['status'] = true;
-            }
-
-            // 判断是否有搜索条件
-            $hasSearchConditions = !empty(array_filter($searchParams));
+            // ✅ 明确判断是否存在真实搜索条件（不受 onlyEnabled 影响）
+            $hasSearchConditions = !empty($keyword)
+                || $status !== ''
+                || !empty($type)
+                || $hidden !== ''
+                || !empty($title)
+                || !empty($name);
 
             if ($hasSearchConditions) {
-                // 有搜索条件，使用高级搜索服务
+                // 有搜索条件，构建搜索参数并走高级搜索
+                $searchParams = [];
+                if ($parentId > 0) {
+                    $searchParams['parent_id'] = $parentId;
+                }
+                if (!empty($keyword)) {
+                    $searchParams['keyword'] = $keyword;
+                }
+                if ($status !== '') {
+                    $searchParams['status'] = (bool)$status;
+                } elseif ($onlyEnabled) {
+                    $searchParams['status'] = true;
+                }
+                if (!empty($type)) {
+                    $searchParams['type'] = $type;
+                }
+                if ($hidden !== '') {
+                    $searchParams['hidden'] = (bool)$hidden;
+                }
+                if (!empty($title)) {
+                    $searchParams['title'] = $title;
+                }
+                if (!empty($name)) {
+                    $searchParams['name'] = $name;
+                }
                 $tree = $this->searchService->advancedSearch($searchParams);
             } else {
-                // 无搜索条件，直接获取树形结构
+                // ✅ 无搜索条件，直接走高效的单次查询树形结构方法
                 $tree = $this->menuModel->getTree($parentId, $onlyEnabled);
             }
 
-            // 格式化树形结构
-            $routes = $this->formatTreeForApi($tree);
-
-            return R::data($routes);
+            return R::data($tree);
 
         } catch (ApiException $e) {
             return $this->error($e->getCode(), $e->getMessage());

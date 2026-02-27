@@ -198,6 +198,11 @@ class MenuSearchService
 
     /**
      * 高级搜索（支持多条件组合）
+     *
+     * 【性能优化】：原实现对每个匹配菜单调用 getParentMenuIds()，内部 while 循环逐个
+     * find() 追溯父链，N 个菜单 × 层级深度 = 大量串行查询。
+     * 现改为：BFS 批量查询，每一层只发一次 SELECT，总查询次数 = 树的层数（通常 ≤ 3）。
+     *
      * @param array $searchParams 搜索参数
      * @return array
      */
@@ -205,37 +210,39 @@ class MenuSearchService
     {
         // 使用 Menu 模型的标准搜索逻辑（会自动使用配置的搜索字段）
         $query = $this->menuModel->handleSearch($this->menuModel->newQuery(), $searchParams);
-
-     
-  
-        
         $menus = $query->orderBy('sort', 'asc')->orderBy('id', 'asc')->get();
-        
+
         // 是否保持层级结构
         $maintainHierarchy = $searchParams['maintain_hierarchy'] ?? true;
-        
+
         if ($maintainHierarchy) {
-            // 获取所有匹配菜单的ID
+            // 获取所有匹配菜单的ID（用于最终高亮标记）
             $matchedIds = $menus->pluck('id')->toArray();
-            
-            // 收集所有需要的父级菜单ID
-            $parentIds = [];
-            foreach ($menus as $menu) {
-                if ($menu->parent_id > 0) {
-                    $ancestors = $this->getParentMenuIds($menu->id);
-                    $parentIds = array_merge($parentIds, $ancestors);
+
+            // ✅ BFS 批量追溯祖先：每一层只查一次数据库，而非对每个菜单逐个查询
+            $loadedIds   = $menus->pluck('id')->flip()->toArray(); // 已加载的 ID 集合（用于去重）
+            $pendingIds  = $menus->pluck('parent_id')->filter()->unique()->values()->toArray();
+
+            while (!empty($pendingIds)) {
+                // 过滤掉已加载的，只查新的父级
+                $pendingIds = array_values(array_diff($pendingIds, array_keys($loadedIds)));
+                if (empty($pendingIds)) {
+                    break;
                 }
+
+                // ✅ 一次 SELECT 拿到这一批父菜单
+                $parentMenus = $this->menuModel->whereIn('id', $pendingIds)->get();
+                $menus       = $menus->merge($parentMenus);
+
+                // 记录已加载的 ID，准备下一轮
+                foreach ($parentMenus as $pm) {
+                    $loadedIds[$pm->id] = true;
+                }
+
+                // 继续向上追溯（祖父、曾祖父……）
+                $pendingIds = $parentMenus->pluck('parent_id')->filter()->unique()->values()->toArray();
             }
-            $parentIds = array_unique($parentIds);
-            
-            // 如果有父级菜单需要补充，查询它们
-            if (!empty($parentIds)) {
-                $parentMenus = $this->menuModel->whereIn('id', $parentIds)->get();
-                
-                // 合并到结果集中
-                $menus = $menus->merge($parentMenus);
-            }
-            
+
             // 构建树形结构，并标记哪些是搜索匹配的
             return $this->buildTreeFromCollection($menus, $matchedIds);
         } else {

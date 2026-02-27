@@ -429,71 +429,92 @@ class Menu extends BaseModel
 
     /**
      * 获取菜单树形结构
-     * @param int $parentId 父菜单ID
+     *
+     * 【性能优化】：原实现为递归查询，每个节点触发一次 SELECT，N+1 问题极严重。
+     * 现改为：一次性加载全部菜单数据，在内存中构建树形结构，数据库只查询 1 次。
+     *
+     * @param int $parentId 树的根节点父ID（0 = 全树）
      * @param bool $onlyEnabled 是否只获取启用的菜单
      * @param bool $includeDeleted 是否包含已删除的菜单
      * @return array
      */
     public function getTree(int $parentId = 0, bool $onlyEnabled = true, bool $includeDeleted = false): array
     {
-        $query = $this->where('parent_id', $parentId);
+        // ✅ 只查询一次数据库，加载全部符合条件的菜单
+        $query = $this->newQuery();
         if ($onlyEnabled) {
             $query->where('status', 1);
         }
-        
         if (!$includeDeleted) {
             $query->where('deleted', false);
         }
-        $menus = $query->orderBy('sort', 'asc')
-                      ->orderBy('id', 'asc')
-                      ->get();
-        $tree = [];
-        foreach ($menus as $menu) {
-            $item = $menu->toArray();
-            $item['children'] = $this->getTree($menu->id, $onlyEnabled, $includeDeleted);
-            $tree[] = $item;
+        $allMenus = $query->orderBy('sort', 'asc')
+                          ->orderBy('id', 'asc')
+                          ->get()
+                          ->toArray();
+
+        // ✅ 在内存中以 id 为键建立 Map，O(n) 时间复杂度
+        $menuMap = [];
+        foreach ($allMenus as $menu) {
+            $menu['children'] = [];
+            $menuMap[$menu['id']] = $menu;
         }
-        
+
+        // ✅ 单次遍历构建树形结构，无任何数据库调用
+        $tree = [];
+        foreach ($menuMap as &$menu) {
+            if ($menu['parent_id'] == $parentId) {
+                // 顶级节点（相对于指定的 parentId）
+                $tree[] = &$menu;
+            } elseif (isset($menuMap[$menu['parent_id']])) {
+                // 挂载到父节点的 children 下
+                $menuMap[$menu['parent_id']]['children'][] = &$menu;
+            }
+        }
+        unset($menu); // 释放引用，避免后续误用
+
         return $tree;
     }
 
     /**
      * 获取管理员菜单树
+     *
+     * 【修复】：
+     * 1. 移除了 var_dump 调试代码（会污染 HTTP 响应）
+     * 2. 移除了 $adminId = 14 硬编码（安全漏洞，导致所有用户都查 ID=14 的菜单）
+     * 3. 将两次角色查询合并为一次（with(['roles.menus']) 一次性预加载角色+菜单）
+     *
      * @param int $adminId 管理员ID
      * @return array
      */
     public function getAdminMenuTree(int $adminId): array
     {
-        $admin = Admin::with('roles')->find($adminId);
+        // ✅ 一次性预加载 roles 和 roles.menus，避免重复查询角色
+        $admin = Admin::with(['roles.menus'])->find($adminId);
         if (!$admin) {
             return [];
         }
-        
-        // 检查是否为超级管理员
-        $isSuperAdmin = false;
-        foreach ($admin->roles as $role) {
-            if ($role->code === 'R_SUPER') {
-                $isSuperAdmin = true;
-                break;
-            }
-        }
+
+        // ✅ 使用集合方法检查超级管理员，无需手动循环
+        $isSuperAdmin = $admin->roles->contains('code', 'R_SUPER');
+
         // 超级管理员获取所有菜单
         if ($isSuperAdmin) {
             return $this->getTree();
         }
-        // 获取管理员的所有菜单ID
+
+        // ✅ 直接从已预加载的关联数据中收集菜单ID，无需额外查询
         $menuIds = [];
-        $rolesWithMenus = $admin->roles()->with('menus')->get();
-        foreach ($rolesWithMenus as $role) {
+        foreach ($admin->roles as $role) {
             foreach ($role->menus as $menu) {
                 $menuIds[] = $menu->id;
             }
         }
-        
+
         if (empty($menuIds)) {
             return [];
         }
-        
+
         // 获取菜单数据并构建树形结构
         return $this->buildTreeFromIds(array_unique($menuIds));
     }

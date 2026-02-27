@@ -13,20 +13,16 @@ namespace plugin\theadmin\app\validator;
  */
 class AdminValidator extends ValidatorBase
 {
-    protected function rules()
-    {  
-        $id = '';
-        if($this->supportRequest->admin){
-            $id = $this->supportRequest->admin->id;
-        }
+    protected function rules(): array
+    {
         return [
             'username' => 'require|string|min:3|max:20|regex:/^[a-zA-Z0-9_]+$/|unique:sys_admin,username',
             'password' => 'requireWithout:id|string|min:6|max:20',
             'old_password' => 'require|string|min:6|max:20',
             'confirm_password' => 'require|string|confirm:password',
             'nickname' => 'string|min:2|max:50',
-            'phone' => "string|regex:/^1[3-9]\d{9}$/|unique:sys_admin,phone,$id",
-            'email' => "email|max:100|unique:sys_admin,email,$id",
+            'phone' => "string|regex:/^1[3-9]\d{9}$/|unique:sys_admin,phone",
+            'email' => "email|max:100|unique:sys_admin,email",
             'avatar' => 'string|max:255',
             'status' => 'integer|in:0,1',
             'gender' => 'integer|in:0,1,2',

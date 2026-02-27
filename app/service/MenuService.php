@@ -310,7 +310,6 @@ class MenuService
 
         // 使用注入的 Model 获取菜单树
         $menuTree = $this->model->getAdminMenuTree($adminId);
-
         // 转换为前端路由格式
         $transformService = new MenuTransformService();
         return $transformService->toRouteConfigTree($menuTree);
