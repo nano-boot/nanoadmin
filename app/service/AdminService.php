@@ -81,7 +81,7 @@ class AdminService extends BaseService
         $roleIds = $data['role_ids'] ?? [];
         unset($data['role_ids']);
 
-        // 创建管理员（使用模型的方法，因为需要密码加密）
+        // 创建管理员
         $admin = $this->model->create($data);
 
         if (!$admin) {
