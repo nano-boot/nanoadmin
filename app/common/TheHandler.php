@@ -121,7 +121,7 @@ class TheHandler extends Handler
             'msg' => $exception->getMessage(),
             'data' => $exception->getData(),
         ] : [
-            'code' => $exception->getCode(),
+            'code' => Code::SYSTEM_ERROR->value,
             'msg' => $defaultMessage,
             'data' => [],
         ];
