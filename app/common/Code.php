@@ -49,6 +49,11 @@ enum Code: int
     case FILE_TYPE_ERROR = 41302;        // 文件类型不支持
     case FILE_SIZE_ERROR = 41303;        // 文件大小超出限制
 
+    // 支付相关错误 (410xx)
+    case PAYMENT_CREATE_FAILED = 41001;   // 支付创建失败
+    case PAYMENT_NOTIFY_FAILED = 41002;  // 支付回调处理失败
+    case PAYMENT_CANCEL_FAILED = 41003;   // 支付取消失败
+
     // 服务器错误 (50xxx)
     case SYSTEM_ERROR = 50000;           // 系统错误
     case DATABASE_ERROR = 50001;         // 数据库错误
@@ -95,6 +100,11 @@ enum Code: int
             self::FILE_NOT_FOUND => '文件不存在',
             self::FILE_TYPE_ERROR => '文件类型不支持',
             self::FILE_SIZE_ERROR => '文件大小超出限制',
+
+            // 支付相关错误
+            self::PAYMENT_CREATE_FAILED => '支付创建失败',
+            self::PAYMENT_NOTIFY_FAILED => '支付回调处理失败',
+            self::PAYMENT_CANCEL_FAILED => '支付取消失败',
 
             // 服务器错误
             self::SYSTEM_ERROR => '系统错误',
@@ -150,6 +160,11 @@ enum Code: int
 
             // 413文件过大
             self::FILE_SIZE_ERROR => 413,
+
+            // 410支付相关错误
+            self::PAYMENT_CREATE_FAILED,
+            self::PAYMENT_NOTIFY_FAILED,
+            self::PAYMENT_CANCEL_FAILED => 400,
 
             // 415不支持的媒体类型
             self::FILE_TYPE_ERROR => 415,
