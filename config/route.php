@@ -73,6 +73,16 @@ Route::group('/sys/menu', function () {
 
 });
 
+// 字典类型管理相关路由
+Route::group('/sys/dict-type', function () {
+    Route::get('', [plugin\theadmin\app\controller\DictTypeController::class, 'page']);
+    Route::post('', [plugin\theadmin\app\controller\DictTypeController::class, 'create']);
+    Route::get('/{id}', [plugin\theadmin\app\controller\DictTypeController::class, 'show']);
+    Route::put('/{id}', [plugin\theadmin\app\controller\DictTypeController::class, 'update']);
+    Route::delete('/batch', [plugin\theadmin\app\controller\DictTypeController::class, 'batchDestroy']);
+    Route::delete('/{id}', [plugin\theadmin\app\controller\DictTypeController::class, 'destroy']);
+});
+
 // 文件管理相关路由
 Route::group('/sys/files', function () {
     Route::get('', [plugin\theadmin\app\controller\FileController::class, 'page']);

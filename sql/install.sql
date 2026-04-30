@@ -217,3 +217,72 @@ CREATE TABLE IF NOT EXISTS th_sys_file (
     INDEX idx_created_at (created_at),
     INDEX idx_deleted (deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件表';
+
+-- 9. 字典类型表
+CREATE TABLE IF NOT EXISTS th_sys_dict_type (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典类型ID',
+    name VARCHAR(100) NOT NULL COMMENT '字典名称',
+    code VARCHAR(100) NOT NULL UNIQUE COMMENT '字典编码',
+    description VARCHAR(500) DEFAULT '' COMMENT '字典描述',
+    status TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
+    sort INT(11) DEFAULT 100 COMMENT '排序',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+
+    INDEX idx_code (code),
+    INDEX idx_status (status),
+    INDEX idx_sort (sort),
+    INDEX idx_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典类型表';
+
+-- 10. 字典数据表
+CREATE TABLE IF NOT EXISTS th_sys_dict_data (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典数据ID',
+    dict_type_id BIGINT NOT NULL COMMENT '字典类型ID',
+    label VARCHAR(100) NOT NULL COMMENT '字典标签',
+    value VARCHAR(255) NOT NULL COMMENT '字典值',
+    sort INT(11) DEFAULT 100 COMMENT '排序',
+    status TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+
+    INDEX idx_dict_type_id (dict_type_id),
+    INDEX idx_status (status),
+    INDEX idx_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典数据表';
+
+
+-- =====================================================
+-- 字典初始化数据
+-- =====================================================
+-- 字典类型
+INSERT INTO `th_sys_dict_type` (`name`, `code`, `description`, `status`, `sort`) VALUES
+('性别', 'sys_gender', '系统性别枚举', 1, 10),
+('状态', 'sys_status', '通用状态枚举', 1, 20),
+('是/否', 'sys_yes_no', '是/否枚举', 1, 30),
+('通知类型', 'sys_notice_type', '通知消息类型', 1, 40),
+-- 字典数据 - 性别
+INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
+(1, '未知', '0', 10, 1),
+(1, '男', '1', 20, 1),
+(1, '女', '2', 30, 1);
+
+-- 字典数据 - 状态
+INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
+(2, '禁用', '0', 10, 1),
+(2, '正常', '1', 20, 1);
+
+-- 字典数据 - 是/否
+INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
+(3, '否', '0', 10, 1),
+(3, '是', '1', 20, 1);
+
+-- 字典数据 - 通知类型
+INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
+(5, '系统通知', 'system', 10, 1),
+(5, '活动通知', 'activity', 20, 1),
+(5, '订单通知', 'order', 30, 1),
+(5, '物流通知', 'delivery', 40, 1);
+

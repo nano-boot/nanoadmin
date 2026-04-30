@@ -24,31 +24,31 @@ INSERT INTO `th_sys_menu` (
 
 
 -- === 二级菜单 - Dashboard ===
-(100, 'Console', '控制台', '/dashboard/console', '/dashboard/console', '', '',
+(100, 'Console', '控制台', '/dashboard/console', '/dashboard/console', 'ri:dashboard-2-line', '',
  1,  1, 'M', 1, 0, 0, 0, 1,  ''),
 
 -- === 二级菜单 - Auth ===
-(200, 'AuthUser', '用户管理', '/permission/user', '/permission/user', '', '',
+(200, 'AuthUser', '用户管理', '/permission/user', '/permission/user', 'ri:user-2-line', '',
  2,  1, 'M', 1, 0, 0, 1, 0,  ''),
 
-(201, 'AuthRole', '角色管理', '/permission/role', '/permission/role', '', '',
+(201, 'AuthRole', '角色管理', '/permission/role', '/permission/role', 'ri:user-settings-line', '',
  2,  2, 'M', 1, 0, 0, 1, 0, ''),
 
-(202, 'AuthMenu', '菜单管理', '/permission/menu', '/permission/menu', '', '',
+(202, 'AuthMenu', '菜单管理', '/permission/menu', '/permission/menu', 'ri:menu-line', '',
  2,  3, 'M', 1, 1, 0, 0, 0,  '/permission/user'),
 
 
 -- === 二级菜单 - System ===
-(300, 'SystemFile', '文件管理', '/system/file', '/system/file', '', '',
+(300, 'SystemFile', '文件管理', '/system/file', '/system/file', 'ri:file-2-line', '',
  3,  1, 'M', 1, 0, 0, 1, 0, ''),
 
-(301, 'SystemDict', '字典管理 ', '/system/dict', '/system/dict', '', '',
+(301, 'SystemDict', '字典管理 ', '/system/dict', '/system/dict', 'ri:book-2-line', '',
  3, 1, 'M', 1, 0, 0, 1, 0,  ''),
 
-(302, 'SystemConfig', '配置管理', '/system/config', '/system/config', '', '',
+(302, 'SystemConfig', '配置管理', '/system/config', '/system/config', 'ri:settings-2-line', '',
  3, 2, 'M', 1, 0, 0, 1, 0,  ''),
 
-(303, 'SystemLog', '日志管理', '/system/log', '/system/log', '', '',
+(303, 'SystemLog', '日志管理', '/system/log', '/system/log', 'ri:file-text-line', '',
  3, 3, 'M', 1, 0, 0, 1, 0,  '');
 
 
@@ -98,6 +98,39 @@ INSERT INTO `th_sys_menu` (
 (3031, 'SystemLogCreate', '创建日志', '/system/log/create', '', 303,  1, 'B', 1, 1, ''),
 (3032, 'SystemLogEdit', '编辑日志', '/system/log/edit', '', 303,  2, 'B', 1, 1, ''),
 (3033, 'SystemLogDelete', '删除日志', '/system/log/delete', '', 303,  3, 'B', 1, 1, '');
+
+
+-- =====================================================
+-- 插入字典类型管理菜单到th_sys_menu 表
+-- =====================================================
+INSERT INTO `th_sys_menu` (
+    `id`, `name`, `title`, `path`, `component`, `icon`, `redirect`,
+    `parent_id`, `sort`, `type`, `status`,
+    `hide`, `hide_tab`, `cache`, `fixed_tab`, `active_path`
+) VALUES
+(301, 'SystemDictType', '字典管理', '/system/dict', '/system/dict-type', 'ri:book-2-line', '',
+ 3, 1, 'M', 1, 0, 0, 1, 0, '')
+ON DUPLICATE KEY UPDATE
+    `name` = VALUES(`name`),
+    `title` = VALUES(`title`),
+    `path` = VALUES(`path`),
+    `component` = VALUES(`component`),
+    `icon` = VALUES(`icon`);
+
+-- 字典类型管理按钮权限
+INSERT INTO `th_sys_menu` (
+    `id`, `name`, `title`, `path`, `component`, `parent_id`,
+    `sort`, `type`, `status`, `hide`, `active_path`
+) VALUES
+(3011, 'SystemDictTypeCreate', '新增', '/system/dict-type/create', '', 301, 1, 'B', 1, 1, ''),
+(3012, 'SystemDictTypeEdit', '编辑', '/system/dict-type/edit', '', 301, 2, 'B', 1, 1, ''),
+(3013, 'SystemDictTypeDelete', '删除', '/system/dict-type/delete', '', 301, 3, 'B', 1, 1, '')
+ON DUPLICATE KEY UPDATE
+    `name` = VALUES(`name`),
+    `title` = VALUES(`title`);
+
+
+
 
 
 
