@@ -83,6 +83,16 @@ Route::group('/sys/dict-type', function () {
     Route::delete('/{id}', [plugin\theadmin\app\controller\DictTypeController::class, 'destroy']);
 });
 
+// 字典数据管理相关路由
+Route::group('/sys/dict-data', function () {
+    Route::get('', [plugin\theadmin\app\controller\DictDataController::class, 'page']);
+    Route::post('', [plugin\theadmin\app\controller\DictDataController::class, 'create']);
+    Route::get('/{id}', [plugin\theadmin\app\controller\DictDataController::class, 'show']);
+    Route::put('/{id}', [plugin\theadmin\app\controller\DictDataController::class, 'update']);
+    Route::delete('/batch', [plugin\theadmin\app\controller\DictDataController::class, 'batchDestroy']);
+    Route::delete('/{id}', [plugin\theadmin\app\controller\DictDataController::class, 'destroy']);
+});
+
 // 文件管理相关路由
 Route::group('/sys/files', function () {
     Route::get('', [plugin\theadmin\app\controller\FileController::class, 'page']);
