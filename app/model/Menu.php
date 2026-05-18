@@ -53,6 +53,15 @@ class Menu extends BaseModel
     protected $pk = 'id';
 
     /**
+     * 搜索字段配置（显式声明，避免静态属性继承污染）
+     * @var array
+     */
+    protected static array $searchLikeFields = ['title'];
+    protected static array $searchEqualFields = ['status', 'type'];
+    protected static array $searchKeywordFields = ['title'];
+    protected static array $searchRangeFields = [];
+
+    /**
      * JSON字段
      * @var array
      */
@@ -133,10 +142,7 @@ class Menu extends BaseModel
     {
         parent::boot();
 
-        // 配置搜索字段
-        static::setSearchLikeFields(['title']);
-        static::setSearchEqualFields(['status', 'type']);
-        static::setSearchKeywordFields(['title']);
+        // 搜索字段已通过静态属性声明，无需重复设置
     }
 
     /**

@@ -31,12 +31,17 @@ class File extends BaseModel
     {
         parent::boot();
 
-        // 设置文件模型的搜索字段配置
-        static::setSearchLikeFields(['original_name']);
-        static::setSearchEqualFields(['file_ext', 'mime_type', 'file_type', 'status', 'created_by']);
-        static::setSearchKeywordFields(['original_name']);
-        static::setSearchRangeFields(['created_at', 'file_size']);
+        // 搜索字段已通过静态属性声明，无需重复设置
     }
+
+    /**
+     * 搜索字段配置（显式声明，避免静态属性继承污染）
+     * @var array
+     */
+    protected static array $searchLikeFields = ['original_name'];
+    protected static array $searchEqualFields = ['file_ext', 'mime_type', 'file_type', 'status', 'created_by'];
+    protected static array $searchKeywordFields = ['original_name'];
+    protected static array $searchRangeFields = ['created_at', 'file_size'];
 
     /**
      * 表名

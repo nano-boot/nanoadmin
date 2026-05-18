@@ -286,3 +286,57 @@ INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `statu
 (5, '订单通知', 'order', 30, 1),
 (5, '物流通知', 'delivery', 40, 1);
 
+-- =====================================================
+-- 11. 配置表
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `th_sys_config` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '配置ID',
+    `name` VARCHAR(100) NOT NULL COMMENT '配置名称',
+    `key` VARCHAR(100) NOT NULL UNIQUE COMMENT '配置键名',
+    `value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '配置值',
+    `type` ENUM('text', 'number', 'boolean', 'select', 'radio', 'checkbox', 'textarea', 'json') DEFAULT 'text' COMMENT '配置类型（text文本 number数字 boolean布尔 select选择 radio单选 checkbox复选 textarea多行文本 json JSON）',
+    `options` VARCHAR(1000) NOT NULL DEFAULT '' COMMENT '选项配置（JSON格式，用于select/radio/checkbox）',
+    `group` VARCHAR(50) NOT NULL COMMENT '配置分组',
+    `description` VARCHAR(500) DEFAULT '' COMMENT '配置描述',
+    `sort` INT(11) DEFAULT 100 COMMENT '排序',
+    `status` TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+
+    INDEX idx_key (`key`),
+    INDEX idx_group (`group`),
+    INDEX idx_type (`type`),
+    INDEX idx_sort (`sort`),
+    INDEX idx_status (`status`),
+    INDEX idx_deleted (`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统配置表';
+
+-- =====================================================
+-- 配置表初始化数据
+-- =====================================================
+INSERT INTO `th_sys_config` (`name`, `key`, `value`, `type`, `options`, `group`, `description`, `sort`, `status`) VALUES
+-- 基础配置
+('网站名称', 'site_name', 'The Admin', 'text', '', 'basic', '网站显示名称', 10, 1),
+('网站Logo', 'site_logo', '', 'text', '', 'basic', '网站Logo地址', 20, 1),
+('网站描述', 'site_description', '后台管理系统', 'textarea', '', 'basic', '网站描述信息', 30, 1),
+('版权信息', 'copyright', '© 2024 The Admin. All Rights Reserved.', 'text', '', 'basic', '底部版权信息', 40, 1),
+
+-- 上传配置
+('允许上传格式', 'upload_allowed_ext', 'jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,zip', 'text', '', 'upload', '允许上传的文件格式，多个用逗号分隔', 10, 1),
+('最大上传大小(MB)', 'upload_max_size', '10', 'number', '', 'upload', '单文件最大上传大小，单位MB', 20, 1),
+
+-- 安全配置
+('登录失败锁定次数', 'login_max_attempts', '5', 'number', '', 'security', '连续登录失败次数，达到后锁定账户', 10, 1),
+('登录锁定时间(分钟)', 'login_lock_minutes', '30', 'number', '', 'security', '账户锁定时长，单位分钟', 20, 1),
+('Token有效期(小时)', 'token_expire_hours', '24', 'number', '', 'security', 'JWT Token有效期，单位小时', 30, 1),
+('刷新Token有效期(天)', 'refresh_token_expire_days', '7', 'number', '', 'security', '刷新Token有效期，单位天', 40, 1),
+
+-- 邮件配置
+('SMTP服务器', 'smtp_host', '', 'text', '', 'email', '邮件发送服务器地址', 10, 1),
+('SMTP端口', 'smtp_port', '465', 'number', '', 'email', '邮件发送端口', 20, 1),
+('SMTP用户名', 'smtp_username', '', 'text', '', 'email', '邮件发送用户名', 30, 1),
+('SMTP密码', 'smtp_password', '', 'text', '', 'email', '邮件发送密码', 40, 1),
+('发件人名称', 'smtp_from_name', 'The Admin', 'text', '', 'email', '发件人显示名称', 50, 1),
+('是否启用SSL', 'smtp_ssl', '1', 'radio', '{"0":"否","1":"是"}', 'email', '是否启用SSL加密', 60, 1);
+

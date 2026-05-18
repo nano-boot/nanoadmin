@@ -24,31 +24,25 @@ use plugin\theadmin\app\common\Code;
 class Admin extends BaseModel
 {
     /**
-     * 初始化搜索字段配置
-     */
-    protected static function boot(): void
-    {
-        parent::boot();
-
-        // 设置管理员模型的搜索字段配置
-        static::setSearchLikeFields(['username', 'nickname']);
-        static::setSearchEqualFields(['phone', 'email', 'status', 'gender', 'deleted']);
-        static::setSearchKeywordFields(['username', 'nickname', 'phone']);
-        static::setSearchRangeFields(['last_login_time']);
-    }
-
-    /**
      * 表名
      * @var string
      */
     protected $table = 'sys_admin';
-
 
     /**
      * 主键
      * @var string
      */
     protected $primaryKey = 'id';
+
+    /**
+     * 搜索字段配置（显式声明，避免静态属性继承污染）
+     * @var array
+     */
+    protected static array $searchLikeFields = ['username', 'nickname'];
+    protected static array $searchEqualFields = ['phone', 'email', 'status', 'gender', 'deleted'];
+    protected static array $searchKeywordFields = ['username', 'nickname', 'phone'];
+    protected static array $searchRangeFields = ['last_login_time'];
 
     /**
      * 可批量赋值的属性

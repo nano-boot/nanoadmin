@@ -43,15 +43,22 @@ class DictType extends BaseModel
     ];
 
     /**
+     * 搜索字段配置（显式声明，避免静态属性继承污染）
+     * @var array
+     */
+    protected static array $searchLikeFields = ['name', 'code', 'description'];
+    protected static array $searchEqualFields = ['status', 'deleted'];
+    protected static array $searchKeywordFields = ['name', 'code'];
+    protected static array $searchRangeFields = ['created_at'];
+
+    /**
      * 初始化搜索字段配置
      */
     protected static function boot(): void
     {
         parent::boot();
 
-        static::setSearchLikeFields(['name', 'code', 'description']);
-        static::setSearchEqualFields(['status', 'deleted']);
-        static::setSearchRangeFields(['created_at']);
+        // 搜索字段已通过静态属性声明，无需重复设置
     }
 
     /**
