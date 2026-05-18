@@ -2,12 +2,7 @@
 
 namespace plugin\theadmin\app\controller;
 
-use plugin\theadmin\app\common\R;
 use plugin\theadmin\app\service\DictTypeService;
-use support\Request;
-use support\Response;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
 
 /**
  * 字典类型控制器

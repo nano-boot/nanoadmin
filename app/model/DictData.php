@@ -44,9 +44,9 @@ class DictData extends BaseModel
      * 搜索字段配置（显式声明，避免静态属性继承污染）
      * @var array
      */
-    protected static array $searchLikeFields = ['label', 'value'];
+    protected static array $searchLikeFields = [];
     protected static array $searchEqualFields = ['dict_type_id', 'status', 'deleted'];
-    protected static array $searchKeywordFields = [];
+    protected static array $searchKeywordFields = ['label', 'value'];
     protected static array $searchRangeFields = ['created_at'];
 
     /**
