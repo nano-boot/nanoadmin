@@ -54,23 +54,7 @@ class DictTypeService extends BaseService
             $this->cacheConfig = require $configFile;
         } else {
             $this->cacheConfig = [
-                'type' => 'file',
-                'dict' => [
-                    'enabled' => true,
-                    'prefix' => 'dict:',
-                    'ttl' => 0,
-                ],
-                'redis' => [
-                    'host' => '127.0.0.1',
-                    'port' => 6379,
-                    'password' => '',
-                    'database' => 1,
-                    'prefix' => 'theadmin_cache:',
-                ],
-                'file' => [
-                    'path' => runtime_path() . '/cache/theadmin/',
-                    'prefix' => 'theadmin_cache_',
-                ],
+                'dict' => ['enabled' => false],
             ];
         }
     }
@@ -120,7 +104,7 @@ class DictTypeService extends BaseService
      */
     private function getCachePrefix(): string
     {
-        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'theadmin_cache:';
+        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'theadmin:';
         $dictPrefix = $this->cacheConfig['dict']['prefix'] ?? 'dict:';
         return $redisPrefix . $dictPrefix;
     }
@@ -453,7 +437,7 @@ class DictTypeService extends BaseService
     {
         $fileConfig = $this->cacheConfig['file'] ?? [];
         $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'theadmin_cache_';
+        $prefix = $fileConfig['prefix'] ?? 'theadmin_';
         $cacheFile = $cachePath . $prefix . md5($key) . '.json';
 
         if (!is_dir($cachePath)) {
@@ -475,7 +459,7 @@ class DictTypeService extends BaseService
     {
         $fileConfig = $this->cacheConfig['file'] ?? [];
         $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'theadmin_cache_';
+        $prefix = $fileConfig['prefix'] ?? 'theadmin_';
         $cacheFile = $cachePath . $prefix . md5($key) . '.json';
 
         if (!file_exists($cacheFile)) {
@@ -502,7 +486,7 @@ class DictTypeService extends BaseService
     {
         $fileConfig = $this->cacheConfig['file'] ?? [];
         $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'theadmin_cache_';
+        $prefix = $fileConfig['prefix'] ?? 'theadmin_';
         $cacheFile = $cachePath . $prefix . md5($key) . '.json';
 
         if (file_exists($cacheFile)) {

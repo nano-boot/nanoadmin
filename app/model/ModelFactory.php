@@ -60,6 +60,24 @@ class ModelFactory
     }
 
     /**
+     * 获取字典类型模型实例
+     * @return DictType
+     */
+    public static function dict_type(): DictType
+    {
+        return self::getInstance(DictType::class);
+    }
+
+    /**
+     * 获取字典数据模型实例
+     * @return DictData
+     */
+    public static function dict_data(): DictData
+    {
+        return self::getInstance(DictData::class);
+    }
+
+    /**
      * 获取模型实例
      * @param string $className 模型类名
      * @return mixed

@@ -51,24 +51,8 @@ class MenuTransformService
         if (file_exists($configFile)) {
             $this->cacheConfig = require $configFile;
         } else {
-            // 默认配置
             $this->cacheConfig = [
-                'type' => 'file',
-                'menu' => [
-                    'ttl' => 3600,
-                    'prefix' => 'menu:',
-                    'enabled' => true,
-                ],
-                'redis' => [
-                    'host' => '127.0.0.1',
-                    'port' => 6379,
-                    'database' => 1,
-                    'prefix' => 'theadmin_cache:',
-                ],
-                'file' => [
-                    'path' => runtime_path() . '/cache/theadmin/',
-                    'prefix' => 'theadmin_cache_',
-                ],
+                'menu' => ['enabled' => false],
             ];
         }
     }
@@ -220,7 +204,7 @@ class MenuTransformService
 
             return $dbData;
         } catch (\Exception $e) {
-            throw new ApiException('表单数据转换失败: ' . $e->getMessage(), Code::MENU_TRANSFORM_ERROR);
+            throw new ApiException(Code::MENU_TRANSFORM_ERROR, '表单数据转换失败: ' . $e->getMessage());
         }
     }
 
@@ -263,7 +247,7 @@ class MenuTransformService
 
             return $formData;
         } catch (\Exception $e) {
-            throw new ApiException('数据库数据转换失败: ' . $e->getMessage(), Code::MENU_TRANSFORM_ERROR);
+            throw new ApiException(Code::MENU_TRANSFORM_ERROR, '数据库数据转换失败: ' . $e->getMessage());
         }
     }
 
@@ -367,18 +351,18 @@ class MenuTransformService
         if (is_string($roles)) {
             $decoded = json_decode($roles, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new ApiException('角色权限JSON格式错误: ' . json_last_error_msg(), Code::INVALID_JSON_FORMAT);
+                throw new ApiException(Code::INVALID_JSON_FORMAT, '角色权限JSON格式错误: ' . json_last_error_msg());
             }
             $roles = $decoded;
         }
 
         if (!is_array($roles)) {
-            throw new ApiException('角色权限必须是数组格式', Code::INVALID_MENU_DATA);
+            throw new ApiException(Code::INVALID_MENU_DATA, '角色权限必须是数组格式');
         }
 
         // 验证角色数组格式
         if (!Menu::validateRoles($roles)) {
-            throw new ApiException('角色权限数组格式不正确', Code::INVALID_MENU_DATA);
+            throw new ApiException(Code::INVALID_MENU_DATA, '角色权限数组格式不正确');
         }
 
         return array_values(array_unique(array_filter($roles))); // 去重并过滤空值
@@ -399,18 +383,18 @@ class MenuTransformService
         if (is_string($authList)) {
             $decoded = json_decode($authList, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new ApiException('权限按钮列表JSON格式错误: ' . json_last_error_msg(), Code::INVALID_JSON_FORMAT);
+                throw new ApiException(Code::INVALID_JSON_FORMAT, '权限按钮列表JSON格式错误: ' . json_last_error_msg());
             }
             $authList = $decoded;
         }
 
         if (!is_array($authList)) {
-            throw new ApiException('权限按钮列表必须是数组格式', Code::INVALID_MENU_DATA);
+            throw new ApiException(Code::INVALID_MENU_DATA, '权限按钮列表必须是数组格式');
         }
 
         // 验证权限按钮列表格式
         if (!Menu::validateAuthList($authList)) {
-            throw new ApiException('权限按钮列表格式不正确', Code::INVALID_MENU_DATA);
+            throw new ApiException(Code::INVALID_MENU_DATA, '权限按钮列表格式不正确');
         }
 
         // 标准化权限按钮数据
@@ -754,7 +738,7 @@ class MenuTransformService
      */
     private function getCachePrefix(): string
     {
-        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'theadmin_cache:';
+        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'theadmin:';
         $menuPrefix = $this->cacheConfig['menu']['prefix'] ?? 'menu:';
         return $redisPrefix . $menuPrefix;
     }
@@ -966,7 +950,7 @@ class MenuTransformService
     private function clearAllFileCache(): bool
     {
         $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_cache_';
+        $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_';
         
         if (!is_dir($cachePath)) {
             return true;
@@ -990,7 +974,7 @@ class MenuTransformService
     private function getCacheFilePath(string $key): string
     {
         $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_cache_';
+        $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_';
         $safeKey = md5($key);
         return $cachePath . $prefix . $safeKey . '.json';
     }
@@ -1237,7 +1221,7 @@ class MenuTransformService
             } else {
                 // 文件缓存统计
                 $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/theadmin/';
-                $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_cache_';
+                $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_';
                 
                 if (is_dir($cachePath)) {
                     $files = glob($cachePath . $prefix . '*.json');
