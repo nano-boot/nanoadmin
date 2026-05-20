@@ -16,11 +16,29 @@ return [
         'timeout' => 2,
         'prefix' => 'theadmin_cache:',
     ],
-    
+
     // 文件缓存配置
     'file' => [
         'path' => runtime_path() . '/cache/theadmin/',
-        'prefix' => 'theadmin_cache_',
+        'prefix' => 'theadmin_',
+    ],
+
+    // 字典缓存配置
+    'dict' => [
+        // 是否启用缓存
+        'enabled' => true,
+
+        // 缓存键前缀（拼接在连接前缀之后）
+        'prefix' => 'dict:',
+
+        // 缓存 TTL（秒），0 表示永久缓存（依赖 CRUD 末尾 clearCache 保证一致性）
+        'ttl' => 0,
+
+        // 是否启用启动预热
+        'warmup_enabled' => true,
+
+        // 预热策略：指定编码则只预热这些，空数组则预热全部
+        'warmup_codes' => [],
     ],
     
     // 菜单缓存配置
