@@ -7,19 +7,19 @@
 -- DELETE FROM `th_sys_menu`;
 
 -- 插入默认菜单数据，匹配前端路由结构
-INSERT INTO `th_sys_menu` (
+REPLACE INTO `th_sys_menu` (
     `id`, `name`, `title`, `path`, `component`, `icon`, `redirect`,
     `parent_id`, `sort`, `type`, `status`,
     `hide`, `hide_tab`, `cache`, `fixed_tab`, `active_path`
 ) VALUES
 -- === 一级菜单 ===
-(1, 'Dashboard', '数据面板', '/dashboard', '/index/index', '&#xe721;', '',
+(1, 'Dashboard', '数据面板', '/dashboard', '/index/index', 'ri:pie-chart-line', '',
  0,  1, 'M', 1, 0, 0, 1, 0,  ''),
 
-(2, 'Auth', '权限管理', '/permission', '/index/index', '&#xe7ad;', '',
+(2, 'Permission', '权限管理', '/permission', '/index/index', 'ri:fingerprint-line', '',
  0,  2, 'M', 1, 0, 0, 1, 0,  ''),
 
-(3, 'System', '系统管理', '/system', '/index/index', '&#xe7b8;', '',
+(3, 'System', '系统管理', '/system', '/index/index', 'ri:settings-line', '',
  0,  3, 'M', 1, 0, 0, 1, 0, ''),
 
 
@@ -42,7 +42,7 @@ INSERT INTO `th_sys_menu` (
 (300, 'SystemFile', '文件管理', '/system/file', '/system/file', 'ri:file-2-line', '',
  3,  1, 'M', 1, 0, 0, 1, 0, ''),
 
-(301, 'SystemDict', '字典管理 ', '/system/dict', '/system/dict', 'ri:book-2-line', '',
+(301, 'SystemDictType', '字典管理 ', '/system/dict', '/system/dict-type', 'ri:book-2-line', '',
  3, 1, 'M', 1, 0, 0, 1, 0,  ''),
 
 (302, 'SystemConfig', '配置管理', '/system/config', '/system/config', 'ri:settings-2-line', '',
@@ -83,9 +83,9 @@ INSERT INTO `th_sys_menu` (
 (3003, 'SystemFileDelete', '删除文件', '/system/file/delete', '', 300,  3, 'B', 1, 1, ''),
 
 -- 字典管理按钮权限
-(3011, 'SystemDictCreate', '创建字典', '/system/dict/create', '', 301,  1, 'B', 1, 1, ''),
-(3012, 'SystemDictEdit', '编辑字典', '/system/dict/edit', '', 301,  2, 'B', 1, 1, ''),
-(3013, 'SystemDictDelete', '删除字典', '/system/dict/delete', '', 301,  3, 'B', 1, 1, ''),
+(3011, 'SystemDictTypeCreate', '创建字典', '/system/dict-type/create', '', 301,  1, 'B', 1, 1, ''),
+(3012, 'SystemDictEdit', '编辑字典', '/system/dict-type/edit', '', 301,  2, 'B', 1, 1, ''),
+(3013, 'SystemDictDelete', '删除字典', '/system/dict-type/delete', '', 301,  3, 'B', 1, 1, ''),
 
 
 -- 配置管理按钮权限
@@ -100,34 +100,6 @@ INSERT INTO `th_sys_menu` (
 (3033, 'SystemLogDelete', '删除日志', '/system/log/delete', '', 303,  3, 'B', 1, 1, '');
 
 
--- =====================================================
--- 插入字典类型管理菜单到th_sys_menu 表
--- =====================================================
-INSERT INTO `th_sys_menu` (
-    `id`, `name`, `title`, `path`, `component`, `icon`, `redirect`,
-    `parent_id`, `sort`, `type`, `status`,
-    `hide`, `hide_tab`, `cache`, `fixed_tab`, `active_path`
-) VALUES
-(301, 'SystemDictType', '字典管理', '/system/dict', '/system/dict-type', 'ri:book-2-line', '',
- 3, 1, 'M', 1, 0, 0, 1, 0, '')
-ON DUPLICATE KEY UPDATE
-    `name` = VALUES(`name`),
-    `title` = VALUES(`title`),
-    `path` = VALUES(`path`),
-    `component` = VALUES(`component`),
-    `icon` = VALUES(`icon`);
-
--- 字典类型管理按钮权限
-INSERT INTO `th_sys_menu` (
-    `id`, `name`, `title`, `path`, `component`, `parent_id`,
-    `sort`, `type`, `status`, `hide`, `active_path`
-) VALUES
-(3011, 'SystemDictTypeCreate', '新增', '/system/dict-type/create', '', 301, 1, 'B', 1, 1, ''),
-(3012, 'SystemDictTypeEdit', '编辑', '/system/dict-type/edit', '', 301, 2, 'B', 1, 1, ''),
-(3013, 'SystemDictTypeDelete', '删除', '/system/dict-type/delete', '', 301, 3, 'B', 1, 1, '')
-ON DUPLICATE KEY UPDATE
-    `name` = VALUES(`name`),
-    `title` = VALUES(`title`);
 
 
 
