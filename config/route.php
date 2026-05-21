@@ -105,3 +105,15 @@ Route::group('/sys/files', function () {
     Route::delete('/batch', [plugin\theadmin\app\controller\FileController::class, 'batchDestroy']);
     Route::delete('/{id}', [plugin\theadmin\app\controller\FileController::class, 'destroy']);
 });
+
+// 配置管理相关路由
+Route::group('/sys/config', function () {
+    Route::get('', [plugin\theadmin\app\controller\ConfigController::class, 'page']);
+    Route::get('/group', [plugin\theadmin\app\controller\ConfigController::class, 'getByGroup']);
+    Route::post('', [plugin\theadmin\app\controller\ConfigController::class, 'create']);
+    Route::put('/batch', [plugin\theadmin\app\controller\ConfigController::class, 'batchUpdate']);
+    Route::get('/{id}', [plugin\theadmin\app\controller\ConfigController::class, 'show']);
+    Route::put('/{id}', [plugin\theadmin\app\controller\ConfigController::class, 'update']);
+    Route::delete('/batch', [plugin\theadmin\app\controller\ConfigController::class, 'batchDestroy']);
+    Route::delete('/{id}', [plugin\theadmin\app\controller\ConfigController::class, 'destroy']);
+});

@@ -294,7 +294,7 @@ CREATE TABLE IF NOT EXISTS `th_sys_config` (
     `name` VARCHAR(100) NOT NULL COMMENT '配置名称',
     `key` VARCHAR(100) NOT NULL UNIQUE COMMENT '配置键名',
     `value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '配置值',
-    `type` ENUM('text', 'number', 'boolean', 'select', 'radio', 'checkbox', 'textarea', 'json') DEFAULT 'text' COMMENT '配置类型（text文本 number数字 boolean布尔 select选择 radio单选 checkbox复选 textarea多行文本 json JSON）',
+    `type` ENUM('text', 'number', 'boolean', 'select', 'radio', 'checkbox', 'textarea', 'json', 'image') DEFAULT 'text' COMMENT '配置类型（text文本 number数字 boolean布尔 select选择 radio单选 checkbox复选 textarea多行文本 json JSON image图片 file文件）',
     `options` VARCHAR(1000) NOT NULL DEFAULT '' COMMENT '选项配置（JSON格式，用于select/radio/checkbox）',
     `group` VARCHAR(50) NOT NULL COMMENT '配置分组',
     `description` VARCHAR(500) DEFAULT '' COMMENT '配置描述',
