@@ -3,6 +3,20 @@
  * Here is your custom functions.
  */
 
+if (!function_exists('plugin_theadmin_path')) {
+    /**
+     * 获取 theadmin 插件的目录路径
+     * @param string $path 相对于插件目录的路径
+     * @return string
+     */
+    function plugin_theadmin_path(string $path = ''): string
+    {
+        // plugin/theadmin/app/ -> plugin/ (向上2级) -> plugin/theadmin/
+        $basePath = dirname(__DIR__, 2) . '/theadmin';
+        return $basePath . ($path ? DIRECTORY_SEPARATOR . $path : '');
+    }
+}
+
 if (!function_exists('record')) {
     function record($data, $flag = 'debug'): void
     {

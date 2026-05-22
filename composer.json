@@ -1,0 +1,12 @@
+{
+    "name": "theadmin/plugin",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "plugin\\theadmin\\": "app/"
+        },
+        "files": [
+            "app/functions.php"
+        ]
+    }
+}
