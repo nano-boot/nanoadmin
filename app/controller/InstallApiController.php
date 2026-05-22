@@ -152,7 +152,7 @@ class InstallApiController
     }
 
     /**
-     * 测试数据库连接
+     * 测试数据库连接（仅测试连接，不创建任何资源）
      */
     public function checkDatabase(array $post): array
     {
@@ -176,15 +176,15 @@ class InstallApiController
             'prefix' => $post['prefix'],
         ];
 
-        $result = $this->model->checkConfig($post['name'], $config);
+        // 仅测试连接，不创建数据库和表
+        $result = $this->model->testConnection($config);
 
         if ($result->result === 'ok') {
             return [
                 'code' => 200,
-                'msg' => '数据库连接成功',
+                'msg' => '数据库连接成功222',
                 'data' => [
                     'success' => true,
-                    'tables' => $this->model->getSuccessTable(),
                 ]
             ];
         } else {
