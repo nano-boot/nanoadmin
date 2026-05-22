@@ -2,20 +2,11 @@
 
 use Webman\Route;
 
-// 安装向导相关路由（不需要认证）
-Route::group('/sys/install', function () {
-    Route::get('/status', [plugin\theadmin\app\controller\InstallController::class, 'status']);
-    Route::get('/environment', [plugin\theadmin\app\controller\InstallController::class, 'environment']);
-    Route::post('/test-connection', [plugin\theadmin\app\controller\InstallController::class, 'testConnection']);
-    Route::post('/execute', [plugin\theadmin\app\controller\InstallController::class, 'execute']);
-    Route::get('/progress', [plugin\theadmin\app\controller\InstallController::class, 'progress']);
-});
-
 // 认证相关路由
 Route::group('/sys/auth', function () {
     // 登录接口（不需要认证）
     Route::post('/login', [plugin\theadmin\app\controller\AuthController::class, 'login']);
-    
+
     // 需要认证的接口
     Route::post('/logout', [plugin\theadmin\app\controller\AuthController::class, 'logout']);
     Route::get('/info', [plugin\theadmin\app\controller\AuthController::class, 'info']);
