@@ -21,7 +21,7 @@ class FileValidator extends ValidatorBase
         'limit' => 'integer|min:1|max:100',
         'keyword' => 'string|max:100',
         'status' => 'integer|in:0,1',
-        'file_type' => 'string|in:image,document,video,audio,archive',
+        'file_type' => 'string|in:image,document,video,audio,archive,other',
         'storage_type' => 'string|in:local,cloud',
         'created_by' => 'integer|gt:0',
         'file' => 'require|max:102400', // 最大100MB

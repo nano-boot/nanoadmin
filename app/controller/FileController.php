@@ -57,9 +57,9 @@ class FileController extends BaseController
     public function page(Request $request): Response
     {
         $params = $request->get();
-            $validator = new FileValidator();
-            $validatedParams = $validator->validateListParams($params);
-            return R::paginate($this->fileService->getPage($validatedParams));
+        $validator = new FileValidator();
+        $validatedParams = $validator->validateListParams($params);
+        return R::paginate($this->fileService->getPage($validatedParams));
     }
 
     /**
