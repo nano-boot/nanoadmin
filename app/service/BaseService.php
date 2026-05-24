@@ -148,16 +148,35 @@ abstract class BaseService
             throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的记录');
         }
 
+        // 规范化 IDs：确保是简单的一维数字数组
+        $normalizedIds = [];
+        foreach ($ids as $id) {
+            if (is_array($id)) {
+                foreach ($id as $subId) {
+                    if (is_numeric($subId)) {
+                        $normalizedIds[] = (int) $subId;
+                    }
+                }
+            } elseif (is_numeric($id)) {
+                $normalizedIds[] = (int) $id;
+            }
+        }
+        $normalizedIds = array_unique($normalizedIds);
+
+        if (empty($normalizedIds)) {
+            throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的记录');
+        }
+
         // 检查记录是否存在
-        $existingRecords = $this->model->whereIn('id', $ids)->pluck('id')->toArray();
-        $invalidIds = array_diff($ids, $existingRecords);
+        $existingRecords = $this->model->whereIn('id', $normalizedIds)->pluck('id')->toArray();
+        $invalidIds = array_diff($normalizedIds, $existingRecords);
 
         if (!empty($invalidIds)) {
             throw new ApiException($this->getNotFoundCode(), $this->getNotFoundMessage() . ': ' . implode(',', $invalidIds));
         }
 
         try {
-            $result = $this->model->destroy($ids);
+            $result = $this->model->destroy($normalizedIds);
 
             if ($result === false) {
                 throw new ApiException(Code::SYSTEM_ERROR, $this->getBatchDeleteFailedMessage());

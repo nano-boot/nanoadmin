@@ -85,7 +85,7 @@ class FileService extends BaseService
             return $existingFile;
         }
 
-        // 根据文件类型确定存储路径
+        // 确定存储路径
         $storagePath = $this->getStoragePath();
 
         // 保存文件到本地
@@ -185,7 +185,27 @@ class FileService extends BaseService
      */
     public function batchDeleteFiles(array $ids): int
     {
-        $files = $this->model->whereIn('id', $ids)->where('deleted', false)->get();
+        // 规范化 IDs：确保是简单的一维数字数组
+        $normalizedIds = [];
+        foreach ($ids as $id) {
+            if (is_array($id)) {
+                // 如果元素是数组，递归扁平化
+                foreach ($id as $subId) {
+                    if (is_numeric($subId)) {
+                        $normalizedIds[] = (int) $subId;
+                    }
+                }
+            } elseif (is_numeric($id)) {
+                $normalizedIds[] = (int) $id;
+            }
+        }
+        $normalizedIds = array_unique($normalizedIds);
+
+        if (empty($normalizedIds)) {
+            throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的文件');
+        }
+
+        $files = $this->model->whereIn('id', $normalizedIds)->where('deleted', false)->get();
 
         foreach ($files as $file) {
             /** @var File $file */
@@ -267,7 +287,7 @@ class FileService extends BaseService
 
         // 确定文件类型（优先使用传入的参数，否则自动检测）
         $fileType = $params['file_type'] ?? $this->getFileTypeByExtension($fileExt);
-        var_dump($fileType);
+        
         return [
             'original_name' => $originalName,
             'file_name' => $fileName,
@@ -297,7 +317,7 @@ class FileService extends BaseService
     private function saveFileToLocal($file, string $fileName, string $customPath = ''): string
     {
         // 使用自定义路径或默认路径
-        $baseUploadPath = public_path('uploads');
+        $baseUploadPath = public_path();
         $dirPath = trim($customPath, '/');
         $uploadPath = $dirPath ? $baseUploadPath . '/' . $dirPath : $baseUploadPath;
 
@@ -336,10 +356,10 @@ class FileService extends BaseService
 
     /**
      * 获取文件存储路径
-     * @param string $basePath 基础路径，默认 'd' (default)
+     * @param string $basePath 基础路径，默认 'up' （uploads）
      * @return string
      */
-    private function getStoragePath(string $basePath = 'd'): string
+    private function getStoragePath(string $basePath = 'up'): string
     {
         return $basePath . '/' . date('Y/m/d');
     }
@@ -355,7 +375,6 @@ class FileService extends BaseService
     private function getFileTypeByExtension(string $ext): string
     {
         $ext = strtolower($ext);
-        var_dump($ext);
         if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'])) {
             return 'image';
         }

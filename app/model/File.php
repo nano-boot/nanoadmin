@@ -109,10 +109,10 @@ class File extends BaseModel
             $domain = domain();
     
             if (str_starts_with($value, '/')) {
-                return $domain . '/uploads' . $value;
+                return $domain . $value;
             }
     
-            return $domain . '/uploads/' . $value;
+            return $domain . '/' . $value;
         } elseif ($this->storage_type === 'cloud') {
             // 云存储URL，需要根据具体云存储服务配置
             return $this->bucket_name . '/' . $value;
@@ -173,7 +173,12 @@ class File extends BaseModel
     public function exists(): bool
     {
         if ($this->storage_type === 'local') {
-            return file_exists(public_path('uploads/' . $this->file_path));
+            $filePath = $this->getRawOriginal('file_path');
+            if (str_starts_with($filePath, 'http://') || str_starts_with($filePath, 'https://')) {
+                $filePath = parse_url($filePath, PHP_URL_PATH);
+            }
+            $filePath = ltrim($filePath, '/');
+            return file_exists(public_path($filePath));
         }
         // 云存储检查逻辑需要根据具体云存储服务实现
         return true;
@@ -186,9 +191,18 @@ class File extends BaseModel
     public function deleteFile(): bool
     {
         if ($this->storage_type === 'local') {
-            $filePath = public_path('uploads/' . $this->file_path);
-            if (file_exists($filePath)) {
-                return unlink($filePath);
+
+            $filePath = $this->getRawOriginal('file_path');
+            
+            if (str_starts_with($filePath, 'http://') || str_starts_with($filePath, 'https://')) {
+                $filePath = parse_url($filePath, PHP_URL_PATH);
+            }
+            
+            $filePath = ltrim($filePath, '/');
+            $fullPath = public_path($filePath);
+            
+            if (file_exists($fullPath)) {
+                return unlink($fullPath);
             }
         }
         // 云存储删除逻辑需要根据具体云存储服务实现
