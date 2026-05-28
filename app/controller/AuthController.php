@@ -35,8 +35,15 @@ class AuthController
      */
     public function login(Request $request): Response
     {
-        // 管理员登录
-        $result = $this->authService->login(...$request->only(['username', 'password']));
+        $credentials = $request->only(['username', 'password']);
+        $ip = $request->getRealIp() ?? '';
+        $userAgent = $request->header('User-Agent', '');
+        $result = $this->authService->login(
+            $credentials['username'] ?? '',
+            $credentials['password'] ?? '',
+            $ip,
+            $userAgent
+        );
         return R::success($result, '登录成功');
     }
 

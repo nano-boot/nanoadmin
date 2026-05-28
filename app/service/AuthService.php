@@ -6,6 +6,8 @@ use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\common\JwtUtil;
 use plugin\theadmin\app\model\Admin;
+use plugin\theadmin\app\model\ModelFactory;
+use plugin\theadmin\app\service\LoginLogService;
 
 /**
  * 认证服务类
@@ -17,10 +19,11 @@ class AuthService
      * @param string $username 用户名
      * @param string $password 密码
      * @param string $ip 登录IP
+     * @param string $userAgent User-Agent
      * @return array
      * @throws ApiException
      */
-    public function login(string $username, string $password, string $ip = ''): array
+    public function login(string $username, string $password, string $ip = '', string $userAgent = ''): array
     {
         // 查找管理员
         $admin = Admin::where('username', $username)
@@ -29,11 +32,13 @@ class AuthService
             ->first();
 
         if (!$admin) {
+            $this->recordLoginLog(0, $username, $ip, $userAgent, false, '用户不存在或已被禁用');
             throw new ApiException(Code::LOGIN_FAILED, '用户名或密码错误');
         }
 
         // 验证密码
         if (!$admin->verifyPassword($password)) {
+            $this->recordLoginLog($admin->id, $username, $ip, $userAgent, false, '密码错误');
             throw new ApiException(Code::LOGIN_FAILED, '用户名或密码错误');
         }
 
@@ -47,7 +52,7 @@ class AuthService
         ]);
 
         // 记录登录日志
-        $this->recordLoginLog($admin->id, $ip, true);
+        $this->recordLoginLog($admin->id, $admin->username, $ip, $userAgent, true);
 
         return [
             'user' => [
@@ -71,10 +76,8 @@ class AuthService
      */
     public function logout(Admin $admin): bool
     {
-        // 记录退出日志
-        $this->recordLoginLog($admin->id, '', false, '主动退出');
-        // 注意：JWT是无状态的，这里只是记录日志
-        // 实际的Token失效需要通过过期时间或者黑名单机制实现
+        $ip = $admin->last_login_ip ?? '';
+        $this->recordLoginLog($admin->id, $admin->username, $ip, '', true, '主动退出');
         return true;
     }
 
@@ -229,26 +232,36 @@ class AuthService
     /**
      * 记录登录日志
      * @param int $adminId 管理员ID
+     * @param string $username 用户名
      * @param string $ip IP地址
+     * @param string $userAgent User-Agent
      * @param bool $success 是否成功
-     * @param string $remark 备注
+     * @param string $failReason 失败原因
      * @return void
      */
-    private function recordLoginLog(int $adminId, string $ip, bool $success = true, string $remark = ''): void
-    {
-        // 这里可以实现登录日志记录功能
-        // 可以记录到数据库或日志文件
-        // 暂时使用简单的日志记录
-        $logData = [
-            'admin_id' => $adminId,
-            'ip' => $ip,
-            'success' => $success,
-            'remark' => $remark,
-            'time' => date('Y-m-d H:i:s'),
-        ];
-
-        // 可以扩展为写入数据库或其他存储方式
-        error_log('Login Log: ' . json_encode($logData, JSON_UNESCAPED_UNICODE));
+    private function recordLoginLog(
+        int $adminId,
+        string $username,
+        string $ip,
+        string $userAgent = '',
+        bool $success = true,
+        string $failReason = ''
+    ): void {
+        try {
+            $loginLogService = new LoginLogService(ModelFactory::login_log());
+            $loginLogService->recordLogin([
+                'admin_id' => $adminId,
+                'username' => $username,
+                'ip' => $ip,
+                'user_agent' => mb_substr($userAgent, 0, 500),
+                'location' => '',
+                'status' => $success ? 1 : 0,
+                'fail_reason' => $failReason,
+                'login_time' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Exception $e) {
+            error_log('LoginLog Error: ' . $e->getMessage());
+        }
     }
 
     /**

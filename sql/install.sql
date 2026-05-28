@@ -340,3 +340,49 @@ INSERT INTO `th_sys_config` (`name`, `key`, `value`, `type`, `options`, `group`,
 ('发件人名称', 'smtp_from_name', 'The Admin', 'text', '', 'email', '发件人显示名称', 50, 1),
 ('是否启用SSL', 'smtp_ssl', '1', 'radio', '{"0":"否","1":"是"}', 'email', '是否启用SSL加密', 60, 1);
 
+-- =====================================================
+-- 12. 登录日志表
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `th_sys_login_log` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
+    `admin_id` BIGINT NOT NULL COMMENT '管理员ID',
+    `username` VARCHAR(50) NOT NULL COMMENT '用户名',
+    `ip` VARCHAR(50) DEFAULT '' COMMENT '登录IP',
+    `user_agent` VARCHAR(500) DEFAULT '' COMMENT 'User-Agent',
+    `location` VARCHAR(200) DEFAULT '' COMMENT '登录地点',
+    `status` TINYINT(1) DEFAULT 1 COMMENT '登录状态（0失败 1成功）',
+    `fail_reason` VARCHAR(255) DEFAULT '' COMMENT '失败原因',
+    `login_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
+
+    INDEX idx_admin_id (admin_id),
+    INDEX idx_username (username),
+    INDEX idx_ip (ip),
+    INDEX idx_status (status),
+    INDEX idx_login_time (login_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='登录日志表';
+
+-- =====================================================
+-- 13. 操作日志表
+-- =====================================================
+CREATE TABLE IF NOT EXISTS `th_sys_operation_log` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
+    `admin_id` BIGINT NOT NULL COMMENT '管理员ID',
+    `username` VARCHAR(50) NOT NULL COMMENT '管理员名称',
+    `module` VARCHAR(50) DEFAULT '' COMMENT '操作模块',
+    `action` VARCHAR(50) DEFAULT '' COMMENT '操作类型',
+    `description` VARCHAR(500) DEFAULT '' COMMENT '操作描述',
+    `request_method` VARCHAR(10) DEFAULT '' COMMENT '请求方法',
+    `request_url` VARCHAR(500) DEFAULT '' COMMENT '请求URL',
+    `request_params` VARCHAR(500) DEFAULT NULL COMMENT '请求参数',
+    `response_code` INT DEFAULT 200 COMMENT '响应状态码',
+    `cost_time` DECIMAL(10,3) DEFAULT 0 COMMENT '消耗时间（秒）',
+    `ip` VARCHAR(50) DEFAULT '' COMMENT '操作IP',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
+
+    INDEX idx_admin_id (admin_id),
+    INDEX idx_module (module),
+    INDEX idx_action (action),
+    INDEX idx_ip (ip),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='操作日志表';
+

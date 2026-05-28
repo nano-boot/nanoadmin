@@ -33,6 +33,7 @@ enum Code: int
     case ADMIN_NOT_FOUND = 40403;        // 管理员不存在
     case PERMISSION_NOT_FOUND = 40404;   // 权限不存在
     case MENU_NOT_FOUND = 40405;         // 菜单不存在
+    case LOG_NOT_FOUND = 40406;          // 日志不存在
     case METHOD_NOT_ALLOWED = 40500;     // 请求方法不允许
     case VALIDATION_ERROR = 40600;       // 数据验证失败
     case DUPLICATE_NAME = 40900;         // 名称已存在
@@ -88,6 +89,8 @@ enum Code: int
             self::MENU_TRANSFORM_ERROR => '菜单数据转换错误',
             self::INVALID_JSON_FORMAT => 'JSON格式错误',
             self::INVALID_MENU_DATA => '菜单数据格式错误',
+
+            self::LOG_NOT_FOUND => '日志不存在',
 
             // 业务资源不存在
             self::MENU_NOT_FOUND => '菜单不存在',
@@ -153,7 +156,8 @@ enum Code: int
             self::ROLE_NOT_FOUND,
             self::ADMIN_NOT_FOUND,
             self::PERMISSION_NOT_FOUND,
-            self::FILE_NOT_FOUND => 404,
+            self::FILE_NOT_FOUND,
+            self::LOG_NOT_FOUND => 404,
 
             // 405方法不允许
             self::METHOD_NOT_ALLOWED => 405,

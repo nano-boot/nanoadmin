@@ -10,6 +10,7 @@ use plugin\theadmin\app\common\JwtUtil;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
+use plugin\theadmin\app\service\LoginLogService;
 
 /**
  * 认证中间件
@@ -79,8 +80,10 @@ class AuthMiddleware implements MiddlewareInterface
             return $handler($request);
 
         } catch (ApiException $e) {
+            $this->recordFailedLogin($request, $e->getMessage());
             return $this->unauthorizedResponse($e->getMessage(), $e->getErrorCode());
         } catch (\Exception $e) {
+            $this->recordFailedLogin($request, '认证失败');
             return $this->unauthorizedResponse('认证失败', Code::UNAUTHORIZED->value);
         }
     }
@@ -140,6 +143,31 @@ class AuthMiddleware implements MiddlewareInterface
     protected function unauthorizedResponse(string $message, int $code): Response
     {
         return R::error($message, $code);
+    }
+
+    /**
+     * 记录认证失败的登录尝试
+     * @param Request $request
+     * @param string $reason
+     * @return void
+     */
+    protected function recordFailedLogin(Request $request, string $reason): void
+    {
+        try {
+            $loginLogService = new LoginLogService(ModelFactory::login_log());
+            $loginLogService->recordLogin([
+                'admin_id' => 0,
+                'username' => '',
+                'ip' => $request->getRealIp() ?? '',
+                'user_agent' => mb_substr($request->header('User-Agent', ''), 0, 500),
+                'location' => '',
+                'status' => 0,
+                'fail_reason' => $reason,
+                'login_time' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Exception $e) {
+            error_log('LoginLog Error: ' . $e->getMessage());
+        }
     }
 
     /**

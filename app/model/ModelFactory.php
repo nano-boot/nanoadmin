@@ -78,6 +78,24 @@ class ModelFactory
     }
 
     /**
+     * 获取登录日志模型实例
+     * @return LoginLog
+     */
+    public static function login_log(): LoginLog
+    {
+        return self::getInstance(LoginLog::class);
+    }
+
+    /**
+     * 获取操作日志模型实例
+     * @return OperationLog
+     */
+    public static function operation_log(): OperationLog
+    {
+        return self::getInstance(OperationLog::class);
+    }
+
+    /**
      * 获取模型实例
      * @param string $className 模型类名
      * @return mixed
