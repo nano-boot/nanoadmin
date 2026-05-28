@@ -316,6 +316,7 @@ class MenuTransformService
      */
     private function getComponentPath(array $menuData): string
     {
+        var_dump($menuData);
         $component = $menuData['component'] ?? '';
         
         // 如果没有指定组件路径，根据菜单类型设置默认值
@@ -324,12 +325,12 @@ class MenuTransformService
             
             switch ($type) {
                 case Menu::TYPE_DIRECTORY:
-                    return 'Layout';
+                    return $menuData["parent_id"]?'':'/index/index';
                 case Menu::TYPE_LINK:
                 case Menu::TYPE_IFRAME:
                     return 'IframeView';
                 default:
-                    return 'Layout';
+                    return '';
             }
         }
 
