@@ -2,7 +2,7 @@
 
 namespace plugin\theadmin\app\middleware;
 
-use plugin\theadmin\app\service\OperationLogService;
+use plugin\theadmin\app\service\LogOperationService;
 use plugin\theadmin\app\model\ModelFactory;
 use Webman\MiddlewareInterface;
 use Webman\Http\Response;
@@ -305,7 +305,7 @@ class OperationLogMiddleware implements MiddlewareInterface
     protected function saveLog(array $logData): void
     {
         try {
-            $operationLogService = new OperationLogService(ModelFactory::operation_log());
+            $operationLogService = new LogOperationService(ModelFactory::log_operation());
             $operationLogService->recordOperation($logData);
         } catch (\Exception $e) {
             error_log('OperationLog Save Error: ' . $e->getMessage());

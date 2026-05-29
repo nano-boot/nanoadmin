@@ -7,7 +7,7 @@ use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\common\JwtUtil;
 use plugin\theadmin\app\model\Admin;
 use plugin\theadmin\app\model\ModelFactory;
-use plugin\theadmin\app\service\LoginLogService;
+use plugin\theadmin\app\service\LogLoginService;
 
 /**
  * 认证服务类
@@ -248,7 +248,7 @@ class AuthService
         string $failReason = ''
     ): void {
         try {
-            $loginLogService = new LoginLogService(ModelFactory::login_log());
+            $loginLogService = new LogLoginService(ModelFactory::log_login());
             $loginLogService->recordLogin([
                 'admin_id' => $adminId,
                 'username' => $username,

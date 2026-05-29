@@ -10,7 +10,7 @@ use plugin\theadmin\app\common\JwtUtil;
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
 use plugin\theadmin\app\model\ModelFactory;
-use plugin\theadmin\app\service\LoginLogService;
+use plugin\theadmin\app\service\LogLoginService;
 
 /**
  * 认证中间件
@@ -154,7 +154,7 @@ class AuthMiddleware implements MiddlewareInterface
     protected function recordFailedLogin(Request $request, string $reason): void
     {
         try {
-            $loginLogService = new LoginLogService(ModelFactory::login_log());
+            $loginLogService = new LogLoginService(ModelFactory::log_login());
             $loginLogService->recordLogin([
                 'admin_id' => 0,
                 'username' => '',

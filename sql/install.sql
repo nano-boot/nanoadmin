@@ -343,7 +343,7 @@ INSERT INTO `th_sys_config` (`name`, `key`, `value`, `type`, `options`, `group`,
 -- =====================================================
 -- 12. 登录日志表
 -- =====================================================
-CREATE TABLE IF NOT EXISTS `th_sys_login_log` (
+CREATE TABLE IF NOT EXISTS `th_sys_log_login` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
     `admin_id` BIGINT NOT NULL COMMENT '管理员ID',
     `username` VARCHAR(50) NOT NULL COMMENT '用户名',
@@ -364,7 +364,7 @@ CREATE TABLE IF NOT EXISTS `th_sys_login_log` (
 -- =====================================================
 -- 13. 操作日志表
 -- =====================================================
-CREATE TABLE IF NOT EXISTS `th_sys_operation_log` (
+CREATE TABLE IF NOT EXISTS `th_sys_log_operation` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
     `admin_id` BIGINT NOT NULL COMMENT '管理员ID',
     `username` VARCHAR(50) NOT NULL COMMENT '管理员名称',

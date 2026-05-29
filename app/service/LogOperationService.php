@@ -3,14 +3,14 @@
 namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\model\OperationLog;
+use plugin\theadmin\app\model\LogOperation;
 
 /**
  * 操作日志服务类
  */
-class OperationLogService extends BaseService
+class LogOperationService extends BaseService
 {
-    public function __construct(OperationLog $model)
+    public function __construct(LogOperation $model)
     {
         parent::__construct($model);
     }
@@ -30,7 +30,7 @@ class OperationLogService extends BaseService
      * @param array $data 日志数据
      * @return OperationLog
      */
-    public function recordOperation(array $data): OperationLog
+    public function recordOperation(array $data): LogOperation
     {
         $data['created_at'] = $data['created_at'] ?? date('Y-m-d H:i:s');
         return $this->model->create($data);

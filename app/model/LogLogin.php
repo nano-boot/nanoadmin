@@ -16,9 +16,9 @@ use Illuminate\Database\Eloquent\Builder;
  * @property string $fail_reason 失败原因
  * @property string $login_time 登录时间
  */
-class LoginLog extends BaseModel
+class LogLogin extends BaseModel
 {
-    protected $table = 'sys_login_log';
+    protected $table = 'sys_log_login';
     protected $primaryKey = 'id';
 
     protected $fillable = [

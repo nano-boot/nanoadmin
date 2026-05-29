@@ -120,12 +120,12 @@ Route::group('/sys/config', function () {
 
 // 登录日志相关路由
 Route::group('/sys/login-log', function () {
-    Route::get('', [plugin\theadmin\app\controller\LoginLogController::class, 'page']);
-    Route::get('/{id}', [plugin\theadmin\app\controller\LoginLogController::class, 'show']);
+    Route::get('', [plugin\theadmin\app\controller\LogLoginController::class, 'page']);
+    Route::get('/{id}', [plugin\theadmin\app\controller\LogLoginController::class, 'show']);
 });
 
 // 操作日志相关路由
 Route::group('/sys/operation-log', function () {
-    Route::get('', [plugin\theadmin\app\controller\OperationLogController::class, 'page']);
-    Route::get('/{id}', [plugin\theadmin\app\controller\OperationLogController::class, 'show']);
+    Route::get('', [plugin\theadmin\app\controller\LogOperationController::class, 'page']);
+    Route::get('/{id}', [plugin\theadmin\app\controller\LogOperationController::class, 'show']);
 });

@@ -3,14 +3,14 @@
 namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\model\LoginLog;
+use plugin\theadmin\app\model\LogLogin;
 
 /**
  * 登录日志服务类
  */
-class LoginLogService extends BaseService
+class LogLoginService extends BaseService
 {
-    public function __construct(LoginLog $model)
+    public function __construct(LogLogin $model)
     {
         parent::__construct($model);
     }
@@ -28,9 +28,9 @@ class LoginLogService extends BaseService
     /**
      * 记录登录日志
      * @param array $data 日志数据
-     * @return LoginLog
+     * @return LogLogin
      */
-    public function recordLogin(array $data): LoginLog
+    public function recordLogin(array $data): LogLogin
     {
         $data['login_time'] = $data['login_time'] ?? date('Y-m-d H:i:s');
         return $this->model->create($data);

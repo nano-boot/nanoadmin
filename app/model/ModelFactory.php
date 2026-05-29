@@ -79,20 +79,20 @@ class ModelFactory
 
     /**
      * 获取登录日志模型实例
-     * @return LoginLog
+     * @return LogLogin
      */
-    public static function login_log(): LoginLog
+    public static function log_login(): LogLogin
     {
-        return self::getInstance(LoginLog::class);
+        return self::getInstance(LogLogin::class);
     }
 
     /**
      * 获取操作日志模型实例
-     * @return OperationLog
+     * @return LogOperation
      */
-    public static function operation_log(): OperationLog
+    public static function log_operation(): LogOperation
     {
-        return self::getInstance(OperationLog::class);
+        return self::getInstance(LogOperation::class);
     }
 
     /**

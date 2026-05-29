@@ -20,9 +20,9 @@ use Illuminate\Database\Eloquent\Builder;
  * @property string $ip 操作IP
  * @property string $created_at 操作时间
  */
-class OperationLog extends BaseModel
+class LogOperation extends BaseModel
 {
-    protected $table = 'sys_operation_log';
+    protected $table = 'sys_log_operation';
     protected $primaryKey = 'id';
 
     protected $fillable = [
