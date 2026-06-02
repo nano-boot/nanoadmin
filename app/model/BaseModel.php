@@ -40,10 +40,7 @@ abstract class BaseModel extends Model
      * 属性默认值
      * @var array
      */
-    protected $attributes = [
-        'status' => true,
-        'deleted' => false,
-    ];
+    protected $attributes = [];
 
     /**
      * 需要转换的属性类型

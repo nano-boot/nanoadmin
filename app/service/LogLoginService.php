@@ -10,6 +10,19 @@ use plugin\theadmin\app\model\LogLogin;
  */
 class LogLoginService extends BaseService
 {
+    /**
+     * 分页查询仅输出以下字段
+     */
+    protected static array $selectFields = [
+        'id',
+        'username',
+        'ip',
+        'location',
+        'status',
+        'login_info',
+        'login_time'
+    ];
+
     public function __construct(LogLogin $model)
     {
         parent::__construct($model);

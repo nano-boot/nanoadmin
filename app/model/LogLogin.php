@@ -13,13 +13,15 @@ use Illuminate\Database\Eloquent\Builder;
  * @property string $user_agent User-Agent
  * @property string $location 登录地点
  * @property int $status 登录状态（0失败 1成功）
- * @property string $fail_reason 失败原因
+ * @property string $login_info 登录信息（成功：登录成功 / 失败：失败原因）
  * @property string $login_time 登录时间
  */
 class LogLogin extends BaseModel
 {
     protected $table = 'sys_log_login';
     protected $primaryKey = 'id';
+
+    public $timestamps = false;
 
     protected $fillable = [
         'admin_id',
@@ -28,8 +30,8 @@ class LogLogin extends BaseModel
         'user_agent',
         'location',
         'status',
-        'fail_reason',
-        'login_time'
+        'login_info',
+        'login_time',
     ];
 
     protected $casts = [

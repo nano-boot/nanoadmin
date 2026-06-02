@@ -351,7 +351,7 @@ CREATE TABLE IF NOT EXISTS `th_sys_log_login` (
     `user_agent` VARCHAR(500) DEFAULT '' COMMENT 'User-Agent',
     `location` VARCHAR(200) DEFAULT '' COMMENT '登录地点',
     `status` TINYINT(1) DEFAULT 1 COMMENT '登录状态（0失败 1成功）',
-    `fail_reason` VARCHAR(255) DEFAULT '' COMMENT '失败原因',
+    `login_info` VARCHAR(255) DEFAULT '' COMMENT '登录信息（成功：登录成功 / 失败：失败原因）',
     `login_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
 
     INDEX idx_admin_id (admin_id),

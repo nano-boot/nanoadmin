@@ -4,6 +4,7 @@ namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
+use plugin\theadmin\app\common\IpLocation;
 use plugin\theadmin\app\common\JwtUtil;
 use plugin\theadmin\app\model\Admin;
 use plugin\theadmin\app\model\ModelFactory;
@@ -52,7 +53,7 @@ class AuthService
         ]);
 
         // 记录登录日志
-        $this->recordLoginLog($admin->id, $admin->username, $ip, $userAgent, true);
+        $this->recordLoginLog($admin->id, $admin->username, $ip, $userAgent, true, '登录成功');
 
         return [
             'user' => [
@@ -230,13 +231,14 @@ class AuthService
     }
 
     /**
-     * 记录登录日志
+     * 记录登录日志（伪异步：直接写入 + 异常捕获，不阻塞登录流程）
+     *
      * @param int $adminId 管理员ID
      * @param string $username 用户名
      * @param string $ip IP地址
      * @param string $userAgent User-Agent
      * @param bool $success 是否成功
-     * @param string $failReason 失败原因
+     * @param string $loginInfo 登录信息（成功：登录成功 / 失败：失败原因）
      * @return void
      */
     private function recordLoginLog(
@@ -245,18 +247,21 @@ class AuthService
         string $ip,
         string $userAgent = '',
         bool $success = true,
-        string $failReason = ''
+        string $loginInfo = ''
     ): void {
         try {
+            $ipLocation = new IpLocation();
+            $location = $ipLocation->get($ip);
+
             $loginLogService = new LogLoginService(ModelFactory::log_login());
             $loginLogService->recordLogin([
                 'admin_id' => $adminId,
                 'username' => $username,
                 'ip' => $ip,
                 'user_agent' => mb_substr($userAgent, 0, 500),
-                'location' => '',
+                'location' => $location,
                 'status' => $success ? 1 : 0,
-                'fail_reason' => $failReason,
+                'login_info' => $loginInfo,
                 'login_time' => date('Y-m-d H:i:s'),
             ]);
         } catch (\Exception $e) {

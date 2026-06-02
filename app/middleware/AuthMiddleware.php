@@ -3,6 +3,7 @@
 namespace plugin\theadmin\app\middleware;
 
 use plugin\theadmin\app\common\R;
+use plugin\theadmin\app\common\IpLocation;
 use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
@@ -146,7 +147,8 @@ class AuthMiddleware implements MiddlewareInterface
     }
 
     /**
-     * 记录认证失败的登录尝试
+     * 记录认证失败的登录尝试（伪异步：直接写入 + 异常捕获）
+     *
      * @param Request $request
      * @param string $reason
      * @return void
@@ -154,15 +156,19 @@ class AuthMiddleware implements MiddlewareInterface
     protected function recordFailedLogin(Request $request, string $reason): void
     {
         try {
+            $ip = $request->getRealIp() ?? '';
+            $ipLocation = new IpLocation();
+            $location = $ipLocation->get($ip);
+
             $loginLogService = new LogLoginService(ModelFactory::log_login());
             $loginLogService->recordLogin([
                 'admin_id' => 0,
                 'username' => '',
-                'ip' => $request->getRealIp() ?? '',
+                'ip' => $ip,
                 'user_agent' => mb_substr($request->header('User-Agent', ''), 0, 500),
-                'location' => '',
+                'location' => $location,
                 'status' => 0,
-                'fail_reason' => $reason,
+                'login_info' => $reason,
                 'login_time' => date('Y-m-d H:i:s'),
             ]);
         } catch (\Exception $e) {
