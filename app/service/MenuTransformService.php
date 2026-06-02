@@ -316,7 +316,6 @@ class MenuTransformService
      */
     private function getComponentPath(array $menuData): string
     {
-        var_dump($menuData);
         $component = $menuData['component'] ?? '';
         
         // 如果没有指定组件路径，根据菜单类型设置默认值
