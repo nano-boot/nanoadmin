@@ -6,10 +6,12 @@ namespace plugin\theadmin\app\common;
  * IP 归属地查询工具
  *
  * 支持两种模式：
- * 1. 在线模式（默认）：调用 ip-api.com（免费，无 Key，适合内网开发/小并发）
- * 2. 本地模式：接入 ip2region 等离线库（生产环境推荐）
+ * 1. 在线模式（默认）：调用 ip-api.com
+ * 2. 本地模式：接入 ip2region 等离线库
  *
- * 切换方式：设置 IPLOCATION_DRIVER 环境变量或修改 defaultDriver
+ * 切换方式：设置 IPLOCATION_DRIVER 环境变量
+ *
+ * 本地模式建议将 ip2region.xdb 放到 runtime/ip2region/ip2region.xdb
  */
 class IpLocation
 {
@@ -20,13 +22,13 @@ class IpLocation
     protected string $driver = 'online';
 
     /**
-     * 在线 API 地址（ip-api.com，免费 45 req/min，支持 IPv4/IPv6）
+     * 在线 API 地址（ip-api.com）
      * @var string
      */
     protected const ONLINE_API = 'http://ip-api.com/json/%s?fields=country,regionName,city,isp,status,message';
 
     /**
-     * 离线库路径（ip2region.db，下载至 runtime/ 目录后启用）
+     * 本地库默认路径
      * @var string
      */
     protected const LOCAL_DB_PATH = '';
@@ -43,7 +45,7 @@ class IpLocation
      * 查询 IP 归属地
      *
      * @param string $ip IP 地址
-     * @return string 归属地字符串，如 "中国 广东省 深圳市 电信"，失败返回空字符串
+     * @return string 归属地字符串，失败返回空字符串
      */
     public function get(string $ip): string
     {
@@ -90,17 +92,14 @@ class IpLocation
             $data['country'] ?? '',
             $data['regionName'] ?? '',
             $data['city'] ?? '',
+            $data['isp'] ?? '',
         ]);
 
-        if (empty($parts)) {
-            return '';
-        }
-
-        return implode(' ', $parts);
+        return empty($parts) ? '' : implode(' ', $parts);
     }
 
     /**
-     * 本地离线查询（需要预先配置 ip2region 等本地库）
+     * 本地离线查询（优先使用 ip2region xdb）
      *
      * @param string $ip
      * @return string
@@ -113,9 +112,64 @@ class IpLocation
             return '';
         }
 
-        // TODO: 接入 ip2region 本地库，示例：
-        // return IpLocationLocal::search($dbPath, $ip);
+        if (class_exists('Ip2Region\Ip2Region')) {
+            try {
+                $ip2region = new \Ip2Region\Ip2Region($dbPath);
+                $result = $ip2region->btreeSearch($ip);
+
+                if (is_array($result)) {
+                    $region = $result['region'] ?? $result['regionStr'] ?? $result['region_str'] ?? '';
+                    if (!empty($region)) {
+                        return $this->normalizeRegion((string) $region);
+                    }
+                }
+
+                if (is_string($result) && !empty($result)) {
+                    return $this->normalizeRegion($result);
+                }
+            } catch (\Throwable $e) {
+                return '';
+            }
+        }
+
         return '';
+    }
+
+    /**
+     * 归一化 ip2region 返回值
+     *
+     * @param string $region
+     * @return string
+     */
+    protected function normalizeRegion(string $region): string
+    {
+        $region = trim($region);
+        if ($region === '') {
+            return '';
+        }
+
+        $parts = array_filter(explode('|', $region), static fn ($value) => $value !== '' && $value !== '0' && $value !== '内网IP');
+        if (empty($parts)) {
+            return '';
+        }
+
+        $filtered = [];
+        foreach ($parts as $part) {
+            if ($part === 'China' || $part === '中国') {
+                $filtered[] = '中国';
+                continue;
+            }
+
+            if (in_array($part, ['0', '内网IP', '内网'], true)) {
+                continue;
+            }
+
+            $filtered[] = $part;
+        }
+
+        $filtered = array_values(array_unique($filtered));
+
+        return implode(' ', $filtered);
     }
 
     /**
