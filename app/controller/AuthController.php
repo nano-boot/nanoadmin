@@ -3,9 +3,9 @@
 namespace plugin\theadmin\app\controller;
 
 use plugin\theadmin\app\common\ApiException;
+use plugin\theadmin\app\common\JwtUtil;
 use plugin\theadmin\app\common\R;
 use plugin\theadmin\app\service\AuthService;
-use plugin\theadmin\app\validator\AdminValidator;
 use plugin\theadmin\app\validator\AuthValidator;
 use support\Request;
 use support\Response;
@@ -100,10 +100,89 @@ class AuthController
     public function refresh(Request $request): Response
     {
         try {
-            $result = $this->authService->refreshToken($request);
+            $refreshToken = $request->post('refresh_token', '');
+            if (empty($refreshToken)) {
+                return R::error('刷新Token不能为空');
+            }
+            $result = $this->authService->refreshToken($refreshToken);
             return R::success($result, 'Token刷新成功');
         } catch (\Exception $e) {
             return R::error($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取当前用户的权限列表
+     * 
+     * @param Request $request
+     * @return Response
+     */
+    public function permissions(Request $request): Response
+    {
+        try {
+            $admin = $request->admin;
+            if (!$admin) {
+                return R::error('用户未登录', 401);
+            }
+            
+            $permissions = $this->authService->getAdminPermissions($admin->id);
+            
+            return R::success($permissions, '获取权限列表成功');
+        } catch (\Exception $e) {
+            return R::error($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取当前用户的菜单列表
+     * 
+     * @param Request $request
+     * @return Response
+     */
+    public function menus(Request $request): Response
+    {
+        try {
+            $admin = $request->admin;
+            if (!$admin) {
+                return R::error('用户未登录', 401);
+            }
+            
+            $menus = $this->authService->getAdminMenus($admin->id);
+            
+            return R::success($menus, '获取菜单列表成功');
+        } catch (\Exception $e) {
+            return R::error($e->getMessage());
+        }
+    }
+
+    /**
+     * 检查 Token 有效性
+     * 
+     * @param Request $request
+     * @return Response
+     */
+    public function check(Request $request): Response
+    {
+        try {
+            $token = $request->post('token', '');
+            if (empty($token)) {
+                return R::error('Token不能为空');
+            }
+            
+            $payload = JwtUtil::verifyToken($token);
+            $remainingTime = JwtUtil::getTokenRemainingTime($token);
+            
+            return R::success([
+                'valid' => true,
+                'remaining_time' => $remainingTime,
+                'user_id' => $payload['user_id'] ?? null,
+            ], '检查成功');
+        } catch (\Exception $e) {
+            return R::success([
+                'valid' => false,
+                'remaining_time' => -1,
+                'error' => $e->getMessage(),
+            ], 'Token无效');
         }
     }
 }

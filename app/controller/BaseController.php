@@ -27,19 +27,18 @@ abstract class BaseController
 
     /**
      * 获取详情
-     * @param Request $request
+     * @param int $id
      * @return Response
      */
-    public function show(Request $request): Response
+    public function show(int $id = 0): Response
     {
         try {
-            $id = $request->get('id', 0);
-            $data = $this->getService()->{'get' . $this->getModelName() . 'ById'}($id);
-            return R::success($data, '获取' . $this->getModelName() . '详情成功');
+            $data = $this->getService()->getById($id);
+            return R::success($data, '获取详情成功');
         } catch (ApiException $e) {
             return R::error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
-            return R::error('获取' . $this->getModelName() . '详情失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+            return R::error('获取详情失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
         }
     }
 

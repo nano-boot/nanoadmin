@@ -15,15 +15,22 @@ use Illuminate\Database\Eloquent\Builder;
  * @property string $request_method 请求方法
  * @property string $request_url 请求URL
  * @property string $request_params 请求参数
- * @property int $response_code 响应状态码
+ * @property int $response_code 业务状态码
+ * @property string $response_msg 响应消息
+ * @property int $http_status HTTP状态码
  * @property float $cost_time 消耗时间（秒）
  * @property string $ip 操作IP
  * @property string $created_at 操作时间
  */
 class LogOperation extends BaseModel
 {
+    public $timestamps = false;
+
     protected $table = 'sys_log_operation';
     protected $primaryKey = 'id';
+
+    protected $attributes = [
+    ];
 
     protected $fillable = [
         'admin_id',
@@ -35,6 +42,8 @@ class LogOperation extends BaseModel
         'request_url',
         'request_params',
         'response_code',
+        'response_msg',
+        'http_status',
         'cost_time',
         'ip',
         'created_at'
@@ -43,13 +52,14 @@ class LogOperation extends BaseModel
     protected $casts = [
         'admin_id' => 'integer',
         'response_code' => 'integer',
+        'http_status' => 'integer',
         'cost_time' => 'float',
         'created_at' => 'datetime',
     ];
 
     protected static array $searchLikeFields = ['username', 'module', 'action', 'description', 'ip'];
-    protected static array $searchEqualFields = ['admin_id', 'module', 'action', 'request_method', 'response_code'];
-    protected static array $searchKeywordFields = ['username', 'description', 'request_url'];
+    protected static array $searchEqualFields = ['admin_id', 'module', 'action', 'request_method', 'response_code', 'http_status'];
+    protected static array $searchKeywordFields = ['username', 'description', 'request_url', 'response_msg'];
     protected static array $searchRangeFields = ['created_at'];
 
     public function handleSearch(Builder $query, array $params): Builder

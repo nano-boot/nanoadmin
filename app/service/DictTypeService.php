@@ -177,15 +177,8 @@ class DictTypeService extends BaseService
         return $data;
     }
 
-    /**
-     * 按 ID 获取字典类型（别名，供 BaseController 动态调用）
-     * @param int $id 字典类型ID
-     * @return array|null
-     */
-    public function getDictTypeById(int $id): ?array
-    {
-        return $this->getByIdFromCache($id);
-    }
+
+
 
     /**
      * 按编码获取字典类型（带缓存）

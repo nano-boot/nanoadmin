@@ -14,6 +14,20 @@ use plugin\theadmin\app\model\BaseModel;
 abstract class BaseService
 {
     /**
+     * 缓存数据表字段存在性判断结果
+     * key: connectionName.table.column
+     * value: bool
+     */
+    protected static array $columnExistsCache = [];
+
+    /**
+     * 分页查询输出字段，默认返回全部字段。
+     * 子类可覆盖此属性来限制输出字段，例如：
+     *   protected static array $selectFields = ['id', 'username', 'created_at'];
+     */
+    protected static array $selectFields = ['*'];
+
+    /**
      * 模型实例
      * @var BaseModel
      */
@@ -46,11 +60,31 @@ abstract class BaseService
      */
     public function getPage(array $params = []): LengthAwarePaginator
     {
-
         $page = max(1, (int)($params['page'] ?? 1));
         $limit = min(1000, max(1, (int)($params['limit'] ?? 15)));
-      
+
         $query = $this->model->handleSearch($this->model->query(), $params);
+
+        // 按子类（或基类默认）配置的字段列表过滤输出
+        $query->select(static::$selectFields);
+
+        // 默认排序：优先使用模型约定/配置的默认排序；未配置时再做字段存在性兜底
+        $defaultOrders = $this->model::getDefaultOrder();
+        if (!empty($defaultOrders)) {
+            foreach ($defaultOrders as $order) {
+                $field = $order[0] ?? null;
+                if (!$field) {
+                    continue;
+                }
+                $direction = strtolower((string)($order[1] ?? 'asc'));
+                $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : 'asc';
+
+                $query->orderBy((string) $field, $direction);
+            }
+        } else {
+            $query->orderByDesc('id');
+        }
+
         return $query->paginate($limit, ['*'], 'page', $page);
     }
 
@@ -234,5 +268,25 @@ abstract class BaseService
     protected function getBatchDeleteFailedMessage(): string
     {
         return '批量删除记录失败';
+    }
+
+    /**
+     * 判断当前模型对应表是否存在某字段（带静态缓存，减少 information_schema 查询）
+     */
+    protected function tableHasColumn(string $column): bool
+    {
+        $connection = $this->model->getConnection();
+        $connectionName = method_exists($connection, 'getName') ? (string) $connection->getName() : (string) $connection->getConfig('name');
+        $table = $this->model->getTable();
+
+        $cacheKey = $connectionName . '.' . $table . '.' . $column;
+        if (array_key_exists($cacheKey, static::$columnExistsCache)) {
+            return static::$columnExistsCache[$cacheKey];
+        }
+
+        $exists = $connection->getSchemaBuilder()->hasColumn($table, $column);
+        static::$columnExistsCache[$cacheKey] = $exists;
+
+        return $exists;
     }
 }

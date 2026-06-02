@@ -14,6 +14,23 @@ use Illuminate\Support\Arr;
 abstract class BaseModel extends Model
 {
     /**
+     * 列表默认排序规则（约定/配置化）
+     *
+     * 子类可覆盖此属性来声明默认排序字段；BaseService 会优先使用它，避免运行时查表结构。
+     *
+     * 示例：
+     *  protected static array $defaultOrder = [
+     *      ['id', 'desc'],
+     *  ];
+     *
+     * 也可以禁用默认排序：
+     *  protected static array $defaultOrder = [];
+     */
+    protected static array $defaultOrder = [
+        ['id', 'desc'],
+    ];
+
+    /**
      * 时间戳格式
      * @var string
      */
@@ -72,6 +89,10 @@ abstract class BaseModel extends Model
         parent::boot();
 
         static::creating(function (BaseModel $model) {
+            if ($model->timestamps === false) {
+                return;
+            }
+
             $now = date('Y-m-d H:i:s');
             if (!isset($model->created_at)) {
                 $model->created_at = $now;
@@ -82,6 +103,10 @@ abstract class BaseModel extends Model
         });
 
         static::updating(function (BaseModel $model) {
+            if ($model->timestamps === false) {
+                return;
+            }
+
             $model->updated_at = date('Y-m-d H:i:s');
         });
     }
@@ -160,6 +185,22 @@ abstract class BaseModel extends Model
     public static function setSearchKeywordFields(array $fields): void
     {
         static::$searchKeywordFields = $fields;
+    }
+
+    /**
+     * 获取列表默认排序规则（约定/配置化）
+     */
+    public static function getDefaultOrder(): array
+    {
+        return static::$defaultOrder ?? [];
+    }
+
+    /**
+     * 设置列表默认排序规则（运行时配置）
+     */
+    public static function setDefaultOrder(array $orders): void
+    {
+        static::$defaultOrder = $orders;
     }
 
     /**

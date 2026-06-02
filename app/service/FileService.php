@@ -216,16 +216,8 @@ class FileService extends BaseService
         return parent::batchDelete($ids);
     }
 
-    /**
-     * 根据ID获取文件详情
-     * @param int $id 文件ID
-     * @return File
-     * @throws ApiException
-     */
-    public function getFileById(int $id): File
-    {
-        return $this->model->find($id) ?? throw new ApiException(Code::PARAMETER_ERROR, '文件不存在');
-    }
+
+
 
     /**
      * 获取文件统计信息

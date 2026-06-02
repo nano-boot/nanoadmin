@@ -219,14 +219,12 @@ class MenuController
     /**
      * 获取菜单详情
      * GET /api/menus/{id}
-     * @param Request $request
+     * @param int $id
      * @return Response
      */
-    public function show(Request $request): Response
+    public function show(int $id = 0): Response
     {
         try {
-            $id = (int)$request->get('id', 0);
-            
             if ($id <= 0) {
                 return $this->error(Code::PARAMETER_ERROR, '菜单ID无效');
             }

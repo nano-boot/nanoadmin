@@ -52,13 +52,12 @@ class PermissionController
     /**
      * 获取权限详情
      * GET /sys/permissions/{id}
-     * @param Request $request
+     * @param int $id
      * @return Response
      */
-    public function show(Request $request)
+    public function show(int $id = 0)
     {
         try {
-            $id = (int)$request->get('id', 0);
             
             if ($id <= 0) {
                 return R::error(Code::PARAMETER_ERROR, '权限ID无效');

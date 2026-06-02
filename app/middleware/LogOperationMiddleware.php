@@ -12,7 +12,7 @@ use Webman\Http\Request;
  * 操作日志中间件
  * 记录所有已认证接口的访问日志
  */
-class OperationLogMiddleware implements MiddlewareInterface
+class LogOperationMiddleware implements MiddlewareInterface
 {
     /**
      * 不记录日志的路由（支持前缀匹配）
@@ -112,8 +112,11 @@ class OperationLogMiddleware implements MiddlewareInterface
             // 获取请求参数
             $requestParams = $this->getRequestParams($request);
 
-            // 获取响应码（从 JSON body 中解析）
-            $responseCode = $this->getResponseCode($response);
+            // 获取响应数据（从 JSON body 中解析业务 code 和 msg）
+            $responseData = $this->getResponseData($response);
+
+            // 获取 HTTP status
+            $httpStatus = $this->getHttpStatus($response);
 
             // 构建日志数据
             $logData = [
@@ -125,7 +128,9 @@ class OperationLogMiddleware implements MiddlewareInterface
                 'request_method' => $method,
                 'request_url' => $path,
                 'request_params' => $requestParams,
-                'response_code' => $responseCode,
+                'response_code' => $responseData['code'],
+                'response_msg' => $responseData['msg'],
+                'http_status' => $httpStatus,
                 'cost_time' => $costTime,
                 'ip' => $request->getRealIp() ?? '',
                 'created_at' => date('Y-m-d H:i:s'),
@@ -139,20 +144,48 @@ class OperationLogMiddleware implements MiddlewareInterface
     }
 
     /**
-     * 从响应体中解析业务状态码
+     * 从响应体中解析业务状态码和消息
      * @param Response $response
-     * @return int
+     * @return array ['code' => int, 'msg' => string]
      */
-    protected function getResponseCode(Response $response): int
+    protected function getResponseData(Response $response): array
     {
+        $code = 20000;
+        $msg = '';
+
         $body = $response->rawBody();
         if ($body) {
             $data = json_decode($body, true);
             if (isset($data['code'])) {
-                return (int) $data['code'];
+                $code = (int) $data['code'];
+            }
+            if (isset($data['msg'])) {
+                $msg = (string) $data['msg'];
             }
         }
-        return 200;
+
+        return ['code' => $code, 'msg' => $msg];
+    }
+
+    /**
+     * 从响应体中解析业务状态码（兼容方法）
+     * @param Response $response
+     * @return int
+     * @deprecated 使用 getResponseData() 替代
+     */
+    protected function getResponseCode(Response $response): int
+    {
+        return $this->getResponseData($response)['code'];
+    }
+
+    /**
+     * 获取 HTTP 状态码
+     * @param Response $response
+     * @return int
+     */
+    protected function getHttpStatus(Response $response): int
+    {
+        return $response->getStatusCode();
     }
 
     /**

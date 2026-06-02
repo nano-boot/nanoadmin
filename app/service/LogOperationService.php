@@ -10,6 +10,23 @@ use plugin\theadmin\app\model\LogOperation;
  */
 class LogOperationService extends BaseService
 {
+    /**
+     * 分页查询仅输出以下字段
+     */
+    protected static array $selectFields = [
+        'id',
+        'username',
+        'module',
+        'action',
+        'request_method',
+        'request_url',
+        'response_code',
+        'http_status',
+        'cost_time',
+        'ip',
+        'created_at'
+    ];
+
     public function __construct(LogOperation $model)
     {
         parent::__construct($model);
@@ -28,7 +45,7 @@ class LogOperationService extends BaseService
     /**
      * 记录操作日志
      * @param array $data 日志数据
-     * @return OperationLog
+     * @return LogOperation
      */
     public function recordOperation(array $data): LogOperation
     {

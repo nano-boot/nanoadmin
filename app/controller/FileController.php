@@ -65,18 +65,13 @@ class FileController extends BaseController
     /**
      * 获取文件详情
      * GET /sys/files/{id}
-     * @param Request $request
+     * @param int $id
      * @return Response
      */
-    public function show(Request $request): Response
+    public function show(int $id = 0): Response
     {
         try {
-            // 从路由参数获取ID
-            $id = (int)$request->get('id', 0);
-            $validator = new FileValidator();
-            $validator->validateId($id);
-
-            $file = $this->fileService->getFileById($id);
+            $file = $this->fileService->getById($id);
             return R::success($file, '获取文件详情成功');
 
         } catch (ApiException $e) {

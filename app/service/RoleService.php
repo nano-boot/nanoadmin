@@ -77,12 +77,12 @@ class RoleService extends BaseService
     }
 
     /**
-     * 根据ID获取角色详情
+     * 根据ID获取角色详情（含权限和菜单信息）
      * @param int $id 角色ID
      * @return Role
      * @throws ApiException
      */
-    public function getRoleById(int $id): Role
+    public function getById(int $id): Role
     {
         return $this->model->with(['permissions', 'menus'])->find($id) ?? throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
     }
