@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * 权限模型
  * @property int $id
  * @property string $name
- * @property string $mark
+     * @property string $code
  * @property string $resource
  * @property string $action
  * @property string $description
@@ -38,7 +38,7 @@ class Permission extends BaseModel
      */
     protected $fillable = [
         'name',
-        'mark',
+        'code',
         'resource',
         'action',
         'description',
@@ -84,9 +84,9 @@ class Permission extends BaseModel
             $query->where('name', 'like', '%' . $where['name'] . '%');
         }
 
-        // 支持权限标识搜索
-        if (!empty($where['mark'])) {
-            $query->where('mark', 'like', '%' . $where['mark'] . '%');
+        // 支持权限编码搜索
+        if (!empty($where['code'])) {
+            $query->where('code', 'like', '%' . $where['code'] . '%');
         }
 
         // 支持资源类型筛选
@@ -129,8 +129,8 @@ class Permission extends BaseModel
      */
     public function createPermission(array $data): Permission|bool
     {
-        // 检查权限标识是否已存在
-        if ($this->where('mark', $data['mark'])->exists()) {
+        // 检查权限编码是否已存在
+        if ($this->where('code', $data['code'])->exists()) {
             return false;
         }
 
@@ -150,9 +150,9 @@ class Permission extends BaseModel
      */
     public function updatePermission(int $id, array $data): bool
     {
-        // 检查权限标识是否已存在（排除自己）
-        if (isset($data['mark'])) {
-            $exists = $this->where('mark', $data['mark'])
+        // 检查权限编码是否已存在（排除自己）
+        if (isset($data['code'])) {
+            $exists = $this->where('code', $data['code'])
                 ->where('id', '!=', $id)
                 ->exists();
 
@@ -180,15 +180,13 @@ class Permission extends BaseModel
     }
 
     /**
-     * 验证权限标识格式
-     * @param string $mark 权限标识
+     * 验证权限编码格式
+     * @param string $code 权限编码
      * @return bool
      */
-    public static function validateMark(string $mark): bool
+    public static function validateCode(string $code): bool
     {
-        // 权限标识格式：resource:action 或 resource:action:detail
-        // 例如：user:create, user:update, user:delete, user:view:profile
-        return preg_match('/^[a-zA-Z][a-zA-Z0-9_]*:[a-zA-Z][a-zA-Z0-9_]*(?::[a-zA-Z][a-zA-Z0-9_]*)?$/', $mark);
+        return preg_match('/^[a-zA-Z][a-zA-Z0-9_]*:[a-zA-Z][a-zA-Z0-9_]*(?::[a-zA-Z][a-zA-Z0-9_]*)?$/', $code);
     }
 
     /**
@@ -359,7 +357,7 @@ class Permission extends BaseModel
 
             $tree[$resource]['children'][] = [
                 'id' => $permission->id,
-                'mark' => $permission->mark,
+                'code' => $permission->code,
                 'name' => $permission->name,
                 'resource' => $permission->resource,
                 'action' => $permission->action,
@@ -372,19 +370,18 @@ class Permission extends BaseModel
 
     /**
      * 批量检查权限
-     * @param array $marks 权限标识数组
+     * @param array $codes 权限编码数组
      * @param int $adminId 管理员ID（可选）
      * @return array 返回权限检查结果
      */
-    public function batchCheck(array $marks, int $adminId = 0): array
+    public function batchCheck(array $codes, int $adminId = 0): array
     {
         $result = [];
 
-        foreach ($marks as $mark) {
-            $result[$mark] = false;
+        foreach ($codes as $code) {
+            $result[$code] = false;
 
-            // 检查权限是否存在且启用
-            $permission = $this->where('mark', $mark)
+            $permission = $this->where('code', $code)
                 ->where('status', 1)
                 ->where('deleted', false)
                 ->first();
@@ -394,14 +391,12 @@ class Permission extends BaseModel
             }
 
             if ($adminId > 0) {
-                // 检查指定管理员是否有此权限
                 $admin = Admin::find($adminId);
-                if ($admin && $admin->hasPermission($mark)) {
-                    $result[$mark] = true;
+                if ($admin && $admin->hasPermission($code)) {
+                    $result[$code] = true;
                 }
             } else {
-                // 只检查权限是否存在
-                $result[$mark] = true;
+                $result[$code] = true;
             }
         }
 
@@ -409,37 +404,24 @@ class Permission extends BaseModel
     }
 
     /**
-     * 获取启用的权限列表（用于下拉选择）
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    public function getEnabledList()
-    {
-        return $this->where('status', 1)
-            ->where('deleted', false)
-            ->orderBy('sort', 'asc')
-            ->orderBy('id', 'desc')
-            ->get();
-    }
-
-    /**
-     * 根据权限标识获取权限信息
-     * @param string $mark 权限标识
+     * 根据权限编码获取权限信息
+     * @param string $code 权限编码
      * @return static|null
      */
-    public function getByMark(string $mark): ?Permission
+    public function getByCode(string $code): ?Permission
     {
-        return $this->where('mark', $mark)->first();
+        return $this->where('code', $code)->first();
     }
 
     /**
-     * 检查权限标识是否符合RESTful规范
-     * @param string $mark 权限标识
+     * 检查权限编码是否符合RESTful规范
+     * @param string $code 权限编码
      * @return bool
      */
-    public static function isRestfulMark(string $mark): bool
+    public static function isRestfulCode(string $code): bool
     {
         $restfulActions = ['index', 'show', 'create', 'store', 'edit', 'update', 'destroy'];
-        $parts = explode(':', $mark);
+        $parts = explode(':', $code);
 
         if (count($parts) < 2) {
             return false;
@@ -449,12 +431,12 @@ class Permission extends BaseModel
     }
 
     /**
-     * 生成RESTful权限标识
+     * 生成RESTful权限编码
      * @param string $resource 资源名称
      * @param string $action 操作名称
      * @return string
      */
-    public static function generateRestfulMark(string $resource, string $action): string
+    public static function generateRestfulCode(string $resource, string $action): string
     {
         return strtolower($resource) . ':' . strtolower($action);
     }

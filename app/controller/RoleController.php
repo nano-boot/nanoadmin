@@ -94,17 +94,17 @@ class RoleController extends BaseController
         if ($id <= 0) {
             return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
         }   
-        // 获取菜单ID和权限标识
+        // 获取菜单ID和权限编码
         $menuIds = $request->post('menuIds', []);
-        $authMarks = $request->post('authMarks', []);
+        $authCodes = $request->post('authCodes', []);
         
         // 验证数据格式
         if (!is_array($menuIds)) {
             return R::error('菜单ID列表格式错误', Code::PARAMETER_ERROR->value);
         }
         
-        if (!is_array($authMarks)) {
-            return R::error('权限标识列表格式错误', Code::PARAMETER_ERROR->value);
+        if (!is_array($authCodes)) {
+            return R::error('权限编码列表格式错误', Code::PARAMETER_ERROR->value);
         }
 
         // 转换菜单ID为整数数组
@@ -113,15 +113,15 @@ class RoleController extends BaseController
             return $id > 0;
         });
         
-        // 过滤权限标识（确保是字符串）
-        $authMarks = array_filter($authMarks, function($mark) {
-            return is_string($mark) && !empty($mark);
+        // 过滤权限编码（确保是字符串）
+        $authCodes = array_filter($authCodes, function($code) {
+            return is_string($code) && !empty($code);
         });
         
         // 调用服务层
         $result = $this->roleService->assignPermissions($id, [
             'menuIds' => array_values($menuIds),
-            'authMarks' => array_values($authMarks)
+            'authCodes' => array_values($authCodes)
         ]);
         
         return R::data($result, '分配权限成功');

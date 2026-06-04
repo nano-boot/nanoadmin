@@ -164,9 +164,9 @@ class RoleService extends BaseService
     }
 
     /**
-     * 为角色分配权限（接收菜单ID和权限标识）
+     * 为角色分配权限（接收菜单ID和权限编码）
      * @param int $roleId 角色ID
-     * @param array $data { menuIds: int[], authMarks: string[] }
+     * @param array $data { menuIds: int[], authCodes: string[] }
      * @return bool
      * @throws ApiException
      */
@@ -182,7 +182,7 @@ class RoleService extends BaseService
         }
         
         $menuIds = $data['menuIds'] ?? [];
-        $authMarks = $data['authMarks'] ?? [];
+        $authCodes = $data['authCodes'] ?? [];
         
         // 验证菜单是否存在
         if (!empty($menuIds)) {
@@ -198,11 +198,10 @@ class RoleService extends BaseService
             }
         }
         
-        // 通过 authMark 查找权限ID
         $permissionIds = [];
-        if (!empty($authMarks)) {
+        if (!empty($authCodes)) {
             $permissionModel = ModelFactory::permission();
-            $permissions = $permissionModel->whereIn('mark', $authMarks)
+            $permissions = $permissionModel->whereIn('code', $authCodes)
                 ->where('status', true)
                 ->get();
             
@@ -210,33 +209,28 @@ class RoleService extends BaseService
                 $permissionIds[] = $permission->id;
             }
             
-            $foundMarks = $permissions->pluck('mark')->toArray();
-            $invalidMarks = array_diff($authMarks, $foundMarks);
-            if (!empty($invalidMarks)) {
-                throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在: ' . implode(',', $invalidMarks));
+            $foundCodes = $permissions->pluck('code')->toArray();
+            $invalidCodes = array_diff($authCodes, $foundCodes);
+            if (!empty($invalidCodes)) {
+                throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在: ' . implode(',', $invalidCodes));
             }
         }
         
         try {
-            // 开始事务
             \support\Db::beginTransaction();
             
-            // 分配菜单
             if (method_exists($role, 'assignMenus')) {
                 $role->assignMenus($menuIds);
             }
             
-            // 分配权限
             if (method_exists($role, 'assignPermissions')) {
                 $role->assignPermissions($permissionIds);
             }
             
-            // 提交事务
             \support\Db::commit();
             
             return true;
         } catch (\Exception $e) {
-            // 回滚事务
             \support\Db::rollBack();
             throw new ApiException(Code::SYSTEM_ERROR, '分配权限失败: ' . $e->getMessage());
         }
@@ -282,36 +276,33 @@ class RoleService extends BaseService
     }
 
     /**
-     * 获取角色权限列表（返回ID和标识用于前端选中）
+     * 获取角色权限列表（返回ID和编码用于前端选中）
      * @param int $roleId 角色ID
-     * @return array { menuIds: int[], authMarks: string[] }
+     * @return array { menuIds: int[], authCodes: string[] }
      * @throws ApiException
      */
     public function getRolePermissions(int $roleId): array
     {
-        // 检查角色是否存在
         $role = $this->model->with(['menus', 'permissions'])->find($roleId);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
-        // 收集菜单ID（不包含权限）
         $menuIds = [];
         foreach ($role->menus as $menu) {
             $menuIds[] = $menu->id;
         }
         
-        // 收集权限标识（authMark格式：menu:action）
-        $authMarks = [];
+        $authCodes = [];
         foreach ($role->permissions as $permission) {
-            if (!empty($permission->mark)) {
-                $authMarks[] = $permission->mark;
+            if (!empty($permission->code)) {
+                $authCodes[] = $permission->code;
             }
         }
         
         return [
             'menuIds' => array_unique(array_values($menuIds)),
-            'authMarks' => array_unique(array_values($authMarks))
+            'authCodes' => array_unique(array_values($authCodes))
         ];
     }
 

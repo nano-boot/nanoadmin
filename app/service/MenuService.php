@@ -4,6 +4,7 @@ namespace plugin\theadmin\app\service;
 
 use plugin\theadmin\app\common\ApiException;
 use plugin\theadmin\app\common\Code;
+use plugin\theadmin\app\model\Admin;
 use plugin\theadmin\app\model\Menu;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -19,12 +20,19 @@ class MenuService
     private Menu $model;
 
     /**
+     * 管理员模型实例
+     * @var Admin
+     */
+    private Admin $adminModel;
+
+    /**
      * 构造函数
      * @param Menu $model 菜单模型实例
      */
     public function __construct(Menu $model)
     {
         $this->model = $model;
+        $this->adminModel = new Admin();
     }
     /**
      * 获取菜单列表
@@ -307,12 +315,122 @@ class MenuService
      */
     public function getAdminRoutes(int $adminId): array
     {
-
-        // 使用注入的 Model 获取菜单树
         $menuTree = $this->model->getAdminMenuTree($adminId);
-        // 转换为前端路由格式
+        if (empty($menuTree)) {
+            return [];
+        }
+
+        $buttonPermissions = $this->getAdminButtonPermissions($adminId);
+        $menuTree = $this->attachRouteAuthList($menuTree, $buttonPermissions);
+
         $transformService = new MenuTransformService();
         return $transformService->toRouteConfigTree($menuTree);
+    }
+
+    /**
+     * 获取管理员可访问的按钮权限码
+     * @param int $adminId 管理员ID
+     * @return array
+     */
+    private function getAdminButtonPermissions(int $adminId): array
+    {
+        $admin = $this->adminModel->with(['roles.permissions'])->find($adminId);
+        if (!$admin) {
+            return [];
+        }
+
+        $isSuperAdmin = $admin->roles->contains('code', 'R_SUPER');
+        if ($isSuperAdmin) {
+            return [];
+        }
+
+        $permissions = [];
+        foreach ($admin->roles as $role) {
+            if (!$role->isActive() || !isset($role->permissions)) {
+                continue;
+            }
+
+            foreach ($role->permissions as $permission) {
+                $permissionCode = trim((string)($permission->code ?? ''));
+                if ($permissionCode !== '') {
+                    $permissions[$permissionCode] = true;
+                }
+            }
+        }
+
+        return array_keys($permissions);
+    }
+
+    /**
+     * 为路由树中的页面节点挂载用户级 auth_list
+     * @param array $menuTree
+     * @param array $buttonPermissions
+     * @return array
+     */
+    private function attachRouteAuthList(array $menuTree, array $buttonPermissions): array
+    {
+        $permissionMap = array_fill_keys($buttonPermissions, true);
+
+        return array_values(array_map(function (array $menu) use ($permissionMap) {
+            return $this->attachRouteAuthListToNode($menu, $permissionMap);
+        }, $menuTree));
+    }
+
+    /**
+     * 递归处理单个菜单节点的 auth_list
+     * @param array $menu
+     * @param array $permissionMap
+     * @return array
+     */
+    private function attachRouteAuthListToNode(array $menu, array $permissionMap): array
+    {
+        $children = $menu['children'] ?? [];
+        $routeChildren = [];
+        $buttonChildren = [];
+
+        foreach ($children as $child) {
+            if (($child['type'] ?? null) === Menu::TYPE_BUTTON) {
+                $buttonChildren[] = $child;
+                continue;
+            }
+
+            $routeChildren[] = $this->attachRouteAuthListToNode($child, $permissionMap);
+        }
+
+        $menu['children'] = $routeChildren;
+        $menu['auth_list'] = $this->buildAuthListFromButtons($buttonChildren, $permissionMap);
+
+        return $menu;
+    }
+
+    /**
+     * 将按钮菜单节点转换为前端 auth_list
+     * @param array $buttonChildren
+     * @param array $permissionMap
+     * @return array
+     */
+    private function buildAuthListFromButtons(array $buttonChildren, array $permissionMap): array
+    {
+        $authList = [];
+        $allowAllButtons = empty($permissionMap);
+
+        foreach ($buttonChildren as $button) {
+            $authMark = trim((string)($button['permission'] ?? ''));
+            if ($authMark === '') {
+                continue;
+            }
+
+            if (!$allowAllButtons && !isset($permissionMap[$authMark])) {
+                continue;
+            }
+
+            $authList[] = [
+                'title' => trim((string)($button['title'] ?? '')),
+                'authMark' => $authMark,
+            ];
+        }
+
+        return $authList;
     }
 
     /**

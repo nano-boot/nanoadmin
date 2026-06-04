@@ -72,7 +72,11 @@ class AuthController
             if (!$admin) {
                 return R::error('用户未登录', 401);
             }
-            
+
+            $permissionCodes = $this->authService->getAdminPermissionCodes($admin->id);
+            $roleCodes = $this->authService->getAdminRoleCodes($admin->id);
+            $buttons = $this->authService->getAdminButtonCodes($admin->id);
+
             return R::success([
                 'id' => $admin->id,
                 'username' => $admin->username,
@@ -83,9 +87,12 @@ class AuthController
                 'status' => $admin->status,
                 'gender' => $admin->gender,
                 'last_login_time' => $admin->last_login_time,
-                'created_at' => $admin->created_at
+                'created_at' => $admin->created_at,
+                'roles' => $roleCodes,
+                'buttons' => $buttons,
+                'permissions' => $permissionCodes,
             ], '获取成功');
-            
+
         } catch (\Exception $e) {
             return R::error($e->getMessage());
         }

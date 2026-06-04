@@ -181,6 +181,79 @@ class AuthService
     }
 
     /**
+     * 获取管理员角色编码列表
+     * @param int $adminId 管理员ID
+     * @return array
+     * @throws ApiException
+     */
+    public function getAdminRoleCodes(int $adminId): array
+    {
+        $admin = Admin::with(['roles'])->find($adminId);
+        if (!$admin) {
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
+        }
+
+        $codes = [];
+        foreach ($admin->roles as $role) {
+            if (!$role->isActive()) {
+                continue;
+            }
+
+            $code = trim((string)($role->code ?? ''));
+            if ($code !== '') {
+                $codes[$code] = true;
+            }
+        }
+
+        return array_keys($codes);
+    }
+
+    /**
+     * 获取管理员按钮权限码列表
+     * @param int $adminId 管理员ID
+     * @return array
+     */
+    public function getAdminButtonCodes(int $adminId): array
+    {
+        return $this->getAdminPermissionCodes($adminId);
+    }
+
+    /**
+     * 获取管理员统一权限码列表
+     * @param int $adminId 管理员ID
+     * @return array
+     * @throws ApiException
+     */
+    public function getAdminPermissionCodes(int $adminId): array
+    {
+        $admin = Admin::with(['roles.permissions'])->find($adminId);
+        if (!$admin) {
+            throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
+        }
+
+        $isSuperAdmin = $admin->roles->contains('code', 'R_SUPER');
+        if ($isSuperAdmin) {
+            return [];
+        }
+
+        $codes = [];
+        foreach ($admin->roles as $role) {
+            if (!$role->isActive() || !isset($role->permissions)) {
+                continue;
+            }
+
+            foreach ($role->permissions as $permission) {
+                $code = trim((string)($permission->code ?? ''));
+                if ($code !== '') {
+                    $codes[$code] = true;
+                }
+            }
+        }
+
+        return array_keys($codes);
+    }
+
+    /**
      * 获取管理员权限列表
      * @param int $adminId 管理员ID
      * @return array
@@ -188,12 +261,29 @@ class AuthService
      */
     public function getAdminPermissions(int $adminId): array
     {
-        $admin = Admin::find($adminId);
+        $admin = Admin::with(['roles.permissions'])->find($adminId);
         if (!$admin) {
             throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
 
-        return $admin->getPermissions();
+        $permissions = [];
+        foreach ($admin->roles as $role) {
+            if (!$role->isActive() || !isset($role->permissions)) {
+                continue;
+            }
+
+            foreach ($role->permissions as $permission) {
+                $code = trim((string)($permission->code ?? ''));
+                if ($code === '') {
+                    continue;
+                }
+
+                $permission->code = $code;
+                $permissions[$code] = $permission;
+            }
+        }
+
+        return array_values($permissions);
     }
 
     /**
