@@ -20,6 +20,37 @@ class AuthController
 {
     protected AuthService $authService;
 
+    /**
+     * 构建 /auth/info 返回契约。
+     *
+     * 约定：
+     * - permissionCodes：后端内部统一权限码数组
+     * - buttons：框架兼容保留字段，值来源于后端统一权限码
+     * - backend 模式下前端正式按钮权限来源仍为动态路由中的 route.meta.authList
+     *
+     * @param object $admin 当前管理员对象
+     * @param array $roleCodes 角色编码列表
+     * @param array $permissionCodes 后端内部统一权限码列表
+     * @return array
+     */
+    protected function buildInfoPayload(object $admin, array $roleCodes, array $permissionCodes): array
+    {
+        return [
+            'id' => $admin->id,
+            'username' => $admin->username,
+            'nickname' => $admin->nickname,
+            'email' => $admin->email,
+            'phone' => $admin->phone,
+            'avatar' => $admin->avatar,
+            'status' => $admin->status,
+            'gender' => $admin->gender,
+            'last_login_time' => $admin->last_login_time,
+            'created_at' => $admin->created_at,
+            'roles' => $roleCodes,
+            'buttons' => $permissionCodes,
+        ];
+    }
+
     public function __construct(AuthService $authService)
     {
         new AuthValidator();
@@ -75,23 +106,11 @@ class AuthController
 
             $permissionCodes = $this->authService->getAdminPermissionCodes($admin->id);
             $roleCodes = $this->authService->getAdminRoleCodes($admin->id);
-            $buttons = $this->authService->getAdminButtonCodes($admin->id);
 
-            return R::success([
-                'id' => $admin->id,
-                'username' => $admin->username,
-                'nickname' => $admin->nickname,
-                'email' => $admin->email,
-                'phone' => $admin->phone,
-                'avatar' => $admin->avatar,
-                'status' => $admin->status,
-                'gender' => $admin->gender,
-                'last_login_time' => $admin->last_login_time,
-                'created_at' => $admin->created_at,
-                'roles' => $roleCodes,
-                'buttons' => $buttons,
-                'permissions' => $permissionCodes,
-            ], '获取成功');
+            return R::success(
+                $this->buildInfoPayload($admin, $roleCodes, $permissionCodes),
+                '获取成功'
+            );
 
         } catch (\Exception $e) {
             return R::error($e->getMessage());

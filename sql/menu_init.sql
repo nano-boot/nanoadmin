@@ -8,96 +8,102 @@
 
 -- 插入默认菜单数据，匹配前端路由结构
 REPLACE INTO `th_sys_menu` (
-    `id`, `name`, `title`, `path`, `component`, `icon`, `redirect`,
+    `id`, `name`, `title`, `path`, `component`, `icon`, `redirect`, `permission`,
     `parent_id`, `sort`, `type`, `status`,
     `hide`, `hide_tab`, `cache`, `fixed_tab`, `active_path`
 ) VALUES
 -- === 一级菜单 ===
-(1, 'Dashboard', '数据面板', '/dashboard', '/index/index', 'ri:pie-chart-line', '',
+(1, 'Dashboard', '数据面板', '/dashboard', '/index/index', 'ri:pie-chart-line', '', '',
  0,  1, 'M', 1, 0, 0, 1, 0,  ''),
 
-(2, 'Permission', '权限管理', '/permission', '/index/index', 'ri:fingerprint-line', '',
+(2, 'Permission', '权限管理', '/permission', '/index/index', 'ri:fingerprint-line', '', '',
  0,  2, 'M', 1, 0, 0, 1, 0,  ''),
 
-(3, 'System', '系统管理', '/system', '/index/index', 'ri:settings-line', '',
+(3, 'System', '系统管理', '/system', '/index/index', 'ri:settings-line', '', '',
  0,  3, 'M', 1, 0, 0, 1, 0, ''),
 
 
 -- === 二级菜单 - Dashboard ===
-(100, 'Console', '控制台', '/dashboard/console', '/dashboard/console', 'ri:dashboard-2-line', '',
+(100, 'Console', '控制台', '/dashboard/console', '/dashboard/console', 'ri:dashboard-2-line', '', '',
  1,  1, 'M', 1, 0, 0, 0, 1,  ''),
 
 -- === 二级菜单 - Auth ===
-(200, 'AuthUser', '用户管理', '/permission/user', '/permission/user', 'ri:user-2-line', '',
+(200, 'AuthUser', '用户管理', '/permission/user', '/permission/user', 'ri:user-2-line', '', 'sys:admin:page',
  2,  1, 'M', 1, 0, 0, 1, 0,  ''),
 
-(201, 'AuthRole', '角色管理', '/permission/role', '/permission/role', 'ri:user-settings-line', '',
+(201, 'AuthRole', '角色管理', '/permission/role', '/permission/role', 'ri:user-settings-line', '', 'sys:role:page',
  2,  2, 'M', 1, 0, 0, 1, 0, ''),
 
-(202, 'AuthMenu', '菜单管理', '/permission/menu', '/permission/menu', 'ri:menu-line', '',
+(202, 'AuthMenu', '菜单管理', '/permission/menu', '/permission/menu', 'ri:menu-line', '', 'sys:menu:page',
  2,  3, 'M', 1, 1, 0, 0, 0,  '/permission/user'),
 
 
 -- === 二级菜单 - System ===
-(300, 'SystemFile', '文件管理', '/system/file', '/system/file', 'ri:file-2-line', '',
+(300, 'SystemFile', '文件管理', '/system/file', '/system/file', 'ri:file-2-line', '', '',
  3,  1, 'M', 1, 0, 0, 1, 0, ''),
 
-(301, 'SystemDictType', '字典管理 ', '/system/dict', '/system/dict-type', 'ri:book-2-line', '',
+(301, 'SystemDictType', '字典管理 ', '/system/dict', '/system/dict-type', 'ri:book-2-line', '', '',
  3, 1, 'M', 1, 0, 0, 1, 0,  ''),
 
-(302, 'SystemConfig', '配置管理', '/system/config', '/system/config', 'ri:settings-2-line', '',
+(302, 'SystemConfig', '配置管理', '/system/config', '/system/config', 'ri:settings-2-line', '', '',
  3, 2, 'M', 1, 0, 0, 1, 0,  ''),
 
-(303, 'SystemLog', '日志管理', '/system/log', '/system/log', 'ri:file-text-line', '',
- 3, 3, 'M', 1, 0, 0, 1, 0,  '');
+(303, 'SystemLog', '日志管理', '/system/log', '/system/log', 'ri:file-text-line', '', '',
+ 3, 3, 'M', 1, 0, 0, 1, 0,  ''),
+
+(304, 'SystemLoginLog', '登录日志', '/system/login-log', '/system/login-log', 'ri:user-follow-line', '', '',
+ 303, 1, 'M', 1, 0, 0, 1, 0,  ''),
+
+(305, 'SystemOperationLog', '操作日志', '/system/operation-log', '/system/operation-log', 'ri:history-line', '', '',
+ 303, 2, 'M', 1, 0, 0, 1, 0,  '');
 
 
 
 -- === 按钮权限 ===
 INSERT INTO `th_sys_menu` (
-    `id`, `name`, `title`, `path`, `component`, `parent_id`,
+    `id`, `name`, `title`, `path`, `component`, `permission`, `parent_id`,
     `sort`, `type`, `status`, `hide`, `active_path`
 ) VALUES
 -- 用户管理按钮权限
-(2001, 'AuthUserCreate', '创建用户', '/permission/user/create', '', 200,  1, 'B', 1, 1, ''),
-(2002, 'AuthUserEdit', '编辑用户', '/permission/user/edit', '', 200,  2, 'B', 1, 1, ''),
-(2003, 'AuthUserDelete', '删除用户', '/permission/user/delete', '', 200,  3, 'B', 1, 1, ''),
-(2004, 'AuthUserResetPwd', '重置密码', '/permission/user/reset-pwd', '', 200,  4, 'B', 1, 1, ''),
+(2001, 'AuthUserCreate', '创建用户', '/permission/user/create', '', 'sys:admin:create', 200,  1, 'B', 1, 1, ''),
+(2002, 'AuthUserEdit', '编辑用户', '/permission/user/edit', '', 'sys:admin:update', 200,  2, 'B', 1, 1, ''),
+(2003, 'AuthUserDelete', '删除用户', '/permission/user/delete', '', 'sys:admin:delete', 200,  3, 'B', 1, 1, ''),
+(2004, 'AuthUserResetPwd', '重置密码', '/permission/user/reset-pwd', '', 'sys:admin:assign-role', 200,  4, 'B', 1, 1, ''),
 
 -- 角色管理按钮权限
-(2011, 'AuthRoleCreate', '创建角色', '/permission/role/create', '', 201,  1, 'B', 1, 1, ''),
-(2012, 'AuthRoleEdit', '编辑角色', '/permission/role/edit', '', 201,  2, 'B', 1, 1, ''),
-(2013, 'AuthRoleDelete', '删除角色', '/permission/role/delete', '', 201,  3, 'B', 1, 1, ''),
-(2014, 'AuthRolePermission', '分配权限', '/permission/role/permission', '', 201,  4, 'B', 1, 1, ''),
+(2011, 'AuthRoleCreate', '创建角色', '/permission/role/create', '', 'sys:role:create', 201,  1, 'B', 1, 1, ''),
+(2012, 'AuthRoleEdit', '编辑角色', '/permission/role/edit', '', 'sys:role:update', 201,  2, 'B', 1, 1, ''),
+(2013, 'AuthRoleDelete', '删除角色', '/permission/role/delete', '', 'sys:role:delete', 201,  3, 'B', 1, 1, ''),
+(2014, 'AuthRolePermission', '分配权限', '/permission/role/permission', '', 'sys:role:assign-permission', 201,  4, 'B', 1, 1, ''),
 
 
 -- 菜单管理按钮权限
-(2021, 'AuthMenuCreate', '创建菜单', '/permission/menu/create', '', 202,  1, 'B', 1, 1, ''),
-(2022, 'AuthMenuEdit', '编辑菜单', '/permission/menu/edit', '', 202,  2, 'B', 1, 1, ''),
-(2023, 'AuthMenuDelete', '删除菜单', '/permission/menu/delete', '', 202,  3, 'B', 1, 1, ''),
-(2024, 'AuthMenuSort', '菜单排序', '/permission/menu/sort', '', 202,  4, 'B', 1, 1, ''),
+(2021, 'AuthMenuCreate', '创建菜单', '/permission/menu/create', '', 'sys:menu:create', 202,  1, 'B', 1, 1, ''),
+(2022, 'AuthMenuEdit', '编辑菜单', '/permission/menu/edit', '', 'sys:menu:update', 202,  2, 'B', 1, 1, ''),
+(2023, 'AuthMenuDelete', '删除菜单', '/permission/menu/delete', '', 'sys:menu:delete', 202,  3, 'B', 1, 1, ''),
+(2024, 'AuthMenuSort', '菜单排序', '/permission/menu/sort', '', 'sys:menu:sort', 202,  4, 'B', 1, 1, ''),
 
 -- 文件管理按钮权限
-(3001, 'SystemFileCreate', '创建文件', '/system/file/create', '', 300,  1, 'B', 1, 1, ''),
-(3002, 'SystemFileEdit', '编辑文件', '/system/file/edit', '', 300,  2, 'B', 1, 1, ''),
-(3003, 'SystemFileDelete', '删除文件', '/system/file/delete', '', 300,  3, 'B', 1, 1, ''),
+(3001, 'SystemFileCreate', '创建文件', '/system/file/create', '', '', 300,  1, 'B', 1, 1, ''),
+(3002, 'SystemFileEdit', '编辑文件', '/system/file/edit', '', '', 300,  2, 'B', 1, 1, ''),
+(3003, 'SystemFileDelete', '删除文件', '/system/file/delete', '', '', 300,  3, 'B', 1, 1, ''),
 
 -- 字典管理按钮权限
-(3011, 'SystemDictTypeCreate', '创建字典', '/system/dict-type/create', '', 301,  1, 'B', 1, 1, ''),
-(3012, 'SystemDictEdit', '编辑字典', '/system/dict-type/edit', '', 301,  2, 'B', 1, 1, ''),
-(3013, 'SystemDictDelete', '删除字典', '/system/dict-type/delete', '', 301,  3, 'B', 1, 1, ''),
+(3011, 'SystemDictTypeCreate', '创建字典', '/system/dict-type/create', '', '', 301,  1, 'B', 1, 1, ''),
+(3012, 'SystemDictEdit', '编辑字典', '/system/dict-type/edit', '', '', 301,  2, 'B', 1, 1, ''),
+(3013, 'SystemDictDelete', '删除字典', '/system/dict-type/delete', '', '', 301,  3, 'B', 1, 1, ''),
 
 
 -- 配置管理按钮权限
-(3021, 'SystemConfigCreate', '创建配置', '/system/config/create', '', 302,  1, 'B', 1, 1, ''),
-(3022, 'SystemConfigEdit', '编辑配置', '/system/config/edit', '', 302,  2, 'B', 1, 1, ''),
-(3023, 'SystemConfigDelete', '删除配置', '/system/config/delete', '', 302,  3, 'B', 1, 1, ''),
+(3021, 'SystemConfigCreate', '创建配置', '/system/config/create', '', '', 302,  1, 'B', 1, 1, ''),
+(3022, 'SystemConfigEdit', '编辑配置', '/system/config/edit', '', '', 302,  2, 'B', 1, 1, ''),
+(3023, 'SystemConfigDelete', '删除配置', '/system/config/delete', '', '', 302,  3, 'B', 1, 1, ''),
 
 
 -- 日志管理按钮权限
-(3031, 'SystemLogCreate', '创建日志', '/system/log/create', '', 303,  1, 'B', 1, 1, ''),
-(3032, 'SystemLogEdit', '编辑日志', '/system/log/edit', '', 303,  2, 'B', 1, 1, ''),
-(3033, 'SystemLogDelete', '删除日志', '/system/log/delete', '', 303,  3, 'B', 1, 1, '');
+(3031, 'SystemLogCreate', '创建日志', '/system/log/create', '', '', 303,  1, 'B', 1, 1, ''),
+(3032, 'SystemLogEdit', '编辑日志', '/system/log/edit', '', '', 303,  2, 'B', 1, 1, ''),
+(3033, 'SystemLogDelete', '删除日志', '/system/log/delete', '', '', 303,  3, 'B', 1, 1, '');
 
 
 

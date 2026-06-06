@@ -234,22 +234,22 @@ class TheAdminInstaller
         $now = date('Y-m-d H:i:s');
         
         return [
-            ['code' => 'admin.list', 'name' => '管理员列表', 'resource' => 'admin', 'action' => 'list', 'description' => '查看管理员列表', 'status' => 1, 'sort' => 100, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'admin.create', 'name' => '创建管理员', 'resource' => 'admin', 'action' => 'create', 'description' => '创建新管理员', 'status' => 1, 'sort' => 101, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'admin.update', 'name' => '更新管理员', 'resource' => 'admin', 'action' => 'update', 'description' => '更新管理员信息', 'status' => 1, 'sort' => 102, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'admin.delete', 'name' => '删除管理员', 'resource' => 'admin', 'action' => 'delete', 'description' => '删除管理员', 'status' => 1, 'sort' => 103, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'role.list', 'name' => '角色列表', 'resource' => 'role', 'action' => 'list', 'description' => '查看角色列表', 'status' => 1, 'sort' => 200, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'role.create', 'name' => '创建角色', 'resource' => 'role', 'action' => 'create', 'description' => '创建新角色', 'status' => 1, 'sort' => 201, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'role.update', 'name' => '更新角色', 'resource' => 'role', 'action' => 'update', 'description' => '更新角色信息', 'status' => 1, 'sort' => 202, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'role.delete', 'name' => '删除角色', 'resource' => 'role', 'action' => 'delete', 'description' => '删除角色', 'status' => 1, 'sort' => 203, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'permission.list', 'name' => '权限列表', 'resource' => 'permission', 'action' => 'list', 'description' => '查看权限列表', 'status' => 1, 'sort' => 300, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'permission.create', 'name' => '创建权限', 'resource' => 'permission', 'action' => 'create', 'description' => '创建新权限', 'status' => 1, 'sort' => 301, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'permission.update', 'name' => '更新权限', 'resource' => 'permission', 'action' => 'update', 'description' => '更新权限信息', 'status' => 1, 'sort' => 302, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'permission.delete', 'name' => '删除权限', 'resource' => 'permission', 'action' => 'delete', 'description' => '删除权限', 'status' => 1, 'sort' => 303, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'menu.list', 'name' => '菜单列表', 'resource' => 'menu', 'action' => 'list', 'description' => '查看菜单列表', 'status' => 1, 'sort' => 400, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'menu.create', 'name' => '创建菜单', 'resource' => 'menu', 'action' => 'create', 'description' => '创建新菜单', 'status' => 1, 'sort' => 401, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'menu.update', 'name' => '更新菜单', 'resource' => 'menu', 'action' => 'update', 'description' => '更新菜单信息', 'status' => 1, 'sort' => 402, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'menu.delete', 'name' => '删除菜单', 'resource' => 'menu', 'action' => 'delete', 'description' => '删除菜单', 'status' => 1, 'sort' => 403, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:admin:page', 'name' => '管理员列表', 'resource' => 'admin', 'action' => 'page', 'description' => '查看管理员列表', 'status' => 1, 'sort' => 100, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:admin:create', 'name' => '创建管理员', 'resource' => 'admin', 'action' => 'create', 'description' => '创建新管理员', 'status' => 1, 'sort' => 101, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:admin:update', 'name' => '更新管理员', 'resource' => 'admin', 'action' => 'update', 'description' => '更新管理员信息', 'status' => 1, 'sort' => 102, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:admin:delete', 'name' => '删除管理员', 'resource' => 'admin', 'action' => 'delete', 'description' => '删除管理员', 'status' => 1, 'sort' => 103, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:role:page', 'name' => '角色列表', 'resource' => 'role', 'action' => 'page', 'description' => '查看角色列表', 'status' => 1, 'sort' => 200, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:role:create', 'name' => '创建角色', 'resource' => 'role', 'action' => 'create', 'description' => '创建新角色', 'status' => 1, 'sort' => 201, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:role:update', 'name' => '更新角色', 'resource' => 'role', 'action' => 'update', 'description' => '更新角色信息', 'status' => 1, 'sort' => 202, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:role:delete', 'name' => '删除角色', 'resource' => 'role', 'action' => 'delete', 'description' => '删除角色', 'status' => 1, 'sort' => 203, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:permission:page', 'name' => '权限列表', 'resource' => 'permission', 'action' => 'page', 'description' => '查看权限列表', 'status' => 1, 'sort' => 300, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:permission:create', 'name' => '创建权限', 'resource' => 'permission', 'action' => 'create', 'description' => '创建新权限', 'status' => 1, 'sort' => 301, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:permission:update', 'name' => '更新权限', 'resource' => 'permission', 'action' => 'update', 'description' => '更新权限信息', 'status' => 1, 'sort' => 302, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:permission:delete', 'name' => '删除权限', 'resource' => 'permission', 'action' => 'delete', 'description' => '删除权限', 'status' => 1, 'sort' => 303, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:menu:page', 'name' => '菜单列表', 'resource' => 'menu', 'action' => 'page', 'description' => '查看菜单列表', 'status' => 1, 'sort' => 400, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:menu:create', 'name' => '创建菜单', 'resource' => 'menu', 'action' => 'create', 'description' => '创建新菜单', 'status' => 1, 'sort' => 401, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:menu:update', 'name' => '更新菜单', 'resource' => 'menu', 'action' => 'update', 'description' => '更新菜单信息', 'status' => 1, 'sort' => 402, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'sys:menu:delete', 'name' => '删除菜单', 'resource' => 'menu', 'action' => 'delete', 'description' => '删除菜单', 'status' => 1, 'sort' => 403, 'created_at' => $now, 'updated_at' => $now],
         ];
     }
 
@@ -262,10 +262,10 @@ class TheAdminInstaller
         
         return [
             ['parent_id' => 0, 'name' => 'system', 'title' => '系统管理', 'icon' => 'Setting', 'path' => '/system', 'component' => '', 'menu_type' => 1, 'permission' => '', 'sort' => 100, 'status' => 1, 'created_at' => $now, 'updated_at' => $now],
-            ['parent_id' => 1, 'name' => 'admin', 'title' => '管理员管理', 'icon' => 'User', 'path' => '/system/admin', 'component' => 'system/admin/index', 'menu_type' => 2, 'permission' => 'admin.list', 'sort' => 101, 'status' => 1, 'created_at' => $now, 'updated_at' => $now],
-            ['parent_id' => 1, 'name' => 'role', 'title' => '角色管理', 'icon' => 'UserFilled', 'path' => '/system/role', 'component' => 'system/role/index', 'menu_type' => 2, 'permission' => 'role.list', 'sort' => 102, 'status' => 1, 'created_at' => $now, 'updated_at' => $now],
-            ['parent_id' => 1, 'name' => 'permission', 'title' => '权限管理', 'icon' => 'Lock', 'path' => '/system/permission', 'component' => 'system/permission/index', 'menu_type' => 2, 'permission' => 'permission.list', 'sort' => 103, 'status' => 1, 'created_at' => $now, 'updated_at' => $now],
-            ['parent_id' => 1, 'name' => 'menu', 'title' => '菜单管理', 'icon' => 'Menu', 'path' => '/system/menu', 'component' => 'system/menu/index', 'menu_type' => 2, 'permission' => 'menu.list', 'sort' => 104, 'status' => 1, 'created_at' => $now, 'updated_at' => $now],
+            ['parent_id' => 1, 'name' => 'admin', 'title' => '管理员管理', 'icon' => 'User', 'path' => '/system/admin', 'component' => 'system/admin/index', 'menu_type' => 2, 'permission' => 'sys:admin:page', 'sort' => 101, 'status' => 1, 'created_at' => $now, 'updated_at' => $now],
+            ['parent_id' => 1, 'name' => 'role', 'title' => '角色管理', 'icon' => 'UserFilled', 'path' => '/system/role', 'component' => 'system/role/index', 'menu_type' => 2, 'permission' => 'sys:role:page', 'sort' => 102, 'status' => 1, 'created_at' => $now, 'updated_at' => $now],
+            ['parent_id' => 1, 'name' => 'permission', 'title' => '权限管理', 'icon' => 'Lock', 'path' => '/system/permission', 'component' => 'system/permission/index', 'menu_type' => 2, 'permission' => 'sys:permission:page', 'sort' => 103, 'status' => 1, 'created_at' => $now, 'updated_at' => $now],
+            ['parent_id' => 1, 'name' => 'menu', 'title' => '菜单管理', 'icon' => 'Menu', 'path' => '/system/menu', 'component' => 'system/menu/index', 'menu_type' => 2, 'permission' => 'sys:menu:page', 'sort' => 104, 'status' => 1, 'created_at' => $now, 'updated_at' => $now],
         ];
     }
 }

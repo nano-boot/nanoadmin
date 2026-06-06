@@ -22,36 +22,36 @@ class PermissionMiddleware implements MiddlewareInterface
      */
     protected array $routePermissions = [
         // 管理员管理
-        'GET:/sys/admin' => 'admin.page',
-        'POST:/sys/admin' => 'admin.create',
-        'GET:/sys/admin/*' => 'admin.view',
-        'PUT:/sys/admin/*' => 'admin.update',
-        // 'DELETE:/sys/admin/*' => 'admin.delete',
-        'POST:/sys/admin/*/roles' => 'admin.assign_roles',
+        'GET:/sys/admin' => 'sys:admin:page',
+        'POST:/sys/admin' => 'sys:admin:create',
+        'GET:/sys/admin/*' => 'sys:admin:view',
+        'PUT:/sys/admin/*' => 'sys:admin:update',
+        // 'DELETE:/sys/admin/*' => 'sys:admin:delete',
+        'POST:/sys/admin/*/roles' => 'sys:admin:assign-role',
 
         // 角色管理
-        'GET:/sys/role' => 'role.page',
-        'POST:/sys/role' => 'role.create',
-        'GET:/sys/role/*' => 'role.view',
-        'PUT:/sys/role/*' => 'role.update',
-        // 'DELETE:/sys/role/*' => 'role.delete',
-        'POST:/sys/role/*/permissions' => 'role.assign_permissions',
-        'POST:/sys/role/*/menus' => 'role.assign_menus',
+        'GET:/sys/role' => 'sys:role:page',
+        'POST:/sys/role' => 'sys:role:create',
+        'GET:/sys/role/*' => 'sys:role:view',
+        'PUT:/sys/role/*' => 'sys:role:update',
+        // 'DELETE:/sys/role/*' => 'sys:role:delete',
+        'POST:/sys/role/*/permissions' => 'sys:role:assign-permission',
+        'POST:/sys/role/*/menus' => 'sys:role:assign-menu',
 
         // 权限管理
-        'GET:/sys/permissions' => 'permission.page',
-        'POST:/sys/permissions' => 'permission.create',
-        'GET:/sys/permissions/*' => 'permission.view',
-        'PUT:/sys/permissions/*' => 'permission.update',
-        // 'DELETE:/sys/permissions/*' => 'permission.delete',
+        'GET:/sys/permissions' => 'sys:permission:page',
+        'POST:/sys/permissions' => 'sys:permission:create',
+        'GET:/sys/permissions/*' => 'sys:permission:view',
+        'PUT:/sys/permissions/*' => 'sys:permission:update',
+        // 'DELETE:/sys/permissions/*' => 'sys:permission:delete',
 
         // 菜单管理
-        'GET:/sys/menu' => 'menu.page',
-        'POST:/sys/menu' => 'menu.create',
-        'GET:/sys/menu/*' => 'menu.view',
-        'PUT:/sys/menu/*' => 'menu.update',
-        // 'DELETE:/sys/menu/*' => 'menu.delete',
-        'POST:/sys/menu/sort' => 'menu.sort',
+        'GET:/sys/menu' => 'sys:menu:page',
+        'POST:/sys/menu' => 'sys:menu:create',
+        'GET:/sys/menu/*' => 'sys:menu:view',
+        'PUT:/sys/menu/*' => 'sys:menu:update',
+        // 'DELETE:/sys/menu/*' => 'sys:menu:delete',
+        'POST:/sys/menu/sort' => 'sys:menu:sort',
     ];
 
     /**
@@ -73,7 +73,7 @@ class PermissionMiddleware implements MiddlewareInterface
      * 超级管理员角色代码
      * @var array
      */
-    protected array $superAdminRoles = ['super_admin', 'administrator'];
+    protected array $superAdminRoles = ['R_SUPER', 'super_admin', 'administrator'];
 
     /**
      * 处理请求

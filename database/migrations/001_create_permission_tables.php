@@ -461,22 +461,22 @@ class CreatePermissionTables extends Migrator
 
         // 插入基础权限
         $permissions = [
-            ['code' => 'admin.list', 'name' => '管理员列表', 'resource' => 'admin', 'action' => 'list', 'description' => '查看管理员列表'],
-            ['code' => 'admin.create', 'name' => '创建管理员', 'resource' => 'admin', 'action' => 'create', 'description' => '创建新管理员'],
-            ['code' => 'admin.update', 'name' => '更新管理员', 'resource' => 'admin', 'action' => 'update', 'description' => '更新管理员信息'],
-            ['code' => 'admin.delete', 'name' => '删除管理员', 'resource' => 'admin', 'action' => 'delete', 'description' => '删除管理员'],
-            ['code' => 'role.list', 'name' => '角色列表', 'resource' => 'role', 'action' => 'list', 'description' => '查看角色列表'],
-            ['code' => 'role.create', 'name' => '创建角色', 'resource' => 'role', 'action' => 'create', 'description' => '创建新角色'],
-            ['code' => 'role.update', 'name' => '更新角色', 'resource' => 'role', 'action' => 'update', 'description' => '更新角色信息'],
-            ['code' => 'role.delete', 'name' => '删除角色', 'resource' => 'role', 'action' => 'delete', 'description' => '删除角色'],
-            ['code' => 'permission.list', 'name' => '权限列表', 'resource' => 'permission', 'action' => 'list', 'description' => '查看权限列表'],
-            ['code' => 'permission.create', 'name' => '创建权限', 'resource' => 'permission', 'action' => 'create', 'description' => '创建新权限'],
-            ['code' => 'permission.update', 'name' => '更新权限', 'resource' => 'permission', 'action' => 'update', 'description' => '更新权限信息'],
-            ['code' => 'permission.delete', 'name' => '删除权限', 'resource' => 'permission', 'action' => 'delete', 'description' => '删除权限'],
-            ['code' => 'menu.list', 'name' => '菜单列表', 'resource' => 'menu', 'action' => 'list', 'description' => '查看菜单列表'],
-            ['code' => 'menu.create', 'name' => '创建菜单', 'resource' => 'menu', 'action' => 'create', 'description' => '创建新菜单'],
-            ['code' => 'menu.update', 'name' => '更新菜单', 'resource' => 'menu', 'action' => 'update', 'description' => '更新菜单信息'],
-            ['code' => 'menu.delete', 'name' => '删除菜单', 'resource' => 'menu', 'action' => 'delete', 'description' => '删除菜单'],
+            ['code' => 'sys:admin:page', 'name' => '管理员列表', 'resource' => 'admin', 'action' => 'page', 'description' => '查看管理员列表'],
+            ['code' => 'sys:admin:create', 'name' => '创建管理员', 'resource' => 'admin', 'action' => 'create', 'description' => '创建新管理员'],
+            ['code' => 'sys:admin:update', 'name' => '更新管理员', 'resource' => 'admin', 'action' => 'update', 'description' => '更新管理员信息'],
+            ['code' => 'sys:admin:delete', 'name' => '删除管理员', 'resource' => 'admin', 'action' => 'delete', 'description' => '删除管理员'],
+            ['code' => 'sys:role:page', 'name' => '角色列表', 'resource' => 'role', 'action' => 'page', 'description' => '查看角色列表'],
+            ['code' => 'sys:role:create', 'name' => '创建角色', 'resource' => 'role', 'action' => 'create', 'description' => '创建新角色'],
+            ['code' => 'sys:role:update', 'name' => '更新角色', 'resource' => 'role', 'action' => 'update', 'description' => '更新角色信息'],
+            ['code' => 'sys:role:delete', 'name' => '删除角色', 'resource' => 'role', 'action' => 'delete', 'description' => '删除角色'],
+            ['code' => 'sys:permission:page', 'name' => '权限列表', 'resource' => 'permission', 'action' => 'page', 'description' => '查看权限列表'],
+            ['code' => 'sys:permission:create', 'name' => '创建权限', 'resource' => 'permission', 'action' => 'create', 'description' => '创建新权限'],
+            ['code' => 'sys:permission:update', 'name' => '更新权限', 'resource' => 'permission', 'action' => 'update', 'description' => '更新权限信息'],
+            ['code' => 'sys:permission:delete', 'name' => '删除权限', 'resource' => 'permission', 'action' => 'delete', 'description' => '删除权限'],
+            ['code' => 'sys:menu:page', 'name' => '菜单列表', 'resource' => 'menu', 'action' => 'page', 'description' => '查看菜单列表'],
+            ['code' => 'sys:menu:create', 'name' => '创建菜单', 'resource' => 'menu', 'action' => 'create', 'description' => '创建新菜单'],
+            ['code' => 'sys:menu:update', 'name' => '更新菜单', 'resource' => 'menu', 'action' => 'update', 'description' => '更新菜单信息'],
+            ['code' => 'sys:menu:delete', 'name' => '删除菜单', 'resource' => 'menu', 'action' => 'delete', 'description' => '删除菜单'],
         ];
 
         foreach ($permissions as $permission) {
@@ -515,7 +515,7 @@ class CreatePermissionTables extends Migrator
                 'path' => '/system/admin',
                 'component' => 'system/admin/index',
                 'menu_type' => 2,
-                'permission' => 'admin.list',
+                'permission' => 'sys:admin:page',
                 'sort' => 101
             ],
             [
@@ -526,7 +526,7 @@ class CreatePermissionTables extends Migrator
                 'path' => '/system/role',
                 'component' => 'system/role/index',
                 'menu_type' => 2,
-                'permission' => 'role.list',
+                'permission' => 'sys:role:page',
                 'sort' => 102
             ],
             [
@@ -537,7 +537,7 @@ class CreatePermissionTables extends Migrator
                 'path' => '/system/permission',
                 'component' => 'system/permission/index',
                 'menu_type' => 2,
-                'permission' => 'permission.list',
+                'permission' => 'sys:permission:page',
                 'sort' => 103
             ],
             [
@@ -548,7 +548,7 @@ class CreatePermissionTables extends Migrator
                 'path' => '/system/menu',
                 'component' => 'system/menu/index',
                 'menu_type' => 2,
-                'permission' => 'menu.list',
+                'permission' => 'sys:menu:page',
                 'sort' => 104
             ]
         ];
