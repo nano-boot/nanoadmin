@@ -388,3 +388,88 @@ CREATE TABLE IF NOT EXISTS `th_sys_log_operation` (
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='操作日志表';
 
+-- =====================================================
+-- 初始化角色、管理员与权限数据
+-- =====================================================
+INSERT INTO `th_sys_role` (`id`, `code`, `name`, `description`, `status`, `sort`, `deleted`) VALUES
+(1, 'R_SUPER', '超级管理员', '系统超级管理员，拥有所有权限', 1, 1, 0),
+(2, 'R_SYSTEM', '系统管理员', '系统管理员，拥有系统管理核心权限', 1, 2, 0)
+ON DUPLICATE KEY UPDATE
+`name` = VALUES(`name`),
+`description` = VALUES(`description`),
+`status` = VALUES(`status`),
+`sort` = VALUES(`sort`),
+`deleted` = VALUES(`deleted`);
+
+INSERT INTO `th_sys_admin` (`id`, `username`, `password`, `nickname`, `status`, `deleted`) VALUES
+(1, 'admin', '$2y$10$4YHfM6z9M3q6Yx8JmM8rE.rS7bQ2QxgG0W5Q6W6m4m0J9wJQm4G4K', '超级管理员', 1, 0),
+(2, 'system', '$2y$10$4YHfM6z9M3q6Yx8JmM8rE.rS7bQ2QxgG0W5Q6W6m4m0J9wJQm4G4K', '系统管理员', 1, 0)
+ON DUPLICATE KEY UPDATE
+`password` = VALUES(`password`),
+`nickname` = VALUES(`nickname`),
+`status` = VALUES(`status`),
+`deleted` = VALUES(`deleted`);
+
+INSERT INTO `th_sys_admin_role` (`admin_id`, `role_id`) VALUES
+(1, 1),
+(2, 2)
+ON DUPLICATE KEY UPDATE `role_id` = VALUES(`role_id`);
+
+INSERT INTO `th_sys_permission` (`id`, `code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted`) VALUES
+(1, 'sys:admin:page', '管理员列表', 'admin', 'page', '查看管理员列表', 1, 100, 0),
+(2, 'sys:admin:create', '创建管理员', 'admin', 'create', '创建新管理员', 1, 101, 0),
+(3, 'sys:admin:view', '查看管理员', 'admin', 'view', '查看管理员详情', 1, 102, 0),
+(4, 'sys:admin:update', '更新管理员', 'admin', 'update', '更新管理员信息', 1, 103, 0),
+(5, 'sys:admin:assign-role', '分配管理员角色', 'admin', 'assign-role', '为管理员分配角色', 1, 104, 0),
+(6, 'sys:admin:delete', '删除管理员', 'admin', 'delete', '删除管理员', 1, 105, 0),
+(7, 'sys:role:page', '角色列表', 'role', 'page', '查看角色列表', 1, 200, 0),
+(8, 'sys:role:create', '创建角色', 'role', 'create', '创建新角色', 1, 201, 0),
+(9, 'sys:role:view', '查看角色', 'role', 'view', '查看角色详情', 1, 202, 0),
+(10, 'sys:role:update', '更新角色', 'role', 'update', '更新角色信息', 1, 203, 0),
+(11, 'sys:role:assign-permission', '分配角色权限', 'role', 'assign-permission', '为角色分配权限', 1, 204, 0),
+(12, 'sys:role:assign-menu', '分配角色菜单', 'role', 'assign-menu', '为角色分配菜单', 1, 205, 0),
+(13, 'sys:role:delete', '删除角色', 'role', 'delete', '删除角色', 1, 206, 0),
+(14, 'sys:permission:page', '权限列表', 'permission', 'page', '查看权限列表', 1, 300, 0),
+(15, 'sys:permission:create', '创建权限', 'permission', 'create', '创建新权限', 1, 301, 0),
+(16, 'sys:permission:view', '查看权限', 'permission', 'view', '查看权限详情', 1, 302, 0),
+(17, 'sys:permission:update', '更新权限', 'permission', 'update', '更新权限信息', 1, 303, 0),
+(18, 'sys:permission:delete', '删除权限', 'permission', 'delete', '删除权限', 1, 304, 0),
+(19, 'sys:menu:page', '菜单列表', 'menu', 'page', '查看菜单列表', 1, 400, 0),
+(20, 'sys:menu:create', '创建菜单', 'menu', 'create', '创建新菜单', 1, 401, 0),
+(21, 'sys:menu:view', '查看菜单', 'menu', 'view', '查看菜单详情', 1, 402, 0),
+(22, 'sys:menu:update', '更新菜单', 'menu', 'update', '更新菜单信息', 1, 403, 0),
+(23, 'sys:menu:sort', '菜单排序', 'menu', 'sort', '调整菜单排序', 1, 404, 0),
+(24, 'sys:menu:delete', '删除菜单', 'menu', 'delete', '删除菜单', 1, 405, 0)
+ON DUPLICATE KEY UPDATE
+`name` = VALUES(`name`),
+`resource` = VALUES(`resource`),
+`action` = VALUES(`action`),
+`description` = VALUES(`description`),
+`status` = VALUES(`status`),
+`sort` = VALUES(`sort`),
+`deleted` = VALUES(`deleted`);
+
+INSERT INTO `th_sys_role_permission` (`role_id`, `permission_id`) VALUES
+(2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
+(2, 7), (2, 8), (2, 9), (2, 10), (2, 11), (2, 12), (2, 13),
+(2, 14), (2, 15), (2, 16), (2, 17), (2, 18),
+(2, 19), (2, 20), (2, 21), (2, 22), (2, 23), (2, 24)
+ON DUPLICATE KEY UPDATE `permission_id` = VALUES(`permission_id`);
+
+UPDATE `th_sys_menu` SET `permission` = 'sys:admin:page' WHERE `id` = 200;
+UPDATE `th_sys_menu` SET `permission` = 'sys:role:page' WHERE `id` = 201;
+UPDATE `th_sys_menu` SET `permission` = 'sys:menu:page' WHERE `id` = 202;
+UPDATE `th_sys_menu` SET `permission` = 'sys:admin:create' WHERE `id` = 2001;
+UPDATE `th_sys_menu` SET `permission` = 'sys:admin:update' WHERE `id` = 2002;
+UPDATE `th_sys_menu` SET `permission` = 'sys:admin:delete' WHERE `id` = 2003;
+UPDATE `th_sys_menu` SET `permission` = 'sys:admin:assign-role' WHERE `id` = 2004;
+UPDATE `th_sys_menu` SET `permission` = 'sys:role:create' WHERE `id` = 2011;
+UPDATE `th_sys_menu` SET `permission` = 'sys:role:update' WHERE `id` = 2012;
+UPDATE `th_sys_menu` SET `permission` = 'sys:role:delete' WHERE `id` = 2013;
+UPDATE `th_sys_menu` SET `permission` = 'sys:role:assign-permission' WHERE `id` = 2014;
+UPDATE `th_sys_menu` SET `permission` = 'sys:menu:create' WHERE `id` = 2021;
+UPDATE `th_sys_menu` SET `permission` = 'sys:menu:update' WHERE `id` = 2022;
+UPDATE `th_sys_menu` SET `permission` = 'sys:menu:delete' WHERE `id` = 2023;
+UPDATE `th_sys_menu` SET `permission` = 'sys:menu:sort' WHERE `id` = 2024;
+
+
