@@ -2,6 +2,7 @@
 
 namespace plugin\theadmin\app\model;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -1063,6 +1064,7 @@ class Menu extends BaseModel
      */
     public function getTopLevelMenus(bool $onlyEnabled = true, bool $includeDeleted = false): Collection
     {
+        /** @var Builder<Menu> $query */
         $query = $this->where('parent_id', 0);
         
         if ($onlyEnabled) {
@@ -1075,6 +1077,7 @@ class Menu extends BaseModel
         
         return $query->orderBy('sort', 'asc')
                     ->orderBy('id', 'asc')
+                    ->select("{$this->getTable()}.*")
                     ->get();
     }
 
@@ -1136,10 +1139,13 @@ class Menu extends BaseModel
      */
     public function getEnabledList(): Collection
     {
-        return $this->where('status', 1)
-                   ->where('deleted', false)
-                   ->orderBy('sort', 'asc')
+        /** @var Builder<Menu> $query */
+        $query = $this->where('status', 1)
+                      ->where('deleted', false);
+
+        return $query->orderBy('sort', 'asc')
                    ->orderBy('id', 'asc')
+                   ->select("{$this->getTable()}.*")
                    ->get();
     }
 
