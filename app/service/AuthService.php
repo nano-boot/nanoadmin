@@ -16,6 +16,16 @@ use plugin\theadmin\app\service\LogLoginService;
 class AuthService
 {
     /**
+     * 超管权限查询返回结构中的全量放行标记。
+     */
+    public const PERMISSION_SCOPE_ALLOW_ALL = 'allow_all';
+
+    /**
+     * 普通权限查询返回结构中的精确权限标记。
+     */
+    public const PERMISSION_SCOPE_LIMITED = 'limited';
+
+    /**
      * 管理员登录
      * @param string $username 用户名
      * @param string $password 密码
@@ -219,12 +229,17 @@ class AuthService
     }
 
     /**
-     * 获取管理员统一权限码列表
+     * 获取管理员统一权限范围。
+     *
+     * 返回结构：
+     * - scope: allow_all|limited
+     * - codes: string[]
+     *
      * @param int $adminId 管理员ID
-     * @return array
+     * @return array{scope:string,codes:array<int,string>}
      * @throws ApiException
      */
-    public function getAdminPermissionCodes(int $adminId): array
+    public function getAdminPermissionScope(int $adminId): array
     {
         $admin = Admin::with(['roles.permissions'])->find($adminId);
         if (!$admin) {
@@ -233,7 +248,10 @@ class AuthService
 
         $isSuperAdmin = $admin->roles->contains('code', 'R_SUPER');
         if ($isSuperAdmin) {
-            return [];
+            return [
+                'scope' => self::PERMISSION_SCOPE_ALLOW_ALL,
+                'codes' => [],
+            ];
         }
 
         $codes = [];
@@ -250,7 +268,21 @@ class AuthService
             }
         }
 
-        return array_keys($codes);
+        return [
+            'scope' => self::PERMISSION_SCOPE_LIMITED,
+            'codes' => array_keys($codes),
+        ];
+    }
+
+    /**
+     * 获取管理员统一权限码列表
+     * @param int $adminId 管理员ID
+     * @return array
+     * @throws ApiException
+     */
+    public function getAdminPermissionCodes(int $adminId): array
+    {
+        return $this->getAdminPermissionScope($adminId)['codes'];
     }
 
     /**

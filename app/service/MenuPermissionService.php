@@ -15,6 +15,16 @@ use plugin\theadmin\app\common\Code;
 class MenuPermissionService
 {
     /**
+     * 超管菜单权限范围标记。
+     */
+    private const MENU_SCOPE_ALLOW_ALL = 'allow_all';
+
+    /**
+     * 普通角色菜单权限范围标记。
+     */
+    private const MENU_SCOPE_LIMITED = 'limited';
+
+    /**
      * 菜单模型实例
      * @var Menu
      */
@@ -55,7 +65,7 @@ class MenuPermissionService
             // 获取管理员信息
             $admin = $this->adminModel->find($adminId);
             if (!$admin) {
-                throw new ApiException('管理员不存在', Code::ADMIN_NOT_FOUND);
+                throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
             }
 
             // 获取管理员的角色
@@ -79,7 +89,7 @@ class MenuPermissionService
             // 根据角色过滤菜单
             return $this->filterMenuTreeByRoles($menuTree, $roleCodes);
         } catch (\Exception $e) {
-            throw new ApiException('菜单权限过滤失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
+            throw new ApiException(Code::SYSTEM_ERROR, '菜单权限过滤失败: ' . $e->getMessage());
         }
     }
 
@@ -161,7 +171,7 @@ class MenuPermissionService
             // 检查菜单权限
             return $this->hasMenuPermission($menu->toArray(), $roleCodes);
         } catch (\Exception $e) {
-            throw new ApiException('菜单权限验证失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
+            throw new ApiException(Code::SYSTEM_ERROR, '菜单权限验证失败: ' . $e->getMessage());
         }
     }
 
@@ -213,7 +223,65 @@ class MenuPermissionService
             // 检查权限按钮权限
             return $this->hasAuthButtonPermission($menu->toArray(), $authMark, $roleCodes);
         } catch (\Exception $e) {
-            throw new ApiException('按钮权限验证失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
+            throw new ApiException(Code::SYSTEM_ERROR, '按钮权限验证失败: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取管理员菜单访问范围。
+     *
+     * 返回结构：
+     * - scope: allow_all|limited
+     * - menuIds: int[]
+     *
+     * @param int $adminId 管理员ID
+     * @return array{scope:string,menuIds:array<int,int>}
+     * @throws ApiException
+     */
+    public function getAccessibleMenuScope(int $adminId): array
+    {
+        try {
+            $admin = $this->adminModel->with(['roles.menus'])->find($adminId);
+            if (!$admin) {
+                throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
+            }
+
+            $activeRoles = $admin->roles->filter(function ($role) {
+                return $role->isActive();
+            });
+
+            if ($activeRoles->isEmpty()) {
+                return [
+                    'scope' => self::MENU_SCOPE_LIMITED,
+                    'menuIds' => [],
+                ];
+            }
+
+            $isSuperAdmin = $activeRoles->contains('code', 'R_SUPER');
+            if ($isSuperAdmin) {
+                return [
+                    'scope' => self::MENU_SCOPE_ALLOW_ALL,
+                    'menuIds' => [],
+                ];
+            }
+
+            $menuIds = [];
+            foreach ($activeRoles as $role) {
+                foreach ($role->menus as $menu) {
+                    if ($menu->isActive()) {
+                        $menuIds[$menu->id] = $menu->id;
+                    }
+                }
+            }
+
+            return [
+                'scope' => self::MENU_SCOPE_LIMITED,
+                'menuIds' => array_values($menuIds),
+            ];
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            throw new ApiException(Code::SYSTEM_ERROR, '获取可访问菜单范围失败: ' . $e->getMessage());
         }
     }
 
@@ -225,43 +293,7 @@ class MenuPermissionService
      */
     public function getAccessibleMenuIds(int $adminId): array
     {
-        try {
-            // 获取管理员信息
-            $admin = $this->adminModel->find($adminId);
-            if (!$admin) {
-                throw new ApiException('管理员不存在', Code::ADMIN_NOT_FOUND);
-            }
-
-            // 获取管理员的角色
-            $roles = $admin->getRoles();
-            if ($roles->isEmpty()) {
-                return [];
-            }
-
-            // 收集所有角色的菜单ID
-            $menuIds = [];
-            foreach ($roles as $role) {
-                if ($role->isActive()) {
-                    $roleMenuIds = $role->getMenuIds();
-                    $menuIds = array_merge($menuIds, $roleMenuIds);
-                }
-            }
-
-            // 去重并过滤激活的菜单
-            $uniqueMenuIds = array_unique($menuIds);
-            $accessibleIds = [];
-
-            foreach ($uniqueMenuIds as $menuId) {
-                $menu = $this->menuModel->find($menuId);
-                if ($menu && $menu->isActive()) {
-                    $accessibleIds[] = $menuId;
-                }
-            }
-
-            return $accessibleIds;
-        } catch (\Exception $e) {
-            throw new ApiException('获取可访问菜单失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
-        }
+        return $this->getAccessibleMenuScope($adminId)['menuIds'];
     }
 
     /**
@@ -273,17 +305,17 @@ class MenuPermissionService
     public function getMenuPermissions(int $adminId): array
     {
         try {
-            // 获取可访问的菜单ID
-            $menuIds = $this->getAccessibleMenuIds($adminId);
-            if (empty($menuIds)) {
+            $menuScope = $this->getAccessibleMenuScope($adminId);
+            $menuIds = $menuScope['menuIds'];
+            if ($menuScope['scope'] === self::MENU_SCOPE_LIMITED && empty($menuIds)) {
                 return [];
             }
 
-            // 获取菜单详细信息
-            $menus = $this->menuModel->whereIn('id', $menuIds)->get();
-            
-            // 获取管理员角色代码
             $admin = $this->adminModel->find($adminId);
+            if (!$admin) {
+                throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
+            }
+
             $roles = $admin->getRoles();
             $roleCodes = [];
             foreach ($roles as $role) {
@@ -292,17 +324,24 @@ class MenuPermissionService
                 }
             }
 
-            // 构建权限列表
+            if ($menuScope['scope'] === self::MENU_SCOPE_ALLOW_ALL) {
+                $menus = $this->menuModel->where('status', 1)->where('deleted', 0)->get();
+            } else {
+                $menus = $this->menuModel->whereIn('id', $menuIds)->get();
+            }
+            
             $permissions = [];
             foreach ($menus as $menu) {
+                if (!$menu instanceof Menu) {
+                    continue;
+                }
+
                 $menuArray = $menu->toArray();
                 
-                // 添加菜单基础权限
                 if (!empty($menuArray['permission'])) {
                     $permissions[] = $menuArray['permission'];
                 }
 
-                // 添加权限按钮权限
                 $authList = $this->filterAuthListByRoles($menuArray, $roleCodes);
                 foreach ($authList as $auth) {
                     if (!empty($auth['authMark'])) {
@@ -313,7 +352,7 @@ class MenuPermissionService
 
             return array_unique($permissions);
         } catch (\Exception $e) {
-            throw new ApiException('获取菜单权限失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
+            throw new ApiException(Code::SYSTEM_ERROR, '获取菜单权限失败: ' . $e->getMessage());
         }
     }
 
@@ -493,7 +532,7 @@ class MenuPermissionService
             // 检查角色是否有此菜单权限
             return $role->hasMenu($menuId);
         } catch (\Exception $e) {
-            throw new ApiException('角色菜单权限验证失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
+            throw new ApiException(Code::SYSTEM_ERROR, '角色菜单权限验证失败: ' . $e->getMessage());
         }
     }
 
@@ -521,7 +560,7 @@ class MenuPermissionService
             // 构建菜单树
             return $this->buildMenuTreeFromIds($menuIds);
         } catch (\Exception $e) {
-            throw new ApiException('获取角色菜单树失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
+            throw new ApiException(Code::SYSTEM_ERROR, '获取角色菜单树失败: ' . $e->getMessage());
         }
     }
 
@@ -550,6 +589,10 @@ class MenuPermissionService
         // 构建菜单映射
         $menuMap = [];
         foreach ($menus as $menu) {
+            if (!$menu instanceof Menu) {
+                continue;
+            }
+
             $menuArray = $menu->toArray();
             $menuMap[$menuArray['id']] = $menuArray;
             $menuMap[$menuArray['id']]['children'] = [];
@@ -683,7 +726,7 @@ class MenuPermissionService
 
             return $stats;
         } catch (\Exception $e) {
-            throw new ApiException('获取权限统计失败: ' . $e->getMessage(), Code::MENU_PERMISSION_ERROR);
+            throw new ApiException(Code::SYSTEM_ERROR, '获取权限统计失败: ' . $e->getMessage());
         }
     }
 }

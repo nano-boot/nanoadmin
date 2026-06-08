@@ -24,16 +24,17 @@ class AuthController
      * 构建 /auth/info 返回契约。
      *
      * 约定：
+     * - permissionScope：后端统一权限范围，显式区分超管全放行与普通精确授权
      * - permissionCodes：后端内部统一权限码数组
      * - buttons：框架兼容保留字段，值来源于后端统一权限码
      * - backend 模式下前端正式按钮权限来源仍为动态路由中的 route.meta.authList
      *
      * @param object $admin 当前管理员对象
      * @param array $roleCodes 角色编码列表
-     * @param array $permissionCodes 后端内部统一权限码列表
+     * @param array $permissionScope 后端统一权限范围
      * @return array
      */
-    protected function buildInfoPayload(object $admin, array $roleCodes, array $permissionCodes): array
+    protected function buildInfoPayload(object $admin, array $roleCodes, array $permissionScope): array
     {
         return [
             'id' => $admin->id,
@@ -47,7 +48,9 @@ class AuthController
             'last_login_time' => $admin->last_login_time,
             'created_at' => $admin->created_at,
             'roles' => $roleCodes,
-            'buttons' => $permissionCodes,
+            'permissionScope' => $permissionScope,
+            'permissionCodes' => $permissionScope['codes'],
+            'buttons' => $permissionScope['codes'],
         ];
     }
 
@@ -104,11 +107,11 @@ class AuthController
                 return R::error('用户未登录', 401);
             }
 
-            $permissionCodes = $this->authService->getAdminPermissionCodes($admin->id);
+            $permissionScope = $this->authService->getAdminPermissionScope($admin->id);
             $roleCodes = $this->authService->getAdminRoleCodes($admin->id);
 
             return R::success(
-                $this->buildInfoPayload($admin, $roleCodes, $permissionCodes),
+                $this->buildInfoPayload($admin, $roleCodes, $permissionScope),
                 '获取成功'
             );
 
