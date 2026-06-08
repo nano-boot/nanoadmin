@@ -45,13 +45,51 @@ class PermissionMiddleware implements MiddlewareInterface
         'PUT:/sys/permissions/*' => 'sys:permission:update',
         // 'DELETE:/sys/permissions/*' => 'sys:permission:delete',
 
-        // 菜单管理
-        'GET:/sys/menu' => 'sys:menu:page',
-        'POST:/sys/menu' => 'sys:menu:create',
-        'GET:/sys/menu/*' => 'sys:menu:view',
-        'PUT:/sys/menu/*' => 'sys:menu:update',
-        // 'DELETE:/sys/menu/*' => 'sys:menu:delete',
-        'POST:/sys/menu/sort' => 'sys:menu:sort',
+        // 字典类型管理
+        'GET:/sys/dict-type' => 'sys:dict:type:page',
+        'POST:/sys/dict-type' => 'sys:dict:type:create',
+        'GET:/sys/dict-type/*' => 'sys:dict:type:page',
+        'PUT:/sys/dict-type/*' => 'sys:dict:type:update',
+        'DELETE:/sys/dict-type/batch' => 'sys:dict:type:delete',
+        'DELETE:/sys/dict-type/*' => 'sys:dict:type:delete',
+
+        // 字典数据管理（沿用字典类型权限）
+        'GET:/sys/dict-data' => 'sys:dict:type:page',
+        'POST:/sys/dict-data' => 'sys:dict:type:create',
+        'GET:/sys/dict-data/*' => 'sys:dict:type:page',
+        'PUT:/sys/dict-data/*' => 'sys:dict:type:update',
+        'DELETE:/sys/dict-data/batch' => 'sys:dict:type:delete',
+        'DELETE:/sys/dict-data/*' => 'sys:dict:type:delete',
+
+        // 文件管理
+        'GET:/sys/files' => 'sys:file:list',
+        'POST:/sys/files' => 'sys:file:create',
+        'POST:/sys/files/batch' => 'sys:file:create',
+        'GET:/sys/files/stats' => 'sys:file:list',
+        'GET:/sys/files/*/download' => 'sys:file:list',
+        'GET:/sys/files/*' => 'sys:file:list',
+        'PUT:/sys/files/*' => 'sys:file:update',
+        'DELETE:/sys/files/batch' => 'sys:file:delete',
+        'DELETE:/sys/files/*' => 'sys:file:delete',
+
+        // 配置管理
+        'GET:/sys/config' => 'sys:config:page',
+        'GET:/sys/config/group' => 'sys:config:page',
+        'POST:/sys/config' => 'sys:config:create',
+        'PUT:/sys/config/batch' => 'sys:config:update',
+        'GET:/sys/config/*' => 'sys:config:page',
+        'PUT:/sys/config/*' => 'sys:config:update',
+        'DELETE:/sys/config/batch' => 'sys:config:delete',
+        'DELETE:/sys/config/*' => 'sys:config:delete',
+
+        // 登录日志
+        'GET:/sys/login-log' => 'sys:log:page',
+        'GET:/sys/login-log/*' => 'sys:log:page',
+
+        // 操作日志
+        'GET:/sys/operation-log' => 'sys:log:page',
+        'GET:/sys/operation-log/*' => 'sys:log:page',
+
     ];
 
     /**

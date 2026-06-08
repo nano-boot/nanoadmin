@@ -113,9 +113,8 @@ CREATE TABLE IF NOT EXISTS th_sys_menu (
     
     -- 菜单类型和权限
     type CHAR(1) DEFAULT 'D' COMMENT '菜单类型（D目录 M菜单 B按钮 L外链 I内嵌）',
-    permission VARCHAR(100) DEFAULT '' COMMENT '权限标识',
-     -- roles JSON DEFAULT NULL COMMENT '角色权限数组（对应meta.roles）',
-    -- auth_list JSON DEFAULT NULL COMMENT '权限按钮列表（对应meta.authList）',
+    permission VARCHAR(100) DEFAULT '' COMMENT '权限标识（正式动作权限载体；当 type = ''B'' 时应与 th_sys_permission.code 保持同一值域）',
+    -- roles / auth_list 为历史设计注释口径，当前正式动作权限模型以 B 类型按钮节点 + permission 为准
 
     -- === 显示控制 ===
     hide tinyint(1) DEFAULT 0 COMMENT '是否在菜单中隐藏（对应meta.isHide）',
@@ -402,8 +401,8 @@ ON DUPLICATE KEY UPDATE
 `deleted` = VALUES(`deleted`);
 
 INSERT INTO `th_sys_admin` (`id`, `username`, `password`, `nickname`, `status`, `deleted`) VALUES
-(1, 'admin', '$2y$10$4YHfM6z9M3q6Yx8JmM8rE.rS7bQ2QxgG0W5Q6W6m4m0J9wJQm4G4K', '超级管理员', 1, 0),
-(2, 'system', '$2y$10$4YHfM6z9M3q6Yx8JmM8rE.rS7bQ2QxgG0W5Q6W6m4m0J9wJQm4G4K', '系统管理员', 1, 0)
+(1, 'admin', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '超级管理员', 1, 0),
+(2, 'system', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '系统管理员', 1, 0)
 ON DUPLICATE KEY UPDATE
 `password` = VALUES(`password`),
 `nickname` = VALUES(`nickname`),
@@ -439,7 +438,23 @@ INSERT INTO `th_sys_permission` (`id`, `code`, `name`, `resource`, `action`, `de
 (21, 'sys:menu:view', '查看菜单', 'menu', 'view', '查看菜单详情', 1, 402, 0),
 (22, 'sys:menu:update', '更新菜单', 'menu', 'update', '更新菜单信息', 1, 403, 0),
 (23, 'sys:menu:sort', '菜单排序', 'menu', 'sort', '调整菜单排序', 1, 404, 0),
-(24, 'sys:menu:delete', '删除菜单', 'menu', 'delete', '删除菜单', 1, 405, 0)
+(24, 'sys:menu:delete', '删除菜单', 'menu', 'delete', '删除菜单', 1, 405, 0),
+(25, 'sys:file:list', '文件列表', 'file', 'list', '查看文件列表', 1, 500, 0),
+(26, 'sys:file:create', '创建文件', 'file', 'create', '上传或创建文件', 1, 501, 0),
+(27, 'sys:file:update', '编辑文件', 'file', 'update', '编辑文件信息', 1, 502, 0),
+(28, 'sys:file:delete', '删除文件', 'file', 'delete', '删除文件', 1, 503, 0),
+(29, 'sys:dict:type:page', '字典列表', 'dict-type', 'page', '查看字典列表', 1, 600, 0),
+(30, 'sys:dict:type:create', '创建字典', 'dict-type', 'create', '创建新字典', 1, 601, 0),
+(31, 'sys:dict:type:update', '编辑字典', 'dict-type', 'update', '编辑字典信息', 1, 602, 0),
+(32, 'sys:dict:type:delete', '删除字典', 'dict-type', 'delete', '删除字典', 1, 603, 0),
+(33, 'sys:config:page', '配置列表', 'config', 'page', '查看配置列表', 1, 700, 0),
+(34, 'sys:config:create', '创建配置', 'config', 'create', '创建新配置', 1, 701, 0),
+(35, 'sys:config:update', '编辑配置', 'config', 'update', '编辑配置信息', 1, 702, 0),
+(36, 'sys:config:delete', '删除配置', 'config', 'delete', '删除配置', 1, 703, 0),
+(37, 'sys:log:page', '日志列表', 'log', 'page', '查看日志列表', 1, 800, 0),
+(38, 'sys:log:create', '创建日志', 'log', 'create', '创建日志记录', 1, 801, 0),
+(39, 'sys:log:update', '编辑日志', 'log', 'update', '编辑日志信息', 1, 802, 0),
+(40, 'sys:log:delete', '删除日志', 'log', 'delete', '删除日志', 1, 803, 0)
 ON DUPLICATE KEY UPDATE
 `name` = VALUES(`name`),
 `resource` = VALUES(`resource`),
@@ -453,23 +468,46 @@ INSERT INTO `th_sys_role_permission` (`role_id`, `permission_id`) VALUES
 (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
 (2, 7), (2, 8), (2, 9), (2, 10), (2, 11), (2, 12), (2, 13),
 (2, 14), (2, 15), (2, 16), (2, 17), (2, 18),
-(2, 19), (2, 20), (2, 21), (2, 22), (2, 23), (2, 24)
+(2, 19), (2, 20), (2, 21), (2, 22), (2, 23), (2, 24),
+(2, 25), (2, 26), (2, 27), (2, 28),
+(2, 29), (2, 30), (2, 31), (2, 32),
+(2, 33), (2, 34), (2, 35), (2, 36),
+(2, 37), (2, 38), (2, 39), (2, 40)
 ON DUPLICATE KEY UPDATE `permission_id` = VALUES(`permission_id`);
 
 UPDATE `th_sys_menu` SET `permission` = 'sys:admin:page' WHERE `id` = 200;
 UPDATE `th_sys_menu` SET `permission` = 'sys:role:page' WHERE `id` = 201;
 UPDATE `th_sys_menu` SET `permission` = 'sys:menu:page' WHERE `id` = 202;
+UPDATE `th_sys_menu` SET `permission` = 'sys:admin:page' WHERE `id` = 2000;
 UPDATE `th_sys_menu` SET `permission` = 'sys:admin:create' WHERE `id` = 2001;
 UPDATE `th_sys_menu` SET `permission` = 'sys:admin:update' WHERE `id` = 2002;
 UPDATE `th_sys_menu` SET `permission` = 'sys:admin:delete' WHERE `id` = 2003;
 UPDATE `th_sys_menu` SET `permission` = 'sys:admin:assign-role' WHERE `id` = 2004;
+UPDATE `th_sys_menu` SET `permission` = 'sys:role:page' WHERE `id` = 2010;
 UPDATE `th_sys_menu` SET `permission` = 'sys:role:create' WHERE `id` = 2011;
 UPDATE `th_sys_menu` SET `permission` = 'sys:role:update' WHERE `id` = 2012;
 UPDATE `th_sys_menu` SET `permission` = 'sys:role:delete' WHERE `id` = 2013;
 UPDATE `th_sys_menu` SET `permission` = 'sys:role:assign-permission' WHERE `id` = 2014;
+UPDATE `th_sys_menu` SET `permission` = 'sys:menu:page' WHERE `id` = 2020;
 UPDATE `th_sys_menu` SET `permission` = 'sys:menu:create' WHERE `id` = 2021;
 UPDATE `th_sys_menu` SET `permission` = 'sys:menu:update' WHERE `id` = 2022;
 UPDATE `th_sys_menu` SET `permission` = 'sys:menu:delete' WHERE `id` = 2023;
 UPDATE `th_sys_menu` SET `permission` = 'sys:menu:sort' WHERE `id` = 2024;
+UPDATE `th_sys_menu` SET `permission` = 'sys:file:list' WHERE `id` = 3001;
+UPDATE `th_sys_menu` SET `permission` = 'sys:file:create' WHERE `id` = 3002;
+UPDATE `th_sys_menu` SET `permission` = 'sys:file:update' WHERE `id` = 3003;
+UPDATE `th_sys_menu` SET `permission` = 'sys:file:delete' WHERE `id` = 3004;
+UPDATE `th_sys_menu` SET `permission` = 'sys:dict:type:page' WHERE `id` = 3010;
+UPDATE `th_sys_menu` SET `permission` = 'sys:dict:type:create' WHERE `id` = 3011;
+UPDATE `th_sys_menu` SET `permission` = 'sys:dict:type:update' WHERE `id` = 3012;
+UPDATE `th_sys_menu` SET `permission` = 'sys:dict:type:delete' WHERE `id` = 3013;
+UPDATE `th_sys_menu` SET `permission` = 'sys:config:page' WHERE `id` = 3020;
+UPDATE `th_sys_menu` SET `permission` = 'sys:config:create' WHERE `id` = 3021;
+UPDATE `th_sys_menu` SET `permission` = 'sys:config:update' WHERE `id` = 3022;
+UPDATE `th_sys_menu` SET `permission` = 'sys:config:delete' WHERE `id` = 3023;
+UPDATE `th_sys_menu` SET `permission` = 'sys:log:page' WHERE `id` = 3030;
+UPDATE `th_sys_menu` SET `permission` = 'sys:log:create' WHERE `id` = 3031;
+UPDATE `th_sys_menu` SET `permission` = 'sys:log:update' WHERE `id` = 3032;
+UPDATE `th_sys_menu` SET `permission` = 'sys:log:delete' WHERE `id` = 3033;
 
 

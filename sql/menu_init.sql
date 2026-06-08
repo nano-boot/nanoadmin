@@ -60,50 +60,57 @@ REPLACE INTO `th_sys_menu` (
 
 
 -- === 按钮权限 ===
-INSERT INTO `th_sys_menu` (
+REPLACE INTO `th_sys_menu` (
     `id`, `name`, `title`, `path`, `component`, `permission`, `parent_id`,
     `sort`, `type`, `status`, `hide`, `active_path`
 ) VALUES
 -- 用户管理按钮权限
-(2001, 'AuthUserCreate', '创建用户', '/permission/user/create', '', 'sys:admin:create', 200,  1, 'B', 1, 1, ''),
-(2002, 'AuthUserEdit', '编辑用户', '/permission/user/edit', '', 'sys:admin:update', 200,  2, 'B', 1, 1, ''),
-(2003, 'AuthUserDelete', '删除用户', '/permission/user/delete', '', 'sys:admin:delete', 200,  3, 'B', 1, 1, ''),
-(2004, 'AuthUserResetPwd', '重置密码', '/permission/user/reset-pwd', '', 'sys:admin:assign-role', 200,  4, 'B', 1, 1, ''),
+(2000, 'AuthUserList', '用户列表', '/permission/user/list', '', 'sys:admin:page', 200,  1, 'B', 1, 1, ''),
+(2001, 'AuthUserCreate', '创建用户', '/permission/user/create', '', 'sys:admin:create', 200,  2, 'B', 1, 1, ''),
+(2002, 'AuthUserEdit', '编辑用户', '/permission/user/edit', '', 'sys:admin:update', 200,  3, 'B', 1, 1, ''),
+(2003, 'AuthUserDelete', '删除用户', '/permission/user/delete', '', 'sys:admin:delete', 200,  4, 'B', 1, 1, ''),
+(2004, 'AuthUserResetPwd', '重置密码', '/permission/user/reset-pwd', '', 'sys:admin:assign-role', 200,  5, 'B', 1, 1, ''),
 
 -- 角色管理按钮权限
-(2011, 'AuthRoleCreate', '创建角色', '/permission/role/create', '', 'sys:role:create', 201,  1, 'B', 1, 1, ''),
-(2012, 'AuthRoleEdit', '编辑角色', '/permission/role/edit', '', 'sys:role:update', 201,  2, 'B', 1, 1, ''),
-(2013, 'AuthRoleDelete', '删除角色', '/permission/role/delete', '', 'sys:role:delete', 201,  3, 'B', 1, 1, ''),
-(2014, 'AuthRolePermission', '分配权限', '/permission/role/permission', '', 'sys:role:assign-permission', 201,  4, 'B', 1, 1, ''),
+(2010, 'AuthRoleList', '角色列表', '/permission/role/list', '', 'sys:role:page', 201,  1, 'B', 1, 1, ''),
+(2011, 'AuthRoleCreate', '创建角色', '/permission/role/create', '', 'sys:role:create', 201,  2, 'B', 1, 1, ''),
+(2012, 'AuthRoleEdit', '编辑角色', '/permission/role/edit', '', 'sys:role:update', 201,  3, 'B', 1, 1, ''),
+(2013, 'AuthRoleDelete', '删除角色', '/permission/role/delete', '', 'sys:role:delete', 201,  4, 'B', 1, 1, ''),
+(2014, 'AuthRolePermission', '分配权限', '/permission/role/permission', '', 'sys:role:assign-permission', 201,  5, 'B', 1, 1, ''),
 
 
 -- 菜单管理按钮权限
-(2021, 'AuthMenuCreate', '创建菜单', '/permission/menu/create', '', 'sys:menu:create', 202,  1, 'B', 1, 1, ''),
-(2022, 'AuthMenuEdit', '编辑菜单', '/permission/menu/edit', '', 'sys:menu:update', 202,  2, 'B', 1, 1, ''),
-(2023, 'AuthMenuDelete', '删除菜单', '/permission/menu/delete', '', 'sys:menu:delete', 202,  3, 'B', 1, 1, ''),
-(2024, 'AuthMenuSort', '菜单排序', '/permission/menu/sort', '', 'sys:menu:sort', 202,  4, 'B', 1, 1, ''),
+(2020, 'AuthMenuList', '菜单列表', '/permission/menu/list', '', 'sys:menu:page', 202,  1, 'B', 1, 1, ''),
+(2021, 'AuthMenuCreate', '创建菜单', '/permission/menu/create', '', 'sys:menu:create', 202,  2, 'B', 1, 1, ''),
+(2022, 'AuthMenuEdit', '编辑菜单', '/permission/menu/edit', '', 'sys:menu:update', 202,  3, 'B', 1, 1, ''),
+(2023, 'AuthMenuDelete', '删除菜单', '/permission/menu/delete', '', 'sys:menu:delete', 202,  4, 'B', 1, 1, ''),
+(2024, 'AuthMenuSort', '菜单排序', '/permission/menu/sort', '', 'sys:menu:sort', 202,  5, 'B', 1, 1, ''),
 
 -- 文件管理按钮权限
-(3001, 'SystemFileCreate', '创建文件', '/system/file/create', '', '', 300,  1, 'B', 1, 1, ''),
-(3002, 'SystemFileEdit', '编辑文件', '/system/file/edit', '', '', 300,  2, 'B', 1, 1, ''),
-(3003, 'SystemFileDelete', '删除文件', '/system/file/delete', '', '', 300,  3, 'B', 1, 1, ''),
+(3001, 'SystemFileList', '文件列表', '/system/file/list', '', 'sys:file:list', 300,  1, 'B', 1, 1, ''),
+(3002, 'SystemFileCreate', '创建文件', '/system/file/create', '', 'sys:file:create', 300,  2, 'B', 1, 1, ''),
+(3003, 'SystemFileEdit', '编辑文件', '/system/file/edit', '', 'sys:file:update', 300,  3, 'B', 1, 1, ''),
+(3004, 'SystemFileDelete', '删除文件', '/system/file/delete', '', 'sys:file:delete', 300,  4, 'B', 1, 1, ''),
 
 -- 字典管理按钮权限
-(3011, 'SystemDictTypeCreate', '创建字典', '/system/dict-type/create', '', '', 301,  1, 'B', 1, 1, ''),
-(3012, 'SystemDictEdit', '编辑字典', '/system/dict-type/edit', '', '', 301,  2, 'B', 1, 1, ''),
-(3013, 'SystemDictDelete', '删除字典', '/system/dict-type/delete', '', '', 301,  3, 'B', 1, 1, ''),
+(3010, 'SystemDictTypeList', '字典列表', '/system/dict-type/list', '', 'sys:dict:type:page', 301,  1, 'B', 1, 1, ''),
+(3011, 'SystemDictTypeCreate', '创建字典', '/system/dict-type/create', '', 'sys:dict:type:create', 301,  2, 'B', 1, 1, ''),
+(3012, 'SystemDictEdit', '编辑字典', '/system/dict-type/edit', '', 'sys:dict:type:update', 301,  3, 'B', 1, 1, ''),
+(3013, 'SystemDictDelete', '删除字典', '/system/dict-type/delete', '', 'sys:dict:type:delete', 301,  4, 'B', 1, 1, ''),
 
 
 -- 配置管理按钮权限
-(3021, 'SystemConfigCreate', '创建配置', '/system/config/create', '', '', 302,  1, 'B', 1, 1, ''),
-(3022, 'SystemConfigEdit', '编辑配置', '/system/config/edit', '', '', 302,  2, 'B', 1, 1, ''),
-(3023, 'SystemConfigDelete', '删除配置', '/system/config/delete', '', '', 302,  3, 'B', 1, 1, ''),
+(3020, 'SystemConfigList', '配置列表', '/system/config/list', '', 'sys:config:page', 302,  1, 'B', 1, 1, ''),
+(3021, 'SystemConfigCreate', '创建配置', '/system/config/create', '', 'sys:config:create', 302,  2, 'B', 1, 1, ''),
+(3022, 'SystemConfigEdit', '编辑配置', '/system/config/edit', '', 'sys:config:update', 302,  3, 'B', 1, 1, ''),
+(3023, 'SystemConfigDelete', '删除配置', '/system/config/delete', '', 'sys:config:delete', 302,  4, 'B', 1, 1, ''),
 
 
 -- 日志管理按钮权限
-(3031, 'SystemLogCreate', '创建日志', '/system/log/create', '', '', 303,  1, 'B', 1, 1, ''),
-(3032, 'SystemLogEdit', '编辑日志', '/system/log/edit', '', '', 303,  2, 'B', 1, 1, ''),
-(3033, 'SystemLogDelete', '删除日志', '/system/log/delete', '', '', 303,  3, 'B', 1, 1, '');
+(3030, 'SystemLogList', '日志列表', '/system/log/list', '', 'sys:log:page', 303,  1, 'B', 1, 1, ''),
+(3031, 'SystemLogCreate', '创建日志', '/system/log/create', '', 'sys:log:create', 303,  2, 'B', 1, 1, ''),
+(3032, 'SystemLogEdit', '编辑日志', '/system/log/edit', '', 'sys:log:update', 303,  3, 'B', 1, 1, ''),
+(3033, 'SystemLogDelete', '删除日志', '/system/log/delete', '', 'sys:log:delete', 303,  4, 'B', 1, 1, '');
 
 
 
@@ -135,8 +142,8 @@ ALTER TABLE `th_sys_menu` AUTO_INCREMENT = 8000;
 2. 元数据字段：
    - icon: 图标，对应前端 meta.icon
    - redirect: 重定向，对应前端 AppRouteRecord.redirect
-   - roles: 角色权限，对应前端 meta.roles（JSON数组）
-   - auth_list: 操作权限，对应前端 meta.authList（JSON数组）
+   - roles: 角色权限（仅兼容说明，不作为当前正式业务权限主链路）
+   - auth_list: 历史兼容/静态说明字段；当前正式按钮权限模型以 B 类型按钮节点 + permission 折叠生成 meta.authList 为准
 
 3. 显示控制：
    - is_hide: 对应前端 meta.isHide
