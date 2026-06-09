@@ -55,7 +55,7 @@ class MenuController
         $this->searchService = new MenuSearchService();
         
         // 初始化验证器并自动验证请求参数
-        new MenuValidator();
+        new MenuValidator(true);
     }
 
     /**

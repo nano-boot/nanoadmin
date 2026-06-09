@@ -37,7 +37,8 @@ class MenuValidator extends ValidatorBase
         'limit' => 'integer|min:1|max:100',
         'keyword' => 'string|max:100',
         'ids' => 'require|array|min:1',
-        'ids.*' => 'integer|gt:0'
+        'ids.*' => 'integer|gt:0',
+        '__button_permission_unique__' => 'checkButtonPermissionUnique'
     ];
 
     protected $message = [
@@ -64,6 +65,7 @@ class MenuValidator extends ValidatorBase
         'type.in' => '菜单类型只能是D(目录)、M(菜单)、B(按钮)、L(外链)、I(内嵌)中的一种',
         'permission.string' => '权限标识必须是字符串',
         'permission.max' => '权限标识长度不能超过100个字符',
+        '__button_permission_unique__.checkButtonPermissionUnique' => '按钮权限标识不能重复',
         'hidden.boolean' => '是否隐藏必须是布尔值',
         'hide_tab.boolean' => '是否隐藏标签页必须是布尔值',
         'full_page.boolean' => '是否全屏显示必须是布尔值',
@@ -146,6 +148,10 @@ class MenuValidator extends ValidatorBase
                 break;
                 
             case 'B': // 按钮
+                // 按钮必须挂在父级菜单下
+                if ((int)($data['parent_id'] ?? 0) <= 0) {
+                    return '按钮节点必须选择父级菜单';
+                }
                 // 按钮需要权限标识
                 if (empty($data['permission'])) {
                     return '按钮类型必须设置权限标识';
@@ -175,13 +181,46 @@ class MenuValidator extends ValidatorBase
     }
 
     /**
+     * 自定义验证规则：按钮权限标识唯一
+     */
+    protected function checkButtonPermissionUnique($value, $rule, $data = [])
+    {
+        if (($data['type'] ?? '') !== 'B') {
+            return true;
+        }
+
+        $permission = trim((string)($data['permission'] ?? ''));
+        if ($permission === '') {
+            return true;
+        }
+
+        $query = new \plugin\theadmin\app\model\Menu();
+        $query = $query
+            ->where('type', 'B')
+            ->where('permission', $permission);
+
+        $excludeId = isset($data['id']) ? (int)$data['id'] : 0;
+        if ($excludeId > 0) {
+            $query = $query->where('id', '<>', $excludeId);
+        }
+
+        $duplicate = $query->first();
+        if (!$duplicate) {
+            return true;
+        }
+
+        return '已存在相同的权限标识「' . $permission . '」（菜单名称：' . ($duplicate->title ?: $duplicate->name) . '）';
+    }
+
+    /**
      * 创建场景的自定义验证
      */
     protected function sceneStore()
     {
-        // ✅ 引用 $scene['store'] 数组，避免重复定义
+        //  引用 $scene['store'] 数组，避免重复定义
         return $this->only($this->scene['store'])
-                    ->append('type', 'checkMenuTypeFields');
+            ->append('__button_permission_unique__', 'checkButtonPermissionUnique')
+            ->append('type', 'checkMenuTypeFields');
     }
 
     /**
@@ -189,8 +228,8 @@ class MenuValidator extends ValidatorBase
      */
     protected function sceneUpdate()
     {
-        // ✅ 引用 $scene['update'] 数组，避免重复定义
         return $this->only($this->scene['update'])
-                    ->append('type', 'checkMenuTypeFields');
+            ->append('__button_permission_unique__', 'checkButtonPermissionUnique')
+            ->append('type', 'checkMenuTypeFields');
     }
 }

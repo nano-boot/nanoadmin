@@ -265,7 +265,6 @@ class ValidatorBase extends Validate
         if(!$scene){
             $scene = $this->getSceneName();
         }
-        var_dump($scene);
         return $this->validateData($this->all(), $scene);
     }
 

@@ -109,6 +109,9 @@ class MenuService
      */
     public function createMenu(array $data): array
     {
+        // 按钮节点强校验
+        $this->validateButtonNode($data);
+
         // 验证父菜单是否存在（如果不是顶级菜单）
         if (!empty($data['parent_id']) && $data['parent_id'] > 0) {
             $parent = $this->model->find($data['parent_id']);
@@ -152,8 +155,34 @@ class MenuService
     }
 
     /**
+     * 校验按钮节点（B类型）父级业务规则
+     * @param array $data 菜单数据
+     * @throws ApiException
+     */
+    private function validateButtonNode(array $data): void
+    {
+        if (($data['type'] ?? '') !== Menu::TYPE_BUTTON) {
+            return;
+        }
+
+        $parentId = (int)($data['parent_id'] ?? 0);
+        $parent = $this->model->find($parentId);
+        if (!$parent) {
+            throw new ApiException(Code::MENU_NOT_FOUND, '父级菜单不存在');
+        }
+
+        // 父节点必须是菜单页面类型（M），目录类型（D）下挂按钮是配置错误
+        if ($parent->type !== Menu::TYPE_MENU) {
+            throw new ApiException(
+                Code::PARAMETER_ERROR,
+                '按钮节点必须挂在「菜单页面」类型的节点下，不能挂在「' . ($parent->title ?: $parent->name) . '」（' . Menu::TYPE_MAP[$parent->type] . '）下'
+            );
+        }
+    }
+
+    /**
      * 更新菜单
-     * @param array $data 更新数据 
+     * @param array $data 更新数据
      * @return array
      * @throws ApiException
      */
@@ -167,14 +196,15 @@ class MenuService
         
         // 移除ID字段，避免更新时包含ID
         unset($data['id']);
-        
-  
-        
+
         // 检查菜单是否存在
         $menu = $this->model->find($id);
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
+        
+        // 按钮节点强校验
+        $this->validateButtonNode($data);
         
         // 验证父菜单
         if (isset($data['parent_id'])) {

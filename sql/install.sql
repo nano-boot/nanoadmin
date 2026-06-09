@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS th_sys_permission (
     resource VARCHAR(50) NOT NULL COMMENT '资源类型',
     action VARCHAR(50) NOT NULL COMMENT '操作类型',
     description VARCHAR(500) COMMENT '权限描述',
-   `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
+    `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
     `sort` int(11) DEFAULT 100 COMMENT '排序',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -475,39 +475,11 @@ INSERT INTO `th_sys_role_permission` (`role_id`, `permission_id`) VALUES
 (2, 37), (2, 38), (2, 39), (2, 40)
 ON DUPLICATE KEY UPDATE `permission_id` = VALUES(`permission_id`);
 
-UPDATE `th_sys_menu` SET `permission` = 'sys:admin:page' WHERE `id` = 200;
-UPDATE `th_sys_menu` SET `permission` = 'sys:role:page' WHERE `id` = 201;
-UPDATE `th_sys_menu` SET `permission` = 'sys:menu:page' WHERE `id` = 202;
-UPDATE `th_sys_menu` SET `permission` = 'sys:admin:page' WHERE `id` = 2000;
-UPDATE `th_sys_menu` SET `permission` = 'sys:admin:create' WHERE `id` = 2001;
-UPDATE `th_sys_menu` SET `permission` = 'sys:admin:update' WHERE `id` = 2002;
-UPDATE `th_sys_menu` SET `permission` = 'sys:admin:delete' WHERE `id` = 2003;
-UPDATE `th_sys_menu` SET `permission` = 'sys:admin:assign-role' WHERE `id` = 2004;
-UPDATE `th_sys_menu` SET `permission` = 'sys:role:page' WHERE `id` = 2010;
-UPDATE `th_sys_menu` SET `permission` = 'sys:role:create' WHERE `id` = 2011;
-UPDATE `th_sys_menu` SET `permission` = 'sys:role:update' WHERE `id` = 2012;
-UPDATE `th_sys_menu` SET `permission` = 'sys:role:delete' WHERE `id` = 2013;
-UPDATE `th_sys_menu` SET `permission` = 'sys:role:assign-permission' WHERE `id` = 2014;
-UPDATE `th_sys_menu` SET `permission` = 'sys:menu:page' WHERE `id` = 2020;
-UPDATE `th_sys_menu` SET `permission` = 'sys:menu:create' WHERE `id` = 2021;
-UPDATE `th_sys_menu` SET `permission` = 'sys:menu:update' WHERE `id` = 2022;
-UPDATE `th_sys_menu` SET `permission` = 'sys:menu:delete' WHERE `id` = 2023;
-UPDATE `th_sys_menu` SET `permission` = 'sys:menu:sort' WHERE `id` = 2024;
-UPDATE `th_sys_menu` SET `permission` = 'sys:file:list' WHERE `id` = 3001;
-UPDATE `th_sys_menu` SET `permission` = 'sys:file:create' WHERE `id` = 3002;
-UPDATE `th_sys_menu` SET `permission` = 'sys:file:update' WHERE `id` = 3003;
-UPDATE `th_sys_menu` SET `permission` = 'sys:file:delete' WHERE `id` = 3004;
-UPDATE `th_sys_menu` SET `permission` = 'sys:dict:type:page' WHERE `id` = 3010;
-UPDATE `th_sys_menu` SET `permission` = 'sys:dict:type:create' WHERE `id` = 3011;
-UPDATE `th_sys_menu` SET `permission` = 'sys:dict:type:update' WHERE `id` = 3012;
-UPDATE `th_sys_menu` SET `permission` = 'sys:dict:type:delete' WHERE `id` = 3013;
-UPDATE `th_sys_menu` SET `permission` = 'sys:config:page' WHERE `id` = 3020;
-UPDATE `th_sys_menu` SET `permission` = 'sys:config:create' WHERE `id` = 3021;
-UPDATE `th_sys_menu` SET `permission` = 'sys:config:update' WHERE `id` = 3022;
-UPDATE `th_sys_menu` SET `permission` = 'sys:config:delete' WHERE `id` = 3023;
-UPDATE `th_sys_menu` SET `permission` = 'sys:log:page' WHERE `id` = 3030;
-UPDATE `th_sys_menu` SET `permission` = 'sys:log:create' WHERE `id` = 3031;
-UPDATE `th_sys_menu` SET `permission` = 'sys:log:update' WHERE `id` = 3032;
-UPDATE `th_sys_menu` SET `permission` = 'sys:log:delete' WHERE `id` = 3033;
-
-
+-- =====================================================
+-- 菜单数据
+-- 请在安装完成后执行 sql/menu_init.sql 填充菜单初始数据
+-- menu_init.sql 中遵循 P0-1 按钮节点强规则：
+-- 1. 按钮节点（type='B'）必须设置 permission，且挂在父级菜单页面（type='M'）下
+-- 2. 页面节点（type='M' 或 'D'）不设置 permission
+-- 3. 同级按钮节点 permission 不可重复
+-- =====================================================
