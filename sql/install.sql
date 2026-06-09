@@ -261,7 +261,7 @@ INSERT INTO `th_sys_dict_type` (`name`, `code`, `description`, `status`, `sort`)
 ('性别', 'sys_gender', '系统性别枚举', 1, 10),
 ('状态', 'sys_status', '通用状态枚举', 1, 20),
 ('是/否', 'sys_yes_no', '是/否枚举', 1, 30),
-('通知类型', 'sys_notice_type', '通知消息类型', 1, 40),
+('通知类型', 'sys_notice_type', '通知消息类型', 1, 40);
 -- 字典数据 - 性别
 INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
 (1, '未知', '0', 10, 1),

@@ -10,8 +10,8 @@ namespace plugin\theadmin\app\controller;
  */
 class InstallApiController
 {
-    protected $model;
-    protected $env;
+    protected \InstallModel $model;
+    protected \YxEnv $env;
 
     public function __construct()
     {
@@ -247,7 +247,13 @@ class InstallApiController
                 ];
             }
 
-            $this->model->initAdminAccount($config);
+            if (!$this->model->initAdminAccount($config)) {
+                return [
+                    'code' => 500,
+                    'msg' => '安装失败: ' . ($this->model->getLastError() ?: '初始化管理员数据失败'),
+                    'data' => null
+                ];
+            }
 
             $envFile = $this->model->getAppRoot() . '/.env';
             $this->env->makeEnv($envFile);
