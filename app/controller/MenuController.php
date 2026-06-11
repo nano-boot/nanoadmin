@@ -95,10 +95,9 @@ class MenuController
                 $where['parent_id'] = (int)$params['parent_id'];
             }
 
-            // 关键词搜索（菜单名称或标题）
+            // 关键词搜索（菜单名称）
             if (!empty($params['keyword'])) {
                 $where['name'] = ['like', '%' . $params['keyword'] . '%'];
-                $where['title'] = ['like', '%' . $params['keyword'] . '%'];
             }
 
             // 获取分页数据
@@ -164,7 +163,6 @@ class MenuController
             $status  = $request->get('status', '');
             $type    = $request->get('type', '');
             $hidden  = $request->get('hidden', '');
-            $title   = trim($request->get('title', ''));
             $name    = trim($request->get('name', ''));
 
             // ✅ 明确判断是否存在真实搜索条件（不受 onlyEnabled 影响）
@@ -172,7 +170,6 @@ class MenuController
                 || $status !== ''
                 || !empty($type)
                 || $hidden !== ''
-                || !empty($title)
                 || !empty($name);
 
             if ($hasSearchConditions) {
@@ -194,9 +191,6 @@ class MenuController
                 }
                 if ($hidden !== '') {
                     $searchParams['hidden'] = (bool)$hidden;
-                }
-                if (!empty($title)) {
-                    $searchParams['title'] = $title;
                 }
                 if (!empty($name)) {
                     $searchParams['name'] = $name;
@@ -451,39 +445,6 @@ class MenuController
     }
 
     /**
-     * 从请求中获取表单数据
-     * @param Request $request
-     * @return array
-     */
-    private function getFormDataFromRequest(Request $request): array
-    {
-        return [
-            'parent_id' => (int)$request->post('parent_id', 0),
-            'name' => trim($request->post('name', '')),
-            'title' => trim($request->post('title', '')),
-            'icon' => trim($request->post('icon', '')),
-            'path' => trim($request->post('path', '')),
-            'component' => trim($request->post('component', '')),
-            'redirect' => trim($request->post('redirect', '')),
-            'type' => trim($request->post('type', Menu::TYPE_DIRECTORY)),
-            'permission' => trim($request->post('permission', '')),
-            'hidden' => (bool)$request->post('hidden', false),
-            'cacheable' => (bool)$request->post('cacheable', true),
-            'fixed_tab' => (bool)$request->post('fixed_tab', false),
-            'full_page' => (bool)$request->post('full_page', false),
-            'link_url' => trim($request->post('link_url', '')),
-            'iframe' => (bool)$request->post('iframe', false),
-            'show_badge' => (bool)$request->post('show_badge', false),
-            'badge_text' => trim($request->post('badge_text', '')),
-            'active_path' => trim($request->post('active_path', '')),
-            'status' => (bool)$request->post('status', true),
-            'sort' => (int)$request->post('sort', 100),
-            'roles' => $request->post('roles', []),
-            'auth_list' => $request->post('auth_list', [])
-        ];
-    }
-
-    /**
      * 根据关键词过滤菜单树
      * @param array $tree
      * @param string $keyword
@@ -497,8 +458,7 @@ class MenuController
             $match = false;
 
             // 检查当前菜单是否匹配
-            if (stripos($menu['name'], $keyword) !== false || 
-                stripos($menu['title'], $keyword) !== false) {
+            if (stripos($menu['name'], $keyword) !== false) {
                 $match = true;
             }
 
@@ -584,7 +544,7 @@ class MenuController
             
             // 搜索选项
             $options = [
-                'search_fields' => $request->get('search_fields', ['name', 'title', 'path']),
+                'search_fields' => $request->get('search_fields', ['name', 'path']),
                 'include_disabled' => $request->get('include_disabled', 'false') === 'true',
                 'include_hidden' => $request->get('include_hidden', 'false') === 'true',
                 'menu_types' => $request->get('menu_types', []),
@@ -627,7 +587,7 @@ class MenuController
             // 获取搜索参数
             $searchParams = [
                 'keyword' => trim($request->post('keyword', '')),
-                'search_fields' => $request->post('search_fields', ['name', 'title', 'path']),
+                'search_fields' => $request->post('search_fields', ['name', 'path']),
                 'menu_types' => $request->post('menu_types', []),
                 'status' => $request->post('status'),
                 'hidden' => $request->post('hidden'),
@@ -721,7 +681,7 @@ class MenuController
             
             // 搜索选项
             $options = [
-                'search_fields' => $request->get('search_fields', ['name', 'title', 'path']),
+                'search_fields' => $request->get('search_fields', ['name', 'path']),
                 'include_disabled' => $request->get('include_disabled', 'false') === 'true',
                 'include_hidden' => $request->get('include_hidden', 'false') === 'true',
                 'menu_types' => $request->get('menu_types', [])
@@ -764,7 +724,7 @@ class MenuController
             
             // 搜索选项
             $options = [
-                'search_fields' => $request->get('search_fields', ['name', 'title', 'path']),
+                'search_fields' => $request->get('search_fields', ['name', 'path']),
                 'include_disabled' => $request->get('include_disabled', 'false') === 'true',
                 'include_hidden' => $request->get('include_hidden', 'false') === 'true',
                 'menu_types' => $request->get('menu_types', []),

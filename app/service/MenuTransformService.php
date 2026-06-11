@@ -181,7 +181,6 @@ class MenuTransformService
                 'path' => $this->sanitizeString($formData['path'] ?? ''),
                 'component' => $this->sanitizeString($formData['component'] ?? ''),
                 'redirect' => $this->sanitizeString($formData['redirect'] ?? ''),
-                'title' => $this->sanitizeString($formData['title'] ?? ''),
                 'icon' => $this->sanitizeString($formData['icon'] ?? ''),
                 'type' => $this->sanitizeString($formData['type'] ?? Menu::TYPE_DIRECTORY),
                 'permission' => $this->sanitizeString($formData['permission'] ?? ''),
@@ -224,7 +223,6 @@ class MenuTransformService
                 'path' => $dbData['path'] ?? '',
                 'component' => $dbData['component'] ?? '',
                 'redirect' => $dbData['redirect'] ?? '',
-                'title' => $dbData['title'] ?? '',
                 'icon' => $dbData['icon'] ?? '',
                 'type' => $dbData['type'] ?? Menu::TYPE_DIRECTORY,
                 'permission' => $dbData['permission'] ?? '',
@@ -232,7 +230,7 @@ class MenuTransformService
                 'cacheable' => (bool)($dbData['cacheable'] ?? true),
                 'fixed_tab' => (bool)($dbData['fixed_tab'] ?? false),
                 'full_page' => (bool)($dbData['full_page'] ?? false),
-                'link_url' => $dbData['link_url'] ?? '',
+                'link' => $dbData['link'] ?? '',
                 'iframe' => (bool)($dbData['iframe'] ?? false),
                 'show_badge' => (bool)($dbData['show_badge'] ?? false),
                 'badge_text' => $dbData['badge_text'] ?? '',
@@ -259,7 +257,7 @@ class MenuTransformService
     private function buildMetaConfig(array $menuData): array
     {
         $meta = [
-            'title' => $menuData['title'] ?? '',
+            'title' => $menuData['name'] ?? '',
             'icon' => $menuData['icon'] ?? '',
             'keepAlive' => $menuData['keepAlive'] ??  true,
             'isHide' =>  $menuData['isHide'] ?? false,
@@ -282,9 +280,9 @@ class MenuTransformService
         }
 
         // 处理外链配置（优先使用驼峰命名）
-        $linkUrl = $menuData['linkUrl'] ?? ($menuData['link_url'] ?? '');
-        if (!empty($linkUrl)) {
-            $meta['link'] = $linkUrl;
+        $link = $menuData['link'] ?? ($menuData['link'] ?? '');
+        if (!empty($link)) {
+            $meta['link'] = $link;
             $meta['isIframe'] = (bool)($menuData['iframe'] ?? false);
         }
 
@@ -499,7 +497,7 @@ class MenuTransformService
             'path' => $menuData['path'] ?? '',
             'component' => $menuData['component'] ?? '',
             'redirect' => $menuData['redirect'] ?? '',
-            'title' => $menuData['title'] ?? '',
+            'title' => $menuData['name'] ?? '',
             'icon' => $menuData['icon'] ?? '',
             'type' => $menuData['type'] ?? Menu::TYPE_DIRECTORY,
             'type_text' => Menu::TYPE_MAP[$menuData['type'] ?? Menu::TYPE_DIRECTORY] ?? '未知',
@@ -509,7 +507,7 @@ class MenuTransformService
             'keepAlive' => $menuData['keepAlive'] ?? (bool)($menuData['cache'] ?? true),
             'fixedTab' => $menuData['fixedTab'] ?? (bool)($menuData['fixed_tab'] ?? false),
             'isFullPage' => $menuData['isFullPage'] ?? (bool)($menuData['full_page'] ?? false),
-            'linkUrl' => $menuData['linkUrl'] ?? ($menuData['link_url'] ?? ''),
+            'link' => $menuData['link'] ?? ($menuData['link'] ?? ''),
             'iframe' => (bool)($menuData['iframe'] ?? false),
             'showBadge' => $menuData['showBadge'] ?? (bool)($menuData['show_badge'] ?? false),
             'badgeText' => $menuData['badgeText'] ?? ($menuData['badge_text'] ?? ''),
@@ -555,7 +553,7 @@ class MenuTransformService
 
             $item = [
                 'value' => $menu['id'] ?? 0,
-                'label' => $menu['title'] ?? '',
+                'label' => $menu['name'] ?? '',
                 'type' => $menu['type'] ?? Menu::TYPE_DIRECTORY,
                 'disabled' => !($menu['status'] ?? true)
             ];

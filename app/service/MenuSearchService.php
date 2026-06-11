@@ -35,12 +35,12 @@ class MenuSearchService
     {
         // 默认搜索选项
         $defaultOptions = [
-            'search_fields' => ['name', 'title', 'path'], // 搜索字段
+            'search_fields' => ['name', 'path'], // 搜索字段
             'include_disabled' => false,                   // 是否包含禁用菜单
             'include_hidden' => false,                     // 是否包含隐藏菜单
             'menu_types' => [],                           // 菜单类型过滤
             'maintain_hierarchy' => true,                 // 是否保持层级结构
-            'parent_id' => null                          // 指定父菜单ID
+            'parent_id' => null                           // 指定父菜单ID
         ];
         
         $options = array_merge($defaultOptions, $options);
@@ -171,7 +171,7 @@ class MenuSearchService
             $isMatch = false;
             
             // 检查当前菜单是否匹配
-            if ($this->isMenuMatch($menuArray, $keyword, $options['search_fields'] ?? ['name', 'title', 'path'])) {
+            if ($this->isMenuMatch($menuArray, $keyword, $options['search_fields'] ?? ['name', 'path'])) {
                 $isMatch = true;
             }
             
@@ -261,7 +261,7 @@ class MenuSearchService
         $query = $this->menuModel->newQuery();
         
         // 构建搜索条件
-        $searchFields = $options['search_fields'] ?? ['name', 'title', 'path'];
+        $searchFields = $options['search_fields'] ?? ['name', 'path'];
         $query->where(function($q) use ($keyword, $searchFields) {
             foreach ($searchFields as $field) {
                 $q->orWhere($field, 'like', '%' . $keyword . '%');
@@ -418,7 +418,7 @@ class MenuSearchService
             } catch (\Exception $e) {
                 $menuArray['level'] = 0;
                 $menuArray['path_info'] = [];
-                $menuArray['full_path'] = $menu->title;
+                $menuArray['full_path'] = $menu->name;
             }
             
             $results[] = $menuArray;
@@ -610,22 +610,6 @@ class MenuSearchService
                 'type' => 'name',
                 'value' => $name,
                 'label' => "菜单名称: {$name}"
-            ];
-        }
-        
-        // 菜单标题建议
-        $titleMatches = $this->menuModel
-            ->where('title', 'like', '%' . $keyword . '%')
-            ->where('status', true)
-            ->limit($limit)
-            ->pluck('title')
-            ->toArray();
-        
-        foreach ($titleMatches as $title) {
-            $suggestions[] = [
-                'type' => 'title',
-                'value' => $title,
-                'label' => "菜单标题: {$title}"
             ];
         }
         

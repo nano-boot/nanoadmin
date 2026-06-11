@@ -324,7 +324,7 @@ class CreatePermissionTables extends Migrator
             'default' => false,
             'comment' => '是否固定在标签页'
         ])
-        ->addColumn('link_url', 'string', [
+        ->addColumn('link', 'string', [
             'limit' => 500,
             'default' => '',
             'comment' => '外链地址'

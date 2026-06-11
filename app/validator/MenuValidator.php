@@ -13,11 +13,10 @@ class MenuValidator extends ValidatorBase
     protected $rule = [
         'id' => 'require|integer|gt:0',
         'parent_id' => 'integer|min:0',
-        'name' => 'require|string|min:2|max:100|regex:/^[a-zA-Z][a-zA-Z0-9_]*$/',
+        'name' => 'require|string|min:1|max:100',
         'path' => 'string|max:200',
         'component' => 'string|max:200',
         'redirect' => 'string|max:200',
-        'title' => 'require|string|min:1|max:100',
         'icon' => 'string|max:100',
         'type' => 'require|in:D,M,B,L,I',
         'permission' => 'string|max:100',
@@ -26,7 +25,7 @@ class MenuValidator extends ValidatorBase
         'full_page' => 'boolean',
         'keep_alive' => 'boolean',
         'fixed_tab' => 'boolean',
-        'link_url' => 'string|max:500',
+        'link' => 'string|max:500',
         'iframe' => 'boolean',
         'show_badge' => 'boolean',
         'badge_text' => 'string|max:20',
@@ -44,21 +43,16 @@ class MenuValidator extends ValidatorBase
     protected $message = [
         'parent_id.integer' => '父菜单ID必须是整数',
         'parent_id.min' => '父菜单ID必须大于等于0',
-        'name.required' => '路由名称不能为空',
-        'name.string' => '路由名称必须是字符串',
-        'name.min' => '路由名称长度必须在2-100个字符之间',
-        'name.max' => '路由名称长度必须在2-100个字符之间',
-        'name.regex' => '路由名称只能包含字母、数字和下划线，且必须以字母开头',
+        'name.required' => '菜单名称不能为空',
+        'name.string' => '菜单名称必须是字符串',
+        'name.min' => '菜单名称长度必须在1-100个字符之间',
+        'name.max' => '菜单名称长度必须在1-100个字符之间',
         'path.string' => '路由路径必须是字符串',
         'path.max' => '路由路径长度不能超过200个字符',
         'component.string' => '组件路径必须是字符串',
         'component.max' => '组件路径长度不能超过200个字符',
         'redirect.string' => '重定向路径必须是字符串',
         'redirect.max' => '重定向路径长度不能超过200个字符',
-        'title.required' => '菜单标题不能为空',
-        'title.string' => '菜单标题必须是字符串',
-        'title.min' => '菜单标题长度必须在1-100个字符之间',
-        'title.max' => '菜单标题长度必须在1-100个字符之间',
         'icon.string' => '菜单图标必须是字符串',
         'icon.max' => '菜单图标长度不能超过100个字符',
         'type.required' => '菜单类型不能为空',
@@ -71,8 +65,8 @@ class MenuValidator extends ValidatorBase
         'full_page.boolean' => '是否全屏显示必须是布尔值',
         'keep_alive.boolean' => '是否缓存必须是布尔值',
         'fixed_tab.boolean' => '是否固定标签必须是布尔值',
-        'link_url.string' => '外链地址必须是字符串',
-        'link_url.max' => '外链地址长度不能超过500个字符',
+        'link.string' => '外链地址必须是字符串',
+        'link.max' => '外链地址长度不能超过500个字符',
         'iframe.boolean' => '是否内嵌必须是布尔值',
         'show_badge.boolean' => '是否显示徽章必须是布尔值',
         'badge_text.string' => '徽章文本必须是字符串',
@@ -105,15 +99,15 @@ class MenuValidator extends ValidatorBase
      */
     protected $scene = [
         'store' => [
-            'parent_id', 'name', 'path', 'component', 'redirect', 'title',
+            'parent_id', 'name', 'path', 'component', 'redirect',
             'icon', 'type', 'permission', 'hidden', 'hide_tab', 'full_page',
-            'keep_alive', 'fixed_tab', 'link_url', 'iframe', 'show_badge',
+            'keep_alive', 'fixed_tab', 'link', 'iframe', 'show_badge',
             'badge_text', 'active_path', 'status', 'sort'
         ],
         'update' => [
-            'id', 'parent_id', 'name', 'path', 'component', 'redirect', 'title', 
-            'icon', 'type', 'permission', 'hidden', 'hide_tab', 'full_page', 
-            'keep_alive', 'fixed_tab', 'link_url', 'iframe', 'show_badge', 
+            'id', 'parent_id', 'name', 'path', 'component', 'redirect',
+            'icon', 'type', 'permission', 'hidden', 'hide_tab', 'full_page',
+            'keep_alive', 'fixed_tab', 'link', 'iframe', 'show_badge',
             'badge_text', 'active_path', 'status', 'sort'
         ],
         'show' => ['id'],
@@ -164,14 +158,14 @@ class MenuValidator extends ValidatorBase
                 
             case 'L': // 外链
                 // 外链需要外链地址
-                if (empty($data['link_url'])) {
+                if (empty($data['link'])) {
                     return '外链类型必须设置外链地址';
                 }
                 break;
                 
             case 'I': // 内嵌
                 // 内嵌需要外链地址
-                if (empty($data['link_url'])) {
+                if (empty($data['link'])) {
                     return '内嵌类型必须设置外链地址';
                 }
                 break;
@@ -209,7 +203,7 @@ class MenuValidator extends ValidatorBase
             return true;
         }
 
-        return '已存在相同的权限标识「' . $permission . '」（菜单名称：' . ($duplicate->title ?: $duplicate->name) . '）';
+        return '已存在相同的权限标识「' . $permission . '」（菜单名称：' . $duplicate->name . '）';
     }
 
     /**

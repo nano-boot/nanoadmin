@@ -57,9 +57,9 @@ class Menu extends BaseModel
      * 搜索字段配置（显式声明，避免静态属性继承污染）
      * @var array
      */
-    protected static array $searchLikeFields = ['title'];
+    protected static array $searchLikeFields = ['name'];
     protected static array $searchEqualFields = ['status', 'type'];
-    protected static array $searchKeywordFields = ['title'];
+    protected static array $searchKeywordFields = ['name'];
     protected static array $searchRangeFields = [];
 
     /**
@@ -72,13 +72,12 @@ class Menu extends BaseModel
         'parent_id',
         'type',
         'name',
-        'title',
         'icon',
         'path',
         'component',
         'redirect',
         'permission',
-        'hide_tab',
+        'hide',
         'link',
         'iframe',
         'status',
@@ -88,7 +87,7 @@ class Menu extends BaseModel
         'auth_list',
         // 底层数据库字段（snake_case）
         'cache',           // 对应虚拟属性 keepAlive
-        'hide',          // 对应虚拟属性 isHide
+        'hide',            // 对应虚拟属性 isHide
         'hide_tab',        // 对应虚拟属性 isHideTab
         'fixed_tab',       // 对应虚拟属性 fixedTab
         'full_page',       // 对应虚拟属性 isFullPage
@@ -582,11 +581,6 @@ class Menu extends BaseModel
             $query->where('name', 'like', '%' . $where['name'] . '%');
         }
         
-        // 支持菜单标题搜索
-        if (!empty($where['title'])) {
-            $query->where('title', 'like', '%' . $where['title'] . '%');
-        }
-        
         // 支持菜单类型筛选
         if (isset($where['menu_type'])) {
             $query->where('menu_type', $where['menu_type']);
@@ -840,7 +834,6 @@ class Menu extends BaseModel
             array_unshift($path, [
                 'id' => $menu->id,
                 'name' => $menu->name,
-                'title' => $menu->title,
                 'path' => $menu->path
             ]);
             
@@ -883,19 +876,8 @@ class Menu extends BaseModel
      */
     public static function validateName(string $name): bool
     {
-        // 菜单名称只能包含字母、数字、下划线、中划线、中文字符，长度2-100
-        return preg_match('/^[a-zA-Z0-9_\-\x{4e00}-\x{9fa5}]{2,100}$/u', $name);
-    }
-
-    /**
-     * 验证菜单标题格式
-     * @param string $title 菜单标题
-     * @return bool
-     */
-    public static function validateTitle(string $title): bool
-    {
-        // 菜单标题长度2-100，不能为空
-        return !empty(trim($title)) && mb_strlen(trim($title)) >= 2 && mb_strlen(trim($title)) <= 100;
+        // 菜单名称长度2-100，不能为空
+        return !empty(trim($name)) && mb_strlen(trim($name)) >= 2 && mb_strlen(trim($name)) <= 100;
     }
 
     /**
@@ -1185,7 +1167,7 @@ class Menu extends BaseModel
                 'path' => $menu['path'],
                 'component' => $menu['component'] ?: 'Layout',
                 'meta' => [
-                    'title' => $menu['title'],
+                    'title' => $menu['name'],
                     'icon' => $menu['icon'],
                     'keepAlive' => $menu['cache'],
                     'isHide' => $menu['hide'],
@@ -1260,7 +1242,6 @@ class Menu extends BaseModel
             'path' => $menu['path'] ?? '',
             'component' => $menu['component'] ?? '',
             'redirect' => $menu['redirect'] ?? '',
-            'title' => $menu['title'] ?? '',
             'icon' => $menu['icon'] ?? '',
             'type' => $menu['type'] ?? self::TYPE_DIRECTORY,
             'permission' => $menu['permission'] ?? '',
@@ -1306,7 +1287,6 @@ class Menu extends BaseModel
             'path' => $formData['path'] ?? '',
             'component' => $formData['component'] ?? '',
             'redirect' => $formData['redirect'] ?? '',
-            'title' => $formData['title'] ?? '',
             'icon' => $formData['icon'] ?? '',
             'type' => $formData['type'] ?? self::TYPE_DIRECTORY,
             'permission' => $formData['permission'] ?? '',
@@ -1349,12 +1329,6 @@ class Menu extends BaseModel
             $errors[] = '菜单名称不能为空';
         } elseif (!self::validateName($data['name'])) {
             $errors[] = '菜单名称格式不正确';
-        }
-
-        if (empty($data['title'])) {
-            $errors[] = '菜单标题不能为空';
-        } elseif (!self::validateTitle($data['title'])) {
-            $errors[] = '菜单标题格式不正确';
         }
 
         // 验证菜单类型

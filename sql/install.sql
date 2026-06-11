@@ -101,15 +101,14 @@ CREATE TABLE IF NOT EXISTS th_sys_menu (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '菜单ID',
     parent_id BIGINT DEFAULT 0 COMMENT '父菜单ID，0为顶级菜单',
     
-    -- 路由基础信息
-    name VARCHAR(100) NOT NULL COMMENT '路由名称（对应前端name字段）',
+    -- 菜单显示信息（核心字段）
+    name VARCHAR(100) NOT NULL COMMENT '菜单名称（对应meta.title）',
+    icon VARCHAR(100) DEFAULT '' COMMENT '菜单图标（对应meta.icon）',
+    
+    -- 路由信息
     path VARCHAR(200) DEFAULT '' COMMENT '路由路径',
     component VARCHAR(200) DEFAULT '' COMMENT '组件路径',
     redirect VARCHAR(200) DEFAULT '' COMMENT '重定向路径',
-    
-    -- 菜单显示信息
-    title VARCHAR(100) NOT NULL COMMENT '菜单标题（对应meta.title）',
-    icon VARCHAR(100) DEFAULT '' COMMENT '菜单图标（对应meta.icon）',
     
     -- 菜单类型和权限
     type CHAR(1) DEFAULT 'D' COMMENT '菜单类型（D目录 M菜单 B按钮 L外链 I内嵌）',

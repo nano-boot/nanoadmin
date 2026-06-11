@@ -66,9 +66,6 @@ class MenuService
         if (!empty($params['name'])) {
             $searchParams['name'] = $params['name'];
         }
-        if (!empty($params['title'])) {
-            $searchParams['title'] = $params['title'];
-        }
         
         return $this->model->getListWithLevel(array_merge($where, $searchParams), $page, $limit);
     }
@@ -175,7 +172,7 @@ class MenuService
         if ($parent->type !== Menu::TYPE_MENU) {
             throw new ApiException(
                 Code::PARAMETER_ERROR,
-                '按钮节点必须挂在「菜单页面」类型的节点下，不能挂在「' . ($parent->title ?: $parent->name) . '」（' . Menu::TYPE_MAP[$parent->type] . '）下'
+                '按钮节点必须挂在「菜单页面」类型的节点下，不能挂在「' . $parent->name . '」（' . Menu::TYPE_MAP[$parent->type] . '）下'
             );
         }
     }
@@ -558,7 +555,6 @@ class MenuService
             $result[] = [
                 'id' => $menu->id,
                 'name' => $menu->name,
-                'title' => $menu->title,
                 'path' => $menu->path,
                 'icon' => $menu->icon,
                 'sort' => $menu->sort,
@@ -629,7 +625,6 @@ class MenuService
             $result[] = [
                 'id' => $menu->id,
                 'name' => $menu->name,
-                'title' => $menu->title,
                 'path' => $menu->path,
                 'permission' => $menu->permission
             ];
@@ -651,7 +646,6 @@ class MenuService
             $result[] = [
                 'id' => $menu->id,
                 'name' => $menu->name,
-                'title' => $menu->title,
                 'path' => $menu->path,
                 'parent_id' => $menu->parent_id,
                 'menu_type' => $menu->menu_type,
@@ -724,13 +718,10 @@ class MenuService
      */
     private function validateMenuData(array $data, bool $isCreate = false): void
     {
-        // 创建时必须提供菜单名称和标题
+        // 创建时必须提供菜单名称和菜单类型
         if ($isCreate) {
             if (empty($data['name'])) {
                 throw new ApiException(Code::PARAMETER_ERROR, '菜单名称不能为空');
-            }
-            if (empty($data['title'])) {
-                throw new ApiException(Code::PARAMETER_ERROR, '菜单标题不能为空');
             }
             if (!isset($data['menu_type'])) {
                 throw new ApiException(Code::PARAMETER_ERROR, '菜单类型不能为空');
@@ -740,14 +731,7 @@ class MenuService
         // 菜单名称格式验证
         if (!empty($data['name'])) {
             if (!Menu::validateName($data['name'])) {
-                throw new ApiException(Code::PARAMETER_ERROR, '菜单名称格式不正确，只能包含字母、数字、下划线、中划线、中文字符，长度2-50个字符');
-            }
-        }
-        
-        // 菜单标题格式验证
-        if (!empty($data['title'])) {
-            if (!Menu::validateTitle($data['title'])) {
-                throw new ApiException(Code::PARAMETER_ERROR, '菜单标题长度必须在2-50个字符之间');
+                throw new ApiException(Code::PARAMETER_ERROR, '菜单名称格式不正确，长度2-100个字符');
             }
         }
         
