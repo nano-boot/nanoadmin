@@ -1,17 +1,17 @@
 <?php
 
-namespace plugin\theadmin\app\middleware;
+namespace plugin\nanoadmin\app\middleware;
 
-use plugin\theadmin\app\common\R;
-use plugin\theadmin\app\common\IpLocation;
+use plugin\nanoadmin\app\common\R;
+use plugin\nanoadmin\app\common\IpLocation;
 use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
-use plugin\theadmin\app\common\JwtUtil;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\model\ModelFactory;
-use plugin\theadmin\app\service\LogLoginService;
+use plugin\nanoadmin\app\common\JwtUtil;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\model\ModelFactory;
+use plugin\nanoadmin\app\service\LogLoginService;
 
 /**
  * 认证中间件

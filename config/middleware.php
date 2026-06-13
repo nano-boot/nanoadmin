@@ -1,9 +1,9 @@
 <?php
 
-use plugin\theadmin\app\middleware\AuthMiddleware;
-use plugin\theadmin\app\middleware\CorsMiddleware;
-use plugin\theadmin\app\middleware\LogOperationMiddleware;
-use plugin\theadmin\app\middleware\PermissionMiddleware;
+use plugin\nanoadmin\app\middleware\AuthMiddleware;
+use plugin\nanoadmin\app\middleware\CorsMiddleware;
+use plugin\nanoadmin\app\middleware\LogOperationMiddleware;
+use plugin\nanoadmin\app\middleware\PermissionMiddleware;
 
 return [
     // 全局中间件

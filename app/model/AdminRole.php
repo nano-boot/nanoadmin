@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\model;
+namespace plugin\nanoadmin\app\model;
 
 /**
  * 管理员角色关联模型（中间表）

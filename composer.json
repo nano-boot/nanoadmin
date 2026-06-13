@@ -1,5 +1,5 @@
 {
-    "name": "theadmin/theadmin-plugin",
+    "name": "nanoadmin/nanoadmin-plugin",
     "description": "The Admin 后台管理系统核心插件，基于 Workerman/Webman",
     "type": "library",
     "license": "MIT",
@@ -25,7 +25,7 @@
     },
     "autoload": {
         "psr-4": {
-            "plugin\\theadmin\\": "app/"
+            "plugin\\nanoadmin\\": "app/"
         },
         "files": [
             "app/functions.php"
@@ -33,7 +33,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "plugin\\theadmin\\tests\\": "tests/"
+            "plugin\\nanoadmin\\tests\\": "tests/"
         }
     },
     "scripts": {
@@ -52,8 +52,8 @@
             "dev-main": "1.x-dev"
         },
         "webman": {
-            "name": "theadmin",
-            "title": "The Admin 核心插件",
+            "name": "nanoadmin",
+            "title": "Nano Admin 核心插件",
             "version": "1.0.0"
         }
     }

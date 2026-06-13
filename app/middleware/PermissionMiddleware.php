@@ -1,13 +1,13 @@
 <?php
 
-namespace plugin\theadmin\app\middleware;
+namespace plugin\nanoadmin\app\middleware;
 
 use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
-use plugin\theadmin\app\common\R;
-use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\R;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\common\ApiException;
 
 /**
  * 权限验证中间件

@@ -1,11 +1,11 @@
 <?php
 
-namespace plugin\theadmin\app\service;
+namespace plugin\nanoadmin\app\service;
 
 use Illuminate\Pagination\LengthAwarePaginator;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\model\BaseModel;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\model\BaseModel;
 
 /**
  * 基础服务类

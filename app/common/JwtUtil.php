@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\common;
+namespace plugin\nanoadmin\app\common;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -16,7 +16,7 @@ class JwtUtil
     /**
      * JWT密钥
      */
-    private static string $key = 'theadmin_jwt_secret_key_2024';
+    private static string $key = 'nanoadmin_jwt_secret_key_2024';
 
     /**
      * JWT算法

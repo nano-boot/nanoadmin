@@ -1,8 +1,8 @@
 <?php
 
-namespace plugin\theadmin\app\controller;
+namespace plugin\nanoadmin\app\controller;
 
-use plugin\theadmin\app\service\DictDataService;
+use plugin\nanoadmin\app\service\DictDataService;
 
 /**
  * 字典数据控制器

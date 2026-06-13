@@ -1,13 +1,13 @@
 <?php
 
-namespace plugin\theadmin\app\controller;
+namespace plugin\nanoadmin\app\controller;
 
-use plugin\theadmin\app\common\R;
-use plugin\theadmin\app\service\BaseService;
+use plugin\nanoadmin\app\common\R;
+use plugin\nanoadmin\app\service\BaseService;
 use support\Request;
 use support\Response;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
 
 /**
  * 基础控制器类

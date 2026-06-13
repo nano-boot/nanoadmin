@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace plugin\theadmin\tests;
+namespace plugin\nanoadmin\tests;
 
 use PHPUnit\Framework\TestCase;
 

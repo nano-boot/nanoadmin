@@ -1,9 +1,9 @@
 <?php
 
-namespace plugin\theadmin\app\middleware;
+namespace plugin\nanoadmin\app\middleware;
 
-use plugin\theadmin\app\service\LogOperationService;
-use plugin\theadmin\app\model\ModelFactory;
+use plugin\nanoadmin\app\service\LogOperationService;
+use plugin\nanoadmin\app\model\ModelFactory;
 use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;

@@ -3,16 +3,16 @@
  * Here is your custom functions.
  */
 
-if (!function_exists('plugin_theadmin_path')) {
+if (!function_exists('plugin_nanoadmin_path')) {
     /**
-     * 获取 theadmin 插件的目录路径
+     * 获取 nanoadmin 插件的目录路径
      * @param string $path 相对于插件目录的路径
      * @return string
      */
-    function plugin_theadmin_path(string $path = ''): string
+    function plugin_nanoadmin_path(string $path = ''): string
     {
-        // plugin/theadmin/app/ -> plugin/ (向上2级) -> plugin/theadmin/
-        $basePath = dirname(__DIR__, 2) . '/theadmin';
+        // plugin/nanoadmin/app/ -> plugin/ (向上2级) -> plugin/nanoadmin/
+        $basePath = dirname(__DIR__, 2) . '/nanoadmin';
         return $basePath . ($path ? DIRECTORY_SEPARATOR . $path : '');
     }
 }

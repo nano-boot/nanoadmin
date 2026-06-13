@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\validator;
+namespace plugin\nanoadmin\app\validator;
 
 /**
  * 菜单验证器
@@ -188,7 +188,7 @@ class MenuValidator extends ValidatorBase
             return true;
         }
 
-        $query = new \plugin\theadmin\app\model\Menu();
+        $query = new \plugin\nanoadmin\app\model\Menu();
         $query = $query
             ->where('type', 'B')
             ->where('permission', $permission);

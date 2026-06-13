@@ -1,8 +1,8 @@
 <?php
 
-namespace plugin\theadmin\app\service;
+namespace plugin\nanoadmin\app\service;
 
-use plugin\theadmin\app\model\Menu;
+use plugin\nanoadmin\app\model\Menu;
 use Illuminate\Database\Eloquent\Collection;
 
 /**

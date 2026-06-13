@@ -17,7 +17,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../support/bootstrap.php';
 
 use think\facade\Db;
-use plugin\theadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\ApiException;
 
 class TheAdminInstaller
 {

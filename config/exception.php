@@ -1,6 +1,6 @@
 <?php
 
-use plugin\theadmin\app\common\TheHandler;
+use plugin\nanoadmin\app\common\TheHandler;
 
 return [
     '' => TheHandler::class,

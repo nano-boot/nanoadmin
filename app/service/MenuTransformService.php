@@ -1,11 +1,11 @@
 <?php
 
-namespace plugin\theadmin\app\service;
+namespace plugin\nanoadmin\app\service;
 
-use plugin\theadmin\app\model\ModelFactory;
-use plugin\theadmin\app\model\Menu;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
+use plugin\nanoadmin\app\model\ModelFactory;
+use plugin\nanoadmin\app\model\Menu;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
 
 /**
  * 菜单数据转换服务
@@ -46,7 +46,7 @@ class MenuTransformService
      */
     private function loadCacheConfig(): void
     {
-        $configFile = base_path() . '/plugin/theadmin/config/cache.php';
+        $configFile = base_path() . '/plugin/nanoadmin/config/cache.php';
         
         if (file_exists($configFile)) {
             $this->cacheConfig = require $configFile;
@@ -736,7 +736,7 @@ class MenuTransformService
      */
     private function getCachePrefix(): string
     {
-        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'theadmin:';
+        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'nanoadmin:';
         $menuPrefix = $this->cacheConfig['menu']['prefix'] ?? 'menu:';
         return $redisPrefix . $menuPrefix;
     }
@@ -947,8 +947,8 @@ class MenuTransformService
      */
     private function clearAllFileCache(): bool
     {
-        $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_';
+        $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/nanoadmin/';
+        $prefix = $this->cacheConfig['file']['prefix'] ?? 'nanoadmin_';
         
         if (!is_dir($cachePath)) {
             return true;
@@ -971,8 +971,8 @@ class MenuTransformService
      */
     private function getCacheFilePath(string $key): string
     {
-        $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_';
+        $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/nanoadmin/';
+        $prefix = $this->cacheConfig['file']['prefix'] ?? 'nanoadmin_';
         $safeKey = md5($key);
         return $cachePath . $prefix . $safeKey . '.json';
     }
@@ -1218,8 +1218,8 @@ class MenuTransformService
                 }
             } else {
                 // 文件缓存统计
-                $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/theadmin/';
-                $prefix = $this->cacheConfig['file']['prefix'] ?? 'theadmin_';
+                $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/nanoadmin/';
+                $prefix = $this->cacheConfig['file']['prefix'] ?? 'nanoadmin_';
                 
                 if (is_dir($cachePath)) {
                     $files = glob($cachePath . $prefix . '*.json');

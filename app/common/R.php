@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\common;
+namespace plugin\nanoadmin\app\common;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use support\Response;

@@ -1,11 +1,11 @@
 <?php
 
-namespace plugin\theadmin\app\model;
+namespace plugin\nanoadmin\app\model;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
 
 /**
  * 角色模型

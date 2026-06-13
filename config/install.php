@@ -15,7 +15,7 @@ return [
     'defaults' => [
         'hostname' => '127.0.0.1',
         'hostport' => '3306',
-        'database' => 'theadmin',
+        'database' => 'nanoadmin',
         'username' => 'root',
         'password' => '',
         'charset' => 'utf8mb4',

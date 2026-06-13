@@ -1,9 +1,9 @@
 <?php
 
-namespace plugin\theadmin\app\service;
+namespace plugin\nanoadmin\app\service;
 
-use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\model\LogOperation;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\model\LogOperation;
 
 /**
  * 操作日志服务类

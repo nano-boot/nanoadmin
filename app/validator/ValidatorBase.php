@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace plugin\theadmin\app\validator;
+namespace plugin\nanoadmin\app\validator;
 
-use plugin\theadmin\app\model\Admin;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
+use plugin\nanoadmin\app\model\Admin;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
 use think\Validate;
 use support\Request;
 

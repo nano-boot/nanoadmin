@@ -1,9 +1,9 @@
 <?php
 
-namespace plugin\theadmin\app\contract;
+namespace plugin\nanoadmin\app\contract;
 
 use Illuminate\Pagination\LengthAwarePaginator;
-use plugin\theadmin\app\model\Admin;
+use plugin\nanoadmin\app\model\Admin;
 
 /**
  * 管理员服务接口

@@ -5,13 +5,13 @@
 ## 安装
 
 ```bash
-composer require theadmin/theadmin-plugin
+composer require nanoadmin/nanoadmin-plugin
 ```
 
 ## 目录结构
 
 ```
-plugin/theadmin/
+plugin/nanoadmin/
 ├── app/                    # 应用代码
 │   ├── common/            # 公共类
 │   ├── config/            # 配置目录

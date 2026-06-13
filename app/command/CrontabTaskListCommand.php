@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\command;
+namespace plugin\nanoadmin\app\command;
 
 use WebmanTech\CrontabTask\Commands\CrontabTaskListCommand as Origin;
 

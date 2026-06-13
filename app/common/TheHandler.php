@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\common;
+namespace plugin\nanoadmin\app\common;
 
 use support\exception\Handler;
 use think\exception\ValidateException;

@@ -1,14 +1,14 @@
 <?php
 
-namespace plugin\theadmin\app\controller;
+namespace plugin\nanoadmin\app\controller;
 
-use plugin\theadmin\app\common\R;
+use plugin\nanoadmin\app\common\R;
 use support\Request;
 use support\Response;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\service\AdminService;
-use plugin\theadmin\app\validator\AdminValidator;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\service\AdminService;
+use plugin\nanoadmin\app\validator\AdminValidator;
 
 /**
  * 管理员控制器

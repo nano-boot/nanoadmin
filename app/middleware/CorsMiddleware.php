@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\middleware;
+namespace plugin\nanoadmin\app\middleware;
 
 use Webman\Http\Request;
 use Webman\Http\Response;

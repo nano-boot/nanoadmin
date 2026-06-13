@@ -14,13 +14,13 @@ return [
         'password' => '',
         'database' => 1, // 使用数据库1存储菜单缓存
         'timeout' => 2,
-        'prefix' => 'theadmin:',
+        'prefix' => 'nanoadmin:',
     ],
 
     // 文件缓存配置
     'file' => [
-        'path' => runtime_path() . '/cache/theadmin/',
-        'prefix' => 'theadmin_',
+        'path' => runtime_path() . '/cache/nanoadmin/',
+        'prefix' => 'nanoadmin_',
     ],
 
     // 字典缓存配置

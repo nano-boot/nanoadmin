@@ -1,9 +1,9 @@
 <?php
 
-namespace plugin\theadmin\app\crontab\tasks;
+namespace plugin\nanoadmin\app\crontab\tasks;
 
-use plugin\theadmin\app\model\LogOperation;
-use plugin\theadmin\app\service\LogOperationService;
+use plugin\nanoadmin\app\model\LogOperation;
+use plugin\nanoadmin\app\service\LogOperationService;
 use WebmanTech\CrontabTask\BaseTask;
 
 /**

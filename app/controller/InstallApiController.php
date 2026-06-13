@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\controller;
+namespace plugin\nanoadmin\app\controller;
 
 /**
  * 安装向导控制器
@@ -228,7 +228,7 @@ class InstallApiController
         $config = [
             'host' => $post['host'] ?? '127.0.0.1',
             'port' => $post['port'] ?? '3306',
-            'name' => $post['name'] ?? 'theadmin',
+            'name' => $post['name'] ?? 'nanoadmin',
             'user' => $post['user'] ?? 'root',
             'password' => $post['password'] ?? '',
             'prefix' => $post['prefix'] ?? 'th_',

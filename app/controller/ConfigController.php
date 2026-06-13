@@ -1,10 +1,10 @@
 <?php
 
-namespace plugin\theadmin\app\controller;
+namespace plugin\nanoadmin\app\controller;
 
-use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\common\R;
-use plugin\theadmin\app\service\ConfigService;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\common\R;
+use plugin\nanoadmin\app\service\ConfigService;
 
 /**
  * 系统配置控制器

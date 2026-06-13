@@ -1,9 +1,9 @@
 <?php
 
-namespace plugin\theadmin\app\service;
+namespace plugin\nanoadmin\app\service;
 
-use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\model\Config;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\model\Config;
 
 /**
  * 系统配置服务
@@ -34,12 +34,12 @@ class ConfigService extends BaseService
     /**
      * 创建配置
      * @param array $data
-     * @return \plugin\theadmin\app\model\BaseModel
+     * @return \plugin\nanoadmin\app\model\BaseModel
      */
-    public function create(array $data): \plugin\theadmin\app\model\BaseModel
+    public function create(array $data): \plugin\nanoadmin\app\model\BaseModel
     {
         if ($this->model->checkExists(['key' => $data['key']])) {
-            throw new \plugin\theadmin\app\common\ApiException(Code::PARAMETER_ERROR, '配置键名已存在');
+            throw new \plugin\nanoadmin\app\common\ApiException(Code::PARAMETER_ERROR, '配置键名已存在');
         }
 
         return parent::create($data);
@@ -49,13 +49,13 @@ class ConfigService extends BaseService
      * 更新配置
      * @param int $id
      * @param array $data
-     * @return \plugin\theadmin\app\model\BaseModel
+     * @return \plugin\nanoadmin\app\model\BaseModel
      */
-    public function update(int $id, array $data): \plugin\theadmin\app\model\BaseModel
+    public function update(int $id, array $data): \plugin\nanoadmin\app\model\BaseModel
     {
         if (isset($data['key'])) {
             if ($this->model->checkExists(['key' => $data['key']], $id)) {
-                throw new \plugin\theadmin\app\common\ApiException(Code::PARAMETER_ERROR, '配置键名已存在');
+                throw new \plugin\nanoadmin\app\common\ApiException(Code::PARAMETER_ERROR, '配置键名已存在');
             }
         }
 

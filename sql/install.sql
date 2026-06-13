@@ -1,12 +1,12 @@
--- theadmin数据库建表语句（无外键约束版本）
--- 数据库: theadmin
+-- nanoadmin数据库建表语句（无外键约束版本）
+-- 数据库: nanoadmin
 -- 字符集: utf8mb4
 -- 排序规则: utf8mb4_unicode_ci
 
 -- 创建数据库（如果不存在）
-CREATE DATABASE IF NOT EXISTS theadmin CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS nanoadmin CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE theadmin;
+USE nanoadmin;
 
 -- 1. 用户表
 CREATE TABLE IF NOT EXISTS `th_sys_user` (

@@ -1,17 +1,17 @@
 <?php
 
-namespace plugin\theadmin\app\controller;
+namespace plugin\nanoadmin\app\controller;
 
-use plugin\theadmin\app\common\R;
-use plugin\theadmin\app\validator\MenuValidator;
+use plugin\nanoadmin\app\common\R;
+use plugin\nanoadmin\app\validator\MenuValidator;
 use support\Request;
 use support\Response;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\model\Menu;
-use plugin\theadmin\app\service\MenuService;
-use plugin\theadmin\app\service\MenuTransformService;
-use plugin\theadmin\app\service\MenuSearchService;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\model\Menu;
+use plugin\nanoadmin\app\service\MenuService;
+use plugin\nanoadmin\app\service\MenuTransformService;
+use plugin\nanoadmin\app\service\MenuSearchService;
  
 
 /**

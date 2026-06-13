@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\api;
+namespace plugin\nanoadmin\api;
 
 use plugin\admin\api\Menu;
 use support\Db;

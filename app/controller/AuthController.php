@@ -1,12 +1,12 @@
 <?php
 
-namespace plugin\theadmin\app\controller;
+namespace plugin\nanoadmin\app\controller;
 
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\JwtUtil;
-use plugin\theadmin\app\common\R;
-use plugin\theadmin\app\service\AuthService;
-use plugin\theadmin\app\validator\AuthValidator;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\JwtUtil;
+use plugin\nanoadmin\app\common\R;
+use plugin\nanoadmin\app\service\AuthService;
+use plugin\nanoadmin\app\validator\AuthValidator;
 use support\Request;
 use support\Response;
 

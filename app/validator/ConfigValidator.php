@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\validator;
+namespace plugin\nanoadmin\app\validator;
 
 /**
  * 系统配置验证器

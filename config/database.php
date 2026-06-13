@@ -14,9 +14,9 @@ return [
             // 服务器地址
             'host' => 'rm-bp1ro8silf8n2nflm9o.mysql.rds.aliyuncs.com',
             // 数据库名
-            'database' => 'theadmin',
+            'database' => 'nanoadmin',
             // 数据库用户名
-            'username' => 'theadmin',
+            'username' => 'nanoadmin',
             // 数据库密码
             'password' => 'Theadmin123',
             // 数据库连接参数

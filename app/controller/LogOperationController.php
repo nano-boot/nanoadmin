@@ -1,8 +1,8 @@
 <?php
 
-namespace plugin\theadmin\app\controller;
+namespace plugin\nanoadmin\app\controller;
 
-use plugin\theadmin\app\service\LogOperationService;
+use plugin\nanoadmin\app\service\LogOperationService;
 use support\Request;
 use support\Response;
 

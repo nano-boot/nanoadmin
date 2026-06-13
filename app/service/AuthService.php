@@ -1,14 +1,14 @@
 <?php
 
-namespace plugin\theadmin\app\service;
+namespace plugin\nanoadmin\app\service;
 
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\common\IpLocation;
-use plugin\theadmin\app\common\JwtUtil;
-use plugin\theadmin\app\model\Admin;
-use plugin\theadmin\app\model\ModelFactory;
-use plugin\theadmin\app\service\LogLoginService;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\common\IpLocation;
+use plugin\nanoadmin\app\common\JwtUtil;
+use plugin\nanoadmin\app\model\Admin;
+use plugin\nanoadmin\app\model\ModelFactory;
+use plugin\nanoadmin\app\service\LogLoginService;
 
 /**
  * 认证服务类

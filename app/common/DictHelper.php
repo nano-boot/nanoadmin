@@ -1,9 +1,9 @@
 <?php
 
-namespace plugin\theadmin\app\common;
+namespace plugin\nanoadmin\app\common;
 
-use plugin\theadmin\app\model\ModelFactory;
-use plugin\theadmin\app\service\DictDataService;
+use plugin\nanoadmin\app\model\ModelFactory;
+use plugin\nanoadmin\app\service\DictDataService;
 
 /**
  * 字典数据辅助类

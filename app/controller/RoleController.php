@@ -1,14 +1,14 @@
 <?php
 
-namespace plugin\theadmin\app\controller;
+namespace plugin\nanoadmin\app\controller;
 
-use plugin\theadmin\app\common\R;
-use plugin\theadmin\app\validator\RoleValidator;
+use plugin\nanoadmin\app\common\R;
+use plugin\nanoadmin\app\validator\RoleValidator;
 use Webman\Http\Request;
 use support\Response;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
-use plugin\theadmin\app\service\RoleService;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\service\RoleService;
 
 /**
  * 角色控制器

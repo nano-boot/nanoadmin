@@ -1,8 +1,8 @@
 <?php
 
-use plugin\theadmin\app\command\CrontabTaskExecCommand;
-use plugin\theadmin\app\command\CrontabTaskListCommand;
-use plugin\theadmin\app\command\MakeTaskCommand;
+use plugin\nanoadmin\app\command\CrontabTaskExecCommand;
+use plugin\nanoadmin\app\command\CrontabTaskListCommand;
+use plugin\nanoadmin\app\command\MakeTaskCommand;
 
 return [
     CrontabTaskListCommand::class,

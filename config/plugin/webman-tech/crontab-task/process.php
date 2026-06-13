@@ -6,6 +6,6 @@ return (new Schedule())
     ->addTask(
         'clear_log_operation',
         '0 2 * * *',
-        \plugin\theadmin\app\crontab\tasks\ClearLogOperationTask::class
+        \plugin\nanoadmin\app\crontab\tasks\ClearLogOperationTask::class
     )
     ->buildProcesses();

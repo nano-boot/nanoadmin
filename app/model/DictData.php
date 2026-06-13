@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\model;
+namespace plugin\nanoadmin\app\model;
 
 /**
  * 字典数据模型

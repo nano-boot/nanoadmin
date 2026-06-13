@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\common;
+namespace plugin\nanoadmin\app\common;
 
 /**
  * IP 归属地查询工具

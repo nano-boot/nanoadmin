@@ -1,10 +1,10 @@
 <?php
 
-namespace plugin\theadmin\app\service;
+namespace plugin\nanoadmin\app\service;
 
-use plugin\theadmin\app\model\DictData;
-use plugin\theadmin\app\common\ApiException;
-use plugin\theadmin\app\common\Code;
+use plugin\nanoadmin\app\model\DictData;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
 
 /**
  * 字典数据服务类
@@ -39,7 +39,7 @@ class DictDataService extends BaseService
      */
     private function loadCacheConfig(): void
     {
-        $configFile = base_path() . '/plugin/theadmin/config/cache.php';
+        $configFile = base_path() . '/plugin/nanoadmin/config/cache.php';
 
         if (file_exists($configFile)) {
             $this->cacheConfig = require $configFile;
@@ -95,7 +95,7 @@ class DictDataService extends BaseService
      */
     private function getCachePrefix(): string
     {
-        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'theadmin:';
+        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'nanoadmin:';
         $dictPrefix = $this->cacheConfig['dict']['prefix'] ?? 'dict:';
         return $redisPrefix . $dictPrefix;
     }
@@ -192,7 +192,7 @@ class DictDataService extends BaseService
      */
     private function getDictTypeModel()
     {
-        $factoryClass = 'plugin\theadmin\app\model\ModelFactory';
+        $factoryClass = 'plugin\nanoadmin\app\model\ModelFactory';
 
         if (!class_exists($factoryClass) || !method_exists($factoryClass, 'dict_type')) {
             return null;
@@ -442,8 +442,8 @@ class DictDataService extends BaseService
     private function setFileCache(string $key, $data): bool
     {
         $fileConfig = $this->cacheConfig['file'] ?? [];
-        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'theadmin_';
+        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/nanoadmin/';
+        $prefix = $fileConfig['prefix'] ?? 'nanoadmin_';
         $cacheFile = $cachePath . $prefix . md5($key) . '.json';
 
         if (!is_dir($cachePath)) {
@@ -464,8 +464,8 @@ class DictDataService extends BaseService
     private function getFileCache(string $key)
     {
         $fileConfig = $this->cacheConfig['file'] ?? [];
-        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'theadmin_';
+        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/nanoadmin/';
+        $prefix = $fileConfig['prefix'] ?? 'nanoadmin_';
         $cacheFile = $cachePath . $prefix . md5($key) . '.json';
 
         if (!file_exists($cacheFile)) {
@@ -491,8 +491,8 @@ class DictDataService extends BaseService
     private function deleteFileCache(string $key): bool
     {
         $fileConfig = $this->cacheConfig['file'] ?? [];
-        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'theadmin_';
+        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/nanoadmin/';
+        $prefix = $fileConfig['prefix'] ?? 'nanoadmin_';
         $cacheFile = $cachePath . $prefix . md5($key) . '.json';
 
         if (file_exists($cacheFile)) {
@@ -508,8 +508,8 @@ class DictDataService extends BaseService
     private function deleteFileCacheByPattern(string $pattern): bool
     {
         $fileConfig = $this->cacheConfig['file'] ?? [];
-        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/theadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'theadmin_';
+        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/nanoadmin/';
+        $prefix = $fileConfig['prefix'] ?? 'nanoadmin_';
 
         if (!is_dir($cachePath)) {
             return true;

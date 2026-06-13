@@ -8,7 +8,7 @@ return [
     // JWT配置
     'jwt' => [
         // JWT密钥
-        'secret' => 'theadmin_jwt_secret_key_2024',
+        'secret' => 'nanoadmin_jwt_secret_key_2024',
         // 过期时间（秒）
         'expire' => 7200, // 2小时
         // 刷新时间（秒）
@@ -16,9 +16,9 @@ return [
         // 算法
         'algorithm' => 'HS256',
         // 发行者
-        'issuer' => 'theadmin',
+        'issuer' => 'nanoadmin',
         // 受众
-        'audience' => 'theadmin-admin',
+        'audience' => 'nanoadmin-admin',
     ],
 
     // 权限配置
@@ -34,7 +34,7 @@ return [
         // 权限缓存时间（秒）
         'cache_expire' => 3600, // 1小时
         // 权限缓存前缀
-        'cache_prefix' => 'theadmin:permission:',
+        'cache_prefix' => 'nanoadmin:permission:',
     ],
 
     // 菜单配置
@@ -42,7 +42,7 @@ return [
         // 菜单缓存时间（秒）
         'cache_expire' => 3600, // 1小时
         // 菜单缓存前缀
-        'cache_prefix' => 'theadmin:menu:',
+        'cache_prefix' => 'nanoadmin:menu:',
         // 默认菜单图标
         'default_icon' => 'Document',
     ],

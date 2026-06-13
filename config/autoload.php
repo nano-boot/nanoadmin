@@ -1,6 +1,6 @@
 <?php
 return [
     'files' => [
-        base_path() . '/plugin/theadmin/app/functions.php',
+        base_path() . '/plugin/nanoadmin/app/functions.php',
     ]
 ];

@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\theadmin\app\validator;
+namespace plugin\nanoadmin\app\validator;
 
 use think\Validate;
 
