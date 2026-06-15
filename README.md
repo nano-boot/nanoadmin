@@ -1,4 +1,4 @@
-# The Admin Plugin
+# Nano Admin Plugin
 
 基于 Workerman/Webman 的后台管理系统核心插件。
 
