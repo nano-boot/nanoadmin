@@ -13,7 +13,7 @@ use support\Response;
 /**
  * 认证控制器
  * 
- * @author TheAdmin Team
+ * @author NanoAdmin Team
  * @since 1.0.0
  */
 class AuthController

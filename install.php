@@ -1,7 +1,7 @@
 <?php
 
 /**
- * TheAdmin权限系统安装脚本
+ * NanoAdmin权限系统安装脚本
  * 用于初始化数据库表和基础数据
  */
 
@@ -19,14 +19,14 @@ require_once __DIR__ . '/../../support/bootstrap.php';
 use think\facade\Db;
 use plugin\nanoadmin\app\common\ApiException;
 
-class TheAdminInstaller
+class NanoAdminInstaller
 {
     /**
      * 执行安装
      */
     public function install()
     {
-        echo "开始安装TheAdmin权限系统...\n";
+        echo "开始安装NanoAdmin权限系统...\n";
         
         try {
             // 1. 检查数据库连接
@@ -38,7 +38,7 @@ class TheAdminInstaller
             // 3. 插入初始数据
             $this->insertInitialData();
             
-            echo "TheAdmin权限系统安装完成！\n";
+            echo "NanoAdmin权限系统安装完成！\n";
             echo "默认管理员账号: admin\n";
             echo "默认管理员密码: admin123\n";
             echo "请及时修改默认密码！\n";
@@ -271,5 +271,5 @@ class TheAdminInstaller
 }
 
 // 执行安装
-$installer = new TheAdminInstaller();
+$installer = new NanoAdminInstaller();
 $installer->install();

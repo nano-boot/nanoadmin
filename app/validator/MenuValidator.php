@@ -5,7 +5,7 @@ namespace plugin\nanoadmin\app\validator;
 /**
  * 菜单验证器
  *
- * @author TheAdmin Team
+ * @author NanoAdmin Team
  * @since 1.0.0
  */
 class MenuValidator extends ValidatorBase

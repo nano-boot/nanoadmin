@@ -1,7 +1,7 @@
 <?php
 
 /**
- * TheAdmin 缓存配置
+ * NanoAdmin 缓存配置
  */
 return [
     // 缓存类型: redis, file

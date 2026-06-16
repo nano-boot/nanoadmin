@@ -7,7 +7,7 @@ namespace plugin\nanoadmin\app\validator;
 /**
  * 管理员验证器
  *
- * @author TheAdmin Team
+ * @author NanoAdmin Team
  * @since 1.0.0
  *
  */

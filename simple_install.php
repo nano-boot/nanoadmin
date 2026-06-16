@@ -1,7 +1,7 @@
 <?php
 
 /**
- * 简化的TheAdmin权限系统安装脚本
+ * 简化的NanoAdmin权限系统安装脚本
  */
 
 // 检查是否在命令行环境中运行
@@ -35,7 +35,7 @@ $config = [
 \think\facade\Db::setConfig($config);
 
 try {
-    echo "开始安装TheAdmin权限系统...\n";
+    echo "开始安装NanoAdmin权限系统...\n";
     
     // 测试数据库连接
     echo "检查数据库连接...\n";
@@ -115,7 +115,7 @@ try {
         echo "初始数据已存在，跳过插入\n";
     }
     
-    echo "\nTheAdmin权限系统安装完成！\n";
+    echo "\nNanoAdmin权限系统安装完成！\n";
     echo "默认管理员账号: admin\n";
     echo "默认管理员密码: admin123\n";
     echo "请及时修改默认密码！\n";

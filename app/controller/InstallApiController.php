@@ -6,7 +6,7 @@ namespace plugin\nanoadmin\app\controller;
  * 安装向导控制器
  * 处理安装向导的 API 请求
  * 
- * @author TheAdmin Team
+ * @author NanoAdmin Team
  */
 class InstallApiController
 {

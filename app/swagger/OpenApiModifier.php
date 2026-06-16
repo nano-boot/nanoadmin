@@ -18,7 +18,7 @@ use OpenApi\Generator;
  * 用法：
  *   'modify' => function (OpenApi $openApi) {
  *       OpenApiModifier::process($openApi, [
- *           'title' => 'The Admin API',
+ *           'title' => 'Nano Admin API',
  *           'version' => '1.0.0',
  *           'description' => '...',
  *           'servers' => [['url' => '/']],

@@ -8,7 +8,7 @@
          failOnRisky="true"
          failOnWarning="true">
     <testsuites>
-        <testsuite name="TheAdmin Test Suite">
+        <testsuite name="NanoAdmin Test Suite">
             <directory suffix="Test.php">./tests</directory>
         </testsuite>
     </testsuites>

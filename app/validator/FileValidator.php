@@ -7,7 +7,7 @@ use think\Validate;
 /**
  * 文件验证器
  *
- * @author TheAdmin Team
+ * @author NanoAdmin Team
  * @since 1.0.0
  *
  */

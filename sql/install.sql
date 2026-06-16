@@ -315,10 +315,10 @@ CREATE TABLE IF NOT EXISTS `th_sys_config` (
 -- =====================================================
 INSERT INTO `th_sys_config` (`name`, `key`, `value`, `type`, `options`, `group`, `description`, `sort`, `status`) VALUES
 -- 基础配置
-('网站名称', 'site_name', 'The Admin', 'text', '', 'basic', '网站显示名称', 10, 1),
+('网站名称', 'site_name', 'Nano Admin', 'text', '', 'basic', '网站显示名称', 10, 1),
 ('网站Logo', 'site_logo', '', 'text', '', 'basic', '网站Logo地址', 20, 1),
 ('网站描述', 'site_description', '后台管理系统', 'textarea', '', 'basic', '网站描述信息', 30, 1),
-('版权信息', 'copyright', '© 2024 The Admin. All Rights Reserved.', 'text', '', 'basic', '底部版权信息', 40, 1),
+('版权信息', 'copyright', '© 2024 Nano Admin. All Rights Reserved.', 'text', '', 'basic', '底部版权信息', 40, 1),
 
 -- 上传配置
 ('允许上传格式', 'upload_allowed_ext', 'jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,zip', 'text', '', 'upload', '允许上传的文件格式，多个用逗号分隔', 10, 1),
@@ -335,7 +335,7 @@ INSERT INTO `th_sys_config` (`name`, `key`, `value`, `type`, `options`, `group`,
 ('SMTP端口', 'smtp_port', '465', 'number', '', 'email', '邮件发送端口', 20, 1),
 ('SMTP用户名', 'smtp_username', '', 'text', '', 'email', '邮件发送用户名', 30, 1),
 ('SMTP密码', 'smtp_password', '', 'text', '', 'email', '邮件发送密码', 40, 1),
-('发件人名称', 'smtp_from_name', 'The Admin', 'text', '', 'email', '发件人显示名称', 50, 1),
+('发件人名称', 'smtp_from_name', 'Nano Admin', 'text', '', 'email', '发件人显示名称', 50, 1),
 ('是否启用SSL', 'smtp_ssl', '1', 'radio', '{"0":"否","1":"是"}', 'email', '是否启用SSL加密', 60, 1);
 
 -- =====================================================
