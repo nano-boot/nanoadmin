@@ -118,14 +118,42 @@ Route::group('/sys/config', function () {
     Route::delete('/{id}', [plugin\nanoadmin\app\controller\ConfigController::class, 'destroy']);
 });
 
-// 登录日志相关路由
-Route::group('/sys/login-log', function () {
-    Route::get('', [plugin\nanoadmin\app\controller\LogLoginController::class, 'page']);
-    Route::get('/{id}', [plugin\nanoadmin\app\controller\LogLoginController::class, 'show']);
-});
-
 // 操作日志相关路由
 Route::group('/sys/operation-log', function () {
     Route::get('', [plugin\nanoadmin\app\controller\LogOperationController::class, 'page']);
     Route::get('/{id}', [plugin\nanoadmin\app\controller\LogOperationController::class, 'show']);
 });
+
+// 注册 OpenAPI / Swagger（从控制器 OA 注解自动注册路由与文档）
+(new \WebmanTech\Swagger\Swagger())->registerRoute([
+    'enable' => true,
+    'route_prefix' => '/sys/openapi',
+    'register_webman_route' => true,
+    'host_forbidden' => [
+        'enable' => false,
+    ],
+    'openapi_doc' => [
+        'scan_path' => [
+            base_path() . '/plugin/nanoadmin/app/controller',
+            base_path() . '/plugin/nanoadmin/app/schema',
+        ],
+        'modify' => function (\OpenApi\Annotations\OpenApi $openApi) {
+            // 一站式后处理：
+            //  1. 读取 operation 的 x[schema-to-request-body] 自动注入 OA\RequestBody
+            //  2. 给所有 operation 注入 401/403 公共响应
+            //  3. 自动补全缺失的 summary / tags / responses
+            //  4. 设置基础信息 + servers
+            \plugin\nanoadmin\app\swagger\OpenApiModifier::process($openApi, [
+                'title' => 'Nano Admin API',
+                'version' => '1.0.0',
+                'description' => 'Nano Admin 后台管理系统 API 文档',
+                'servers' => [
+                    ['url' => '/', 'description' => '当前服务'],
+                ],
+                'auto_complete' => [
+                    'default_tag' => '其他',
+                ],
+            ]);
+        },
+    ],
+]);
