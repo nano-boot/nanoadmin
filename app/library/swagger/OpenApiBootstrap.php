@@ -31,6 +31,9 @@ final class OpenApiBootstrap
     /** @var string swagger UI HTML 路径 */
     private const SWAGGER_UI_TEMPLATE = __DIR__ . '/templates/swagger-ui.html';
 
+    /** @var string swagger UI 静态资源目录 */
+    private const SWAGGER_UI_ASSETS_DIR = __DIR__ . '/templates/assets';
+
     /**
      * 一键注册 OpenAPI 路由
      *
@@ -61,6 +64,25 @@ final class OpenApiBootstrap
                 ['Content-Type' => 'text/html; charset=utf-8'],
                 (string) file_get_contents(self::SWAGGER_UI_TEMPLATE)
             );
+        });
+
+        // 3.1 注册 swagger UI 静态资源（CSS / JS 等），避免依赖 CDN
+        $assetBase = '/' . trim($uiRoute, '/') . '/assets';
+        Route::get($assetBase . '/{file}', function (string $file) {
+            $file = basename($file);
+            $path = self::SWAGGER_UI_ASSETS_DIR . '/' . $file;
+            if (!is_file($path)) {
+                return new \support\Response(404, ['Content-Type' => 'text/plain'], 'Not Found');
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'css' => 'text/css; charset=utf-8',
+                'js' => 'application/javascript; charset=utf-8',
+                'png' => 'image/png',
+                'svg' => 'image/svg+xml',
+                default => 'application/octet-stream',
+            };
+            return new \support\Response(200, ['Content-Type' => $mime], (string) file_get_contents($path));
         });
 
         // 4. 注册 OpenAPI YAML 文档接口

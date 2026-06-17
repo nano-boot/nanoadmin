@@ -3,18 +3,10 @@
 use Webman\Route;
 
 // 认证相关路由
-Route::group('/sys/auth', function () {
-    // 登录接口（不需要认证）
-    Route::post('/login', [plugin\nanoadmin\app\controller\AuthController::class, 'login']);
-
-    // 需要认证的接口
-    Route::post('/logout', [plugin\nanoadmin\app\controller\AuthController::class, 'logout']);
-    Route::get('/info', [plugin\nanoadmin\app\controller\AuthController::class, 'info']);
-    Route::get('/permissions', [plugin\nanoadmin\app\controller\AuthController::class, 'permissions']);
-    Route::get('/menus', [plugin\nanoadmin\app\controller\AuthController::class, 'menus']);
-    Route::post('/refresh', [plugin\nanoadmin\app\controller\AuthController::class, 'refresh']);
-    Route::post('/check', [plugin\nanoadmin\app\controller\AuthController::class, 'check']);
-});
+// AuthController 已通过类级/方法级 #[OA\Post]、#[OA\Get] 注解注册，
+// 由 OpenApiRouteRegister 自动扫描注册（详见 plugin/nanoadmin/app/library/swagger/OpenApiRouteRegister）。
+// 中间件：login 方法用 #[Middleware()] 覆盖为无中间件；其余方法走类级 AuthMiddleware。
+// 不再在此手写 Route::group('/sys/auth', ...)。
 
 
 // 权限管理相关路由

@@ -4,7 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OpenAPI 文档</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+  <script>
+    // 根据当前 URL 动态设置 base,让相对路径 CSS/JS 总能命中本地静态资源路由
+    (function () {
+      var path = window.location.pathname.replace(/\/+$/, '');
+      var base = document.createElement('base');
+      base.href = path + '/assets/';
+      document.head.appendChild(base);
+    })();
+  </script>
+  <link rel="stylesheet" href="./swagger-ui.css" />
   <style>
     .auth-btn {
       background: #409eff;
@@ -98,7 +107,7 @@
     </div>
   </div>
   
-  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" crossorigin></script>
+  <script src="./swagger-ui-bundle.js" crossorigin></script>
   <script>
     window.onload = () => {
       window.ui = SwaggerUIBundle({

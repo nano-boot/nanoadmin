@@ -111,21 +111,59 @@ class OpenApiRouteRegister
         });
 
         foreach ($pathGroups as $path => $methodMap) {
-            $routeGroup = Route::group($path, function () use ($methodMap, $class) {
-                foreach ($methodMap as $method => $op) {
-                    $httpMethod = strtolower($method);
-                    Route::$httpMethod('', [$class, $op['action']]);
-                }
-            });
+            // 类级中间件作为兜底默认值
+            $groupMiddleware = $defaultMiddleware ?? $classMiddleware;
 
-            if ($middleware) {
-                $routeGroup->middleware($middleware);
+            // 探测是否存在方法级中间件覆盖。
+            // 有覆盖时，路径下不同 method 可能需要不同的中间件，无法整组共享 group middleware，
+            // 必须逐 method 注册并显式指定 middleware。
+            $hasOverride = false;
+            foreach ($methodMap as $op) {
+                if (($op['middleware'] ?? null) !== null) {
+                    $hasOverride = true;
+                    break;
+                }
+            }
+
+            if (!$hasOverride) {
+                // 无方法级覆盖：保持原行为，整组挂中间件
+                $routeGroup = Route::group($path, function () use ($methodMap, $class) {
+                    foreach ($methodMap as $method => $op) {
+                        $httpMethod = strtolower($method);
+                        Route::$httpMethod('', [$class, $op['action']]);
+                    }
+                });
+                if ($groupMiddleware) {
+                    $routeGroup->middleware($groupMiddleware);
+                }
+                continue;
+            }
+
+            // 有方法级覆盖：逐 method 注册到同一 path 下
+            // webman Route::group 的中间件无法在子 method 上"清空"，
+            // 因此这里用 Route::xx(path, action)->middleware(...) 单独注册，
+            // 而不再套 Route::group（group 中间件会与 method 冲突）。
+            foreach ($methodMap as $method => $op) {
+                $httpMethod = strtolower($method);
+                $route = Route::$httpMethod($path, [$class, $op['action']]);
+
+                $override = $op['middleware'] ?? null;
+                if ($override !== null) {
+                    // 方法级显式：merge 类级 + 方法级；
+                    // 方法级 [] = 完全覆盖（即清空类级中间件）
+                    $merged = array_merge($groupMiddleware, $override);
+                    if (!empty($merged)) {
+                        $route->middleware($merged);
+                    }
+                } elseif ($groupMiddleware) {
+                    $route->middleware($groupMiddleware);
+                }
             }
         }
     }
 
     /**
-     * @return array<int, array{path: string, method: string, action: string}>
+     * @return array<int, array{path: string, method: string, action: string, middleware?: array}>
      */
     private function collectOperations(\ReflectionClass $ref): array
     {
@@ -158,11 +196,17 @@ class OpenApiRouteRegister
                 if (!$methodType) {
                     continue;
                 }
-                $operations[] = [
+                $op = [
                     'path' => $path,
                     'method' => $methodType,
                     'action' => $method->getName(),
                 ];
+                // 方法级 #[Middleware(...)] 覆盖：返回 null 表示"未声明"，空数组 [] 表示"清空"
+                $methodMw = $this->extractMiddleware($method->getAttributes());
+                if ($methodMw !== null) {
+                    $op['middleware'] = $methodMw;
+                }
+                $operations[] = $op;
             }
         }
         return $operations;
@@ -182,23 +226,33 @@ class OpenApiRouteRegister
         ][$short] ?? null;
     }
 
-    private function extractMiddleware(array $attributes): array
+    /**
+     * 提取 #[Middleware(...)] 注解里的中间件列表。
+     *
+     * 返回值语义：
+     *  - null：未声明（调用方走默认 / 类级中间件）
+     *  - array：声明后的中间件列表，空数组 = "完全无中间件"（覆盖类级）
+     *
+     * @return array|null
+     */
+    private function extractMiddleware(array $attributes): ?array
     {
         foreach ($attributes as $attr) {
             if ($attr->getName() === 'support\\annotation\\Middleware') {
                 $args = $attr->getArguments();
                 if (empty($args)) {
+                    // #[Middleware] 不带参数：视为空数组（完全覆盖）
                     return [];
                 }
                 $first = $args[0];
                 // #[Middleware([A::class, B::class])] -> 数组
                 if (is_array($first)) {
-                    return $first;
+                    return array_values(array_filter($first, 'is_string'));
                 }
                 // #[Middleware(A::class, B::class)] -> 多个字符串参数
                 return array_values(array_filter($args, 'is_string'));
             }
         }
-        return [];
+        return null;
     }
 }
