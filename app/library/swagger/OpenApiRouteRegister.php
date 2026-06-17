@@ -97,6 +97,19 @@ class OpenApiRouteRegister
             $pathGroups[$op['path']][$op['method']] = $op;
         }
 
+        // 排序：静态路由优先于动态路由，长路径优先于短路径
+        // FastRoute 要求静态路由必须先于参数路由注册
+        uksort($pathGroups, function ($a, $b) {
+            $aHasParams = str_contains($a, '{');
+            $bHasParams = str_contains($b, '{');
+            // 静态路由优先
+            if ($aHasParams !== $bHasParams) {
+                return $aHasParams ? 1 : -1;
+            }
+            // 长度相同则按原始顺序
+            return 0;
+        });
+
         foreach ($pathGroups as $path => $methodMap) {
             $routeGroup = Route::group($path, function () use ($methodMap, $class) {
                 foreach ($methodMap as $method => $op) {

@@ -33,22 +33,6 @@ Route::group('/sys/admin', function () {
     Route::get('/{id}/roles', [plugin\nanoadmin\app\controller\AdminController::class, 'getRoles']);
 });
 
-// 角色管理相关路由
-Route::group('/sys/role', function () {
-    Route::get('', [plugin\nanoadmin\app\controller\RoleController::class, 'page']);
-    Route::get('/select', [plugin\nanoadmin\app\controller\RoleController::class, 'selectList']);
-    Route::post('', [plugin\nanoadmin\app\controller\RoleController::class, 'create']);
-    Route::get('/{id}', [plugin\nanoadmin\app\controller\RoleController::class, 'show']);
-    Route::put('/{id}', [plugin\nanoadmin\app\controller\RoleController::class, 'update']);
-    Route::delete('/batch', [plugin\nanoadmin\app\controller\RoleController::class, 'batchDestroy']);
-    Route::delete('/{id}', [plugin\nanoadmin\app\controller\RoleController::class, 'destroy']);
-    Route::post('/{id}/permissions', [plugin\nanoadmin\app\controller\RoleController::class, 'assignPermissions']);
-    Route::get('/{id}/permissions', [plugin\nanoadmin\app\controller\RoleController::class, 'getPermissions']);
-    Route::post('/{id}/menus', [plugin\nanoadmin\app\controller\RoleController::class, 'assignMenus']);
-    Route::get('/{id}/menus', [plugin\nanoadmin\app\controller\RoleController::class, 'getMenus']);
-
-});
-
 // 权限管理相关路由
 Route::group('/sys/permissions', function () {
     Route::get('', [plugin\nanoadmin\app\controller\PermissionController::class, 'page']);

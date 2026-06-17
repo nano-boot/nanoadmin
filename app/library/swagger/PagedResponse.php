@@ -1,9 +1,8 @@
 <?php
 
-namespace plugin\nanoadmin\app\library\swagger\schema\response;
+namespace plugin\nanoadmin\app\library\swagger;
 
 use OpenApi\Attributes as OA;
-use plugin\nanoadmin\app\library\swagger\ResponseSchema;
 
 /**
  * 通用分页响应

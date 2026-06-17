@@ -21,7 +21,8 @@ use Webman\Route;
  *
  * 默认扫描路径（递归包含子目录）：
  *  - 控制器目录（业务方传入）
- *  - library/swagger（自身 + schema 子目录）
+ *  - library/swagger（基础设施 + 通用 schema）
+ *  - schema/（业务 schema，与 controller 同级）
  *
  * 业务方如需自定义 OpenAPI info / servers / 扫描路径，可传入 config 覆盖。
  */
@@ -49,7 +50,8 @@ final class OpenApiBootstrap
 
         // 2. 准备文档配置
         $defaultLibraryPath = dirname(__DIR__, 2) . '/library/swagger';
-        $docConfig = self::buildDocConfig($controllerPaths, $defaultLibraryPath, $config);
+        $defaultSchemaPath = dirname(__DIR__, 2) . '/schema';
+        $docConfig = self::buildDocConfig($controllerPaths, $defaultLibraryPath, $defaultSchemaPath, $config);
 
         // 3. 注册 swagger UI 页面
         $uiRoute = $config['ui_route'] ?? '/sys/openapi';
@@ -72,12 +74,13 @@ final class OpenApiBootstrap
     /**
      * 构建 OpenAPI 文档配置（合并用户传入 + 默认值）
      */
-    private static function buildDocConfig(array $controllerPaths, string $defaultLibraryPath, array $config): array
+    private static function buildDocConfig(array $controllerPaths, string $defaultLibraryPath, string $defaultSchemaPath, array $config): array
     {
         $scanPath = $config['scan_path']
             ?? array_values(array_unique(array_merge(
                 $controllerPaths,
-                [$defaultLibraryPath]
+                [$defaultLibraryPath],
+                [$defaultSchemaPath]
             )));
 
         return [

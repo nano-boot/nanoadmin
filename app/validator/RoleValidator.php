@@ -36,6 +36,6 @@ class RoleValidator extends ValidatorBase
         'delete'  =>  ['id'],
         'batch_delete'  =>  ['ids'],
         'show'  =>  ['id'],
-        'list'  =>  ['page','limit','keyword','status'],
+        'page'  =>  ['page','limit','keyword','status'],
     ];
 }

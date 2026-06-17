@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\nanoadmin\app\library\swagger\schema\query;
+namespace plugin\nanoadmin\app\schema\log;
 
 use OpenApi\Attributes as OA;
 use plugin\nanoadmin\app\library\swagger\QuerySchema;

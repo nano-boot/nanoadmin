@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\nanoadmin\app\library\swagger\schema\response;
+namespace plugin\nanoadmin\app\schema\log;
 
 use OpenApi\Attributes as OA;
 use plugin\nanoadmin\app\library\swagger\ResponseSchema;
