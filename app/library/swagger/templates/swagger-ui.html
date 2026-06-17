@@ -4,16 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OpenAPI 文档</title>
-  <script>
-    // 根据当前 URL 动态设置 base,让相对路径 CSS/JS 总能命中本地静态资源路由
-    (function () {
-      var path = window.location.pathname.replace(/\/+$/, '');
-      var base = document.createElement('base');
-      base.href = path + '/assets/';
-      document.head.appendChild(base);
-    })();
-  </script>
-  <link rel="stylesheet" href="./swagger-ui.css" />
+  <link rel="stylesheet" href="{{CSS_URL}}" />
+  <script src="{{JS_URL}}" crossorigin></script>
   <style>
     .auth-btn {
       background: #409eff;
@@ -94,7 +86,7 @@
     <button class="auth-btn" onclick="showAuthModal()">设置 Token</button>
   </div>
   <div id="swagger-ui"></div>
-  
+
   <div id="authModal" class="auth-modal">
     <div class="auth-modal-content">
       <h3>设置 Authorization Token</h3>
@@ -106,12 +98,13 @@
       </div>
     </div>
   </div>
-  
-  <script src="./swagger-ui-bundle.js" crossorigin></script>
+
   <script>
+    // spec URL 必须基于 UI 根路径（而不是当前 pathname），避免 deepLinking
+    // 让 URL 变成 /sys/openapi/assets/... 时 spec 跑去 /sys/openapi/assets/doc
     window.onload = () => {
       window.ui = SwaggerUIBundle({
-        url: window.location.pathname.replace(/\/?$/, '/') + 'doc',
+        url: '{{DOC_URL}}',
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [SwaggerUIBundle.presets.apis],
@@ -127,17 +120,17 @@
         },
       });
     };
-    
+
     function showAuthModal() {
       document.getElementById('authModal').classList.add('show');
       var savedToken = localStorage.getItem('swagger_auth_token') || '';
       document.getElementById('tokenInput').value = savedToken;
     }
-    
+
     function hideAuthModal() {
       document.getElementById('authModal').classList.remove('show');
     }
-    
+
     function applyToken() {
       var token = document.getElementById('tokenInput').value.trim();
       if (token) {

@@ -58,11 +58,20 @@ final class OpenApiBootstrap
 
         // 3. 注册 swagger UI 页面
         $uiRoute = $config['ui_route'] ?? '/sys/openapi';
-        Route::get($uiRoute, function () {
+        $docRoute = $config['doc_route'] ?? '/sys/openapi/doc';
+        Route::get($uiRoute, function () use ($uiRoute, $docRoute) {
+            // 由后端注入 UI 根路径与静态资源绝对 URL，避免 <base href> 引起的 deepLinking 路径偏移
+            $html = (string) file_get_contents(self::SWAGGER_UI_TEMPLATE);
+            $html = strtr($html, [
+                '{{UI_PATH}}' => $uiRoute,
+                '{{CSS_URL}}' => $uiRoute . '/assets/swagger-ui.css',
+                '{{JS_URL}}' => $uiRoute . '/assets/swagger-ui-bundle.js',
+                '{{DOC_URL}}' => $docRoute,
+            ]);
             return new \support\Response(
                 200,
                 ['Content-Type' => 'text/html; charset=utf-8'],
-                (string) file_get_contents(self::SWAGGER_UI_TEMPLATE)
+                $html
             );
         });
 
