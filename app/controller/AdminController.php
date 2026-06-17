@@ -63,7 +63,10 @@ class AdminController extends AbstractResourceController
     #[OA\Get(
         path: '/sys/admin/{id}',
         summary: '管理员详情',
-        tags: ['管理员']
+        tags: ['管理员'],
+        x: [OpenApiModifier::X_PATH_PARAMETERS => [
+            'id' => ['type' => 'integer', 'description' => '管理员ID'],
+        ]]
     )]
     #[DataResponse(schema: AdminResponse::class)]
     public function show(int $id = 0): Response
@@ -88,7 +91,12 @@ class AdminController extends AbstractResourceController
         path: '/sys/admin/{id}',
         summary: '更新管理员',
         tags: ['管理员'],
-        x: [OpenApiModifier::X_REQUEST_BODY => AdminRequest::class]
+        x: [
+            OpenApiModifier::X_PATH_PARAMETERS => [
+                'id' => ['type' => 'integer', 'description' => '管理员ID'],
+            ],
+            OpenApiModifier::X_REQUEST_BODY => AdminRequest::class
+        ]
     )]
     #[DataResponse()]
     public function update(Request $request, int $id): Response
@@ -100,7 +108,10 @@ class AdminController extends AbstractResourceController
     #[OA\Delete(
         path: '/sys/admin/{id}',
         summary: '删除管理员',
-        tags: ['管理员']
+        tags: ['管理员'],
+        x: [OpenApiModifier::X_PATH_PARAMETERS => [
+            'id' => ['type' => 'integer', 'description' => '管理员ID'],
+        ]]
     )]
     #[DataResponse()]
     public function destroy(int $id): Response
@@ -124,7 +135,12 @@ class AdminController extends AbstractResourceController
         summary: '分配角色',
         description: '为管理员分配角色',
         tags: ['管理员'],
-        x: [OpenApiModifier::X_REQUEST_BODY => AdminRoleRequest::class]
+        x: [
+            OpenApiModifier::X_PATH_PARAMETERS => [
+                'id' => ['type' => 'integer', 'description' => '管理员ID'],
+            ],
+            OpenApiModifier::X_REQUEST_BODY => AdminRoleRequest::class
+        ]
     )]
     #[DataResponse()]
     public function assignRoles(Request $request, int $id): Response
@@ -141,7 +157,10 @@ class AdminController extends AbstractResourceController
     #[OA\Get(
         path: '/sys/admin/{id}/roles',
         summary: '获取管理员角色',
-        tags: ['管理员']
+        tags: ['管理员'],
+        x: [OpenApiModifier::X_PATH_PARAMETERS => [
+            'id' => ['type' => 'integer', 'description' => '管理员ID'],
+        ]]
     )]
     #[DataResponse()]
     public function getRoles(int $id): Response

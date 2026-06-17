@@ -12,9 +12,10 @@ use plugin\nanoadmin\app\library\swagger\ApiResponseDocs;
  *
  * 在 route.php 的 modify 回调里调用，自动给文档补充：
  *  1. 读取 x[schema-to-request-body] 自动追加 OA\RequestBody
- *  2. 给所有 operation 注入 401/403 公共响应
- *  3. 自动补全缺失的 summary / tags / responses
- *  4. 设置基础信息 + servers
+ *  2. 读取 x[schema-to-path-parameters] 自动追加 OA\Parameter（路径参数）
+ *  3. 给所有 operation 注入 401/403 公共响应
+ *  4. 自动补全缺失的 summary / tags / responses
+ *  5. 设置基础信息 + servers
  *
  * 用法：
  *   'modify' => function (OpenApi $openApi) {
@@ -41,6 +42,19 @@ final class OpenApiModifier
      */
     public const X_REQUEST_BODY = 'schema-to-request-body';
 
+    /**
+     * 路径参数自动注入的 x key
+     *
+     * 控制器写法：
+     *   #[OA\Get(
+     *       path: '/sys/admin/{id}',
+     *       x: [OpenApiModifier::X_PATH_PARAMETERS => [
+     *           'id' => ['type' => 'integer', 'description' => '管理员ID'],
+     *       ]]
+     *   )]
+     */
+    public const X_PATH_PARAMETERS = 'schema-to-path-parameters';
+
     private function __construct() {}
 
     /**
@@ -48,6 +62,7 @@ final class OpenApiModifier
      */
     public static function process(OpenApi $openApi, array $info = []): void
     {
+        self::injectPathParameters($openApi);
         self::injectRequestBodies($openApi);
         self::injectCommonResponses($openApi);
         self::injectAutoComplete($openApi, $info['auto_complete'] ?? []);
@@ -60,6 +75,77 @@ final class OpenApiModifier
         if (!empty($info['servers'])) {
             self::setServers($openApi, $info['servers']);
         }
+    }
+
+    /**
+     * 根据 operation 的 x[X_PATH_PARAMETERS] 自动追加 OA\Parameter
+     *
+     * 控制器写法：
+     *   #[OA\Get(
+     *       path: '/sys/admin/{id}',
+     *       x: [OpenApiModifier::X_PATH_PARAMETERS => [
+     *           'id' => ['type' => 'integer', 'description' => '管理员ID'],
+     *       ]]
+     *   )]
+     */
+    public static function injectPathParameters(OpenApi $openApi): void
+    {
+        if (empty($openApi->paths)) {
+            return;
+        }
+
+        $methodAttrs = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options'];
+
+        foreach ($openApi->paths as $path) {
+            foreach ($methodAttrs as $attr) {
+                $operation = $path->{$attr} ?? null;
+                if (!$operation instanceof OA\Operation) {
+                    continue;
+                }
+
+                if (Generator::isDefault($operation->x) || !array_key_exists(self::X_PATH_PARAMETERS, $operation->x)) {
+                    continue;
+                }
+
+                $paramsConfig = $operation->x[self::X_PATH_PARAMETERS];
+                if (!is_array($paramsConfig)) {
+                    continue;
+                }
+
+                foreach ($paramsConfig as $name => $config) {
+                    // 已手动声明的同名参数，跳过
+                    if (self::hasPathParameter($operation, $name)) {
+                        continue;
+                    }
+
+                    $parameter = new OA\Parameter([
+                        'parameter' => $name,
+                        'in' => 'path',
+                        'required' => true,
+                        'schema' => new OA\Schema([
+                            'type' => $config['type'] ?? 'string',
+                        ]),
+                        'description' => $config['description'] ?? '',
+                    ]);
+                    $operation->parameters[] = $parameter;
+                }
+
+                self::cleanX($operation, self::X_PATH_PARAMETERS);
+            }
+        }
+    }
+
+    private static function hasPathParameter(OA\Operation $operation, string $name): bool
+    {
+        if (empty($operation->parameters)) {
+            return false;
+        }
+        foreach ($operation->parameters as $p) {
+            if ($p->parameter === $name && $p->in === 'path') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
