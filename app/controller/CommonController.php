@@ -8,21 +8,25 @@ use plugin\nanoadmin\app\validator\ValidatorBase;
 use support\Request;
 
 /**
- * 资源控制器抽象基类
+ * 通用 CRUD 控制器基类
  *
- * 校验策略：使用 ValidatorBase 进行参数校验
+ * 定位：nanoadmin 中带"标准约定"的标准 CRUD 控制器骨架
+ *  - 比 BaseController 多一层通用约定：参数校验 + OpenAPI 文档 + Middleware 声明
+ *  - 适合绝大多数后台业务模块（管理员/角色/菜单/字典…）
  *
  * 子类使用模式：
  *  - 声明 $queryValidator / $createValidator / $updateValidator
  *  - 调用 validateQuery() / validateCreate() / validateUpdate() 获取校验后的数据
- *
- * OpenAPI 文档：
- *  - 在控制器方法上使用 OA 注解 + x: [X_SCHEMA_TO_PARAMETERS] / x: [X_REQUEST_BODY]
- *  - 由 OpenApiModifier 自动处理文档生成
+ *  - 在方法上使用 OA 注解 + x: [X_SCHEMA_TO_PARAMETERS] / x: [X_REQUEST_BODY]
+ *  - 路由由 OpenApiRouteRegister 通过 OA 注解自动注册
  *
  * 错误处理：校验失败统一抛 ApiException(VALIDATION_ERROR)，由异常中间件转 R::error
+ *
+ * 与 BaseController 的关系：
+ *  - BaseController：极简 CRUD 骨架，不做参数校验、无注解约定
+ *  - CommonController：标准 CRUD + ValidatorBase 校验 + OpenAPI 注解 + Middleware 注解
  */
-abstract class AbstractResourceController extends BaseController
+abstract class CommonController extends BaseController
 {
     /**
      * 查询参数 ValidatorBase

@@ -20,7 +20,7 @@ use plugin\nanoadmin\app\library\swagger\SchemaConstants;
 /**
  * 登录日志控制器
  *
- * 使用 AbstractResourceController 抽象：
+ * 使用 CommonController 抽象：
  *  - schema 类通过 $querySchema / $responseSchema 声明
  *  - validateQuery($request) 自动完成参数校验
  *  - CRUD 方法直接继承 BaseController
@@ -31,15 +31,13 @@ use plugin\nanoadmin\app\library\swagger\SchemaConstants;
  */
 #[OA\Tag(name: '登录日志', description: '登录日志管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
-class LogLoginController extends AbstractResourceController
+class LogLoginController extends CommonController
 {
     private LogLoginService $logLoginService;
 
     public function __construct(LogLoginService $logLoginService)
     {
         $this->logLoginService = $logLoginService;
-        $this->queryValidator = LogLoginValidator::class;
-        $this->resourceTag    = '登录日志';
     }
 
     protected function getService(): LogLoginService

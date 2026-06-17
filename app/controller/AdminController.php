@@ -28,7 +28,7 @@ use support\Response;
  */
 #[OA\Tag(name: '管理员', description: '系统管理员管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
-class AdminController extends AbstractResourceController
+class AdminController extends CommonController
 {
     private AdminService $adminService;
 
