@@ -10,12 +10,12 @@ use plugin\nanoadmin\app\schema\response\LogLoginResponse;
 use plugin\nanoadmin\app\service\LogLoginService;
 use plugin\nanoadmin\app\swagger\OpenApiModifier;
 use plugin\nanoadmin\app\swagger\annotation\response\PageResponse;
-use plugin\nanoadmin\app\swagger\annotation\response\SimpleResponse;
+use plugin\nanoadmin\app\swagger\annotation\response\DataResponse;
 use plugin\nanoadmin\app\validator\LogLoginValidator;
 use support\annotation\Middleware;
 use support\Request;
 use support\Response;
-use WebmanTech\Swagger\DTO\SchemaConstants;
+use plugin\nanoadmin\app\swagger\SchemaConstants;
 
 /**
  * 登录日志控制器
@@ -70,7 +70,7 @@ class LogLoginController extends AbstractResourceController
         summary: '登录日志详情',
         tags: ['登录日志']
     )]
-    #[SimpleResponse(schema: LogLoginResponse::class)]
+    #[DataResponse(schema: LogLoginResponse::class)]
     public function show(int $id = 0): Response
     {
         return parent::show($id);
@@ -82,7 +82,6 @@ class LogLoginController extends AbstractResourceController
         tags: ['登录日志'],
         x: [OpenApiModifier::X_REQUEST_BODY => LogLoginResponse::class]
     )]
-    #[SimpleResponse()]
     public function create(Request $request): Response
     {
         return parent::create($request);

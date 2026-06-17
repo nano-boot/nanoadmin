@@ -8,7 +8,7 @@ use OpenApi\Attributes\JsonContent;
 use OpenApi\Attributes\Property;
 
 /**
- * 简单响应
+ * 数据响应
  *
  * 响应格式：
  * {
@@ -18,12 +18,12 @@ use OpenApi\Attributes\Property;
  * }
  *
  * 示例：
- * #[SimpleResponse()]
- * #[SimpleResponse(example: ['id' => 1])]
- * #[SimpleResponse(schema: AdminResponse::class)]
+ * #[DataResponse()]
+ * #[DataResponse(example: ['id' => 1])]
+ * #[DataResponse(schema: AdminResponse::class)]
  */
 #[\Attribute(\Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
-class SimpleResponse extends AbstractResponse
+class DataResponse extends AbstractResponse
 {
     /**
      * @param mixed $schema Schema 类名

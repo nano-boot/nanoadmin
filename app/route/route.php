@@ -124,36 +124,74 @@ Route::group('/sys/operation-log', function () {
     Route::get('/{id}', [plugin\nanoadmin\app\controller\LogOperationController::class, 'show']);
 });
 
-// 注册 OpenAPI / Swagger（从控制器 OA 注解自动注册路由与文档）
-(new \WebmanTech\Swagger\Swagger())->registerRoute([
-    'enable' => true,
-    'route_prefix' => '/sys/openapi',
-    'register_webman_route' => true,
-    'host_forbidden' => [
-        'enable' => false,
-    ],
-    'openapi_doc' => [
-        'scan_path' => [
-            base_path() . '/plugin/nanoadmin/app/controller',
-            base_path() . '/plugin/nanoadmin/app/schema',
-        ],
-        'modify' => function (\OpenApi\Annotations\OpenApi $openApi) {
-            // 一站式后处理：
-            //  1. 读取 operation 的 x[schema-to-request-body] 自动注入 OA\RequestBody
-            //  2. 给所有 operation 注入 401/403 公共响应
-            //  3. 自动补全缺失的 summary / tags / responses
-            //  4. 设置基础信息 + servers
-            \plugin\nanoadmin\app\swagger\OpenApiModifier::process($openApi, [
-                'title' => 'Nano Admin API',
-                'version' => '1.0.0',
-                'description' => 'Nano Admin 后台管理系统 API 文档',
-                'servers' => [
-                    ['url' => '/', 'description' => '当前服务'],
-                ],
-                'auto_complete' => [
-                    'default_tag' => '其他',
-                ],
-            ]);
-        },
-    ],
+// 注册 OpenAPI / Swagger（完全基于 zircote/swagger-php，零依赖 webman-tech）
+//   - /sys/openapi        渲染 swagger UI（用 swagger-ui CDN 引用）
+//   - /sys/openapi/doc    输出 OpenAPI YAML（zircote Generator + 自定义 Processor + OpenApiModifier）
+// 业务路由在上方 Route::group(...) 段手动注册，OpenAPI 注解仅用于生成文档。
+// 注意：LogLoginController / 其他只写 #[OA\Get / OA\Post] 注解没在手写 Route::group 里的控制器，
+//       需要用 OpenApiRouteRegister 扫描注册路由。
+(new \plugin\nanoadmin\app\swagger\OpenApiRouteRegister())->register([
+    base_path() . '/plugin/nanoadmin/app/controller',
 ]);
+
+$openapiDocConfig = [
+    'scan_path' => [
+        base_path() . '/plugin/nanoadmin/app/controller',
+        base_path() . '/plugin/nanoadmin/app/schema',
+        base_path() . '/plugin/nanoadmin/app/swagger',
+    ],
+    'info' => [
+        'title' => 'Nano Admin API',
+        'version' => '1.0.0',
+        'description' => 'Nano Admin 后台管理系统 API 文档',
+    ],
+    'servers' => [
+        ['url' => '/', 'description' => '当前服务'],
+    ],
+    'auto_complete' => [
+        'default_tag' => '其他',
+    ],
+];
+
+$openapiDocController = new \plugin\nanoadmin\app\controller\OpenapiDocController();
+
+// swagger UI 页面（用 swagger-ui CDN 自渲染，无需 webman-tech 的 view 模板）
+Route::get('/sys/openapi', function () {
+    return new \support\Response(
+        200,
+        ['Content-Type' => 'text/html; charset=utf-8'],
+        <<<'HTML'
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenAPI 文档</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" crossorigin></script>
+  <script>
+    window.onload = () => {
+      window.ui = SwaggerUIBundle({
+        url: window.location.pathname.replace(/\/?$/, '/') + 'doc',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis],
+        layout: 'BaseLayout',
+        docExpansion: 'none',
+        defaultModelsExpandDepth: -1,
+      });
+    };
+  </script>
+</body>
+</html>
+HTML
+    );
+});
+
+// openapi doc YAML
+Route::get('/sys/openapi/doc', function () use ($openapiDocController, $openapiDocConfig) {
+    return $openapiDocController->openapiDoc($openapiDocConfig);
+});

@@ -3,7 +3,7 @@
 namespace plugin\nanoadmin\app\swagger;
 
 use OpenApi\Attributes as OA;
-use WebmanTech\Swagger\DTO\SchemaConstants;
+use plugin\nanoadmin\app\swagger\SchemaConstants;
 
 /**
  * CRUD 注解片段工厂

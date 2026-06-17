@@ -111,7 +111,14 @@ abstract class AbstractResponse extends BaseResponse
             $propAttributes = $property->getAttributes(Property::class);
 
             if (!empty($propAttributes)) {
-                $properties[] = $propAttributes[0]->newInstance();
+                $prop = $propAttributes[0]->newInstance();
+                // PHP 8 attribute 装饰在类属性上时，无法在注解里写 property 名称（必须为常量表达式），
+                // 因此 newInstance() 出来的 Property->property 是 Generator::UNDEFINED。
+                // 这里手动回填为 PHP 属性名，避免 swagger-php 校验时把多条 Property 误判为同 key="" 的重复。
+                if (\OpenApi\Generator::isDefault($prop->property)) {
+                    $prop->property = $property->getName();
+                }
+                $properties[] = $prop;
             } else {
                 $type = $property->getType();
                 $typeName = $type ? $type->getName() : 'string';

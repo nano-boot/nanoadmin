@@ -60,6 +60,17 @@ final class ApiResponseDocs
     }
 
     /**
+     * 通用 200 成功响应的 JsonContent（data 为 null）
+     *
+     * 给没写响应注解的接口兜底用，让前端在 OpenAPI 文档里能看到一个标准的成功示例。
+     * 当前与 emptyJsonContent 等价，未来需要扩展示例时单点修改即可。
+     */
+    public static function successJsonContent(): OA\JsonContent
+    {
+        return self::emptyJsonContent();
+    }
+
+    /**
      * 通用 401/403 响应注解
      * @return array<int, OA\Response>
      */

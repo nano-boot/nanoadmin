@@ -5,6 +5,7 @@ namespace plugin\nanoadmin\app\swagger;
 use OpenApi\Annotations as OA;
 use OpenApi\Annotations\OpenApi;
 use OpenApi\Generator;
+use plugin\nanoadmin\app\swagger\ApiResponseDocs;
 
 /**
  * OpenAPI 文档后处理工具
@@ -158,6 +159,9 @@ final class OpenApiModifier
 
     /**
      * 设置 OpenAPI 基础信息
+     *
+     * 如果扫描阶段没找到 #[OA\Info] 占位类，这里会兜底创建一个空 Info，
+     * 避免 $openApi->info->title 这种写法在 UNDEFINED 上报错。
      */
     public static function setInfo(
         OpenApi $openApi,
@@ -165,6 +169,11 @@ final class OpenApiModifier
         string $version = '1.0.0',
         string $description = ''
     ): void {
+        if (Generator::isDefault($openApi->info)) {
+            $openApi->info = new OA\Info([
+                '_context' => $openApi->_context,
+            ]);
+        }
         $openApi->info->title = $title;
         $openApi->info->version = $version;
         if ($description !== '') {
@@ -210,7 +219,6 @@ final class OpenApiModifier
         }
 
         $defaultTag = $opts['default_tag'] ?? '接口';
-        $defaultDesc = $opts['default_description'] ?? '操作成功';
 
         $methodAttrs = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options'];
         $actionNames = [
@@ -249,21 +257,8 @@ final class OpenApiModifier
                     }
                 }
 
-                // 自动补 responses（仅当完全无 response 时）
-                if (empty($operation->responses)) {
-                    $response = new OA\Response([
-                        'response' => 200,
-                        'description' => $defaultDesc,
-                    ]);
-                    // 手动设置 content，确保正确的结构
-                    $response->content = [
-                        'application/json' => new OA\MediaType([
-                            'mediaType' => 'application/json',
-                            'schema' => new OA\Schema(['ref' => ApiResponseDocs::class]),
-                        ]),
-                    ];
-                    $operation->responses = [$response];
-                }
+                // 200 响应兜底已移到 Processor 阶段（InjectDefault200Response），
+                // 在 swagger-php validate() 之前完成。这里不再重复注入。
             }
         }
     }
