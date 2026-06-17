@@ -17,22 +17,6 @@ Route::group('/sys/auth', function () {
 });
 
 
-// 管理员管理相关路由
-Route::group('/sys/admin', function () {
-    Route::get('', [plugin\nanoadmin\app\controller\AdminController::class, 'page']);
-    Route::post('', [plugin\nanoadmin\app\controller\AdminController::class, 'create']);
-    Route::put('/info', [plugin\nanoadmin\app\controller\AdminController::class, 'updateProfile']);
-    Route::put('/password', [plugin\nanoadmin\app\controller\AdminController::class, 'updateCurrentPassword']);
-    Route::get('/{id}', [plugin\nanoadmin\app\controller\AdminController::class, 'show']);
-    Route::put('/{id}', [plugin\nanoadmin\app\controller\AdminController::class, 'update']);
-
-    Route::delete('/batch', [plugin\nanoadmin\app\controller\AdminController::class, 'batchDestroy']);
-    Route::delete('/{id}', [plugin\nanoadmin\app\controller\AdminController::class, 'destroy']);
-
-    Route::post('/{id}/roles', [plugin\nanoadmin\app\controller\AdminController::class, 'assignRoles']);
-    Route::get('/{id}/roles', [plugin\nanoadmin\app\controller\AdminController::class, 'getRoles']);
-});
-
 // 权限管理相关路由
 Route::group('/sys/permissions', function () {
     Route::get('', [plugin\nanoadmin\app\controller\PermissionController::class, 'page']);
