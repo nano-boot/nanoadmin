@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace plugin\nanoadmin\app\swagger\Processors;
+namespace plugin\nanoadmin\app\library\swagger\Processors;
 
 use OpenApi\Analysis;
 use OpenApi\Annotations as OA;
 use OpenApi\Annotations\Operation;
 use OpenApi\Generator;
 use OpenApi\Processors\ProcessorInterface;
-use plugin\nanoadmin\app\swagger\ApiResponseDocs;
+use plugin\nanoadmin\app\library\swagger\ApiResponseDocs;
 /**
  * 给所有 operation 兜底注入 200 成功响应。
  *

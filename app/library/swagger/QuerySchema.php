@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\nanoadmin\app\swagger;
+namespace plugin\nanoadmin\app\library\swagger;
 
 /**
  * 查询参数 schema 基类

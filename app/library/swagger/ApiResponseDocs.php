@@ -1,10 +1,10 @@
 <?php
 
-namespace plugin\nanoadmin\app\swagger;
+namespace plugin\nanoadmin\app\library\swagger;
 
 use OpenApi\Attributes as OA;
-use plugin\nanoadmin\app\schema\response\ApiResponse;
-use plugin\nanoadmin\app\schema\response\PagedResponse;
+use plugin\nanoadmin\app\library\swagger\schema\response\ApiResponse;
+use plugin\nanoadmin\app\library\swagger\schema\response\PagedResponse;
 
 /**
  * OpenAPI 响应注解工厂（运行时使用）

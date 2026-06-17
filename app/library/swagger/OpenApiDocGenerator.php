@@ -1,31 +1,31 @@
 <?php
 
-namespace plugin\nanoadmin\app\controller;
+namespace plugin\nanoadmin\app\library\swagger;
 
 use OpenApi\Analysers\AttributeAnnotationFactory;
 use OpenApi\Analysers\ReflectionAnalyser;
 use OpenApi\Annotations as OA;
 use OpenApi\Generator;
 use OpenApi\Util;
-use plugin\nanoadmin\app\swagger\OpenApiModifier;
-use plugin\nanoadmin\app\swagger\Processors\InjectDefault200Response;
-use plugin\nanoadmin\app\swagger\Processors\SchemaQueryParameter;
-use support\Response;
+use plugin\nanoadmin\app\library\swagger\Processors\InjectDefault200Response;
+use plugin\nanoadmin\app\library\swagger\Processors\SchemaQueryParameter;
 
 /**
- * 自定义 OpenAPI doc 路由 handler
+ * OpenAPI 文档生成器
  *
- * 完整基于 zircote/swagger-php 实现，不依赖 webman-tech/swagger：
+ * 基于 zircote/swagger-php 生成 OpenAPI YAML：
  *  - swagger-php 自带的 ReflectionAnalyser（PHP 8 attribute 解析）做注解扫描
- *  - SchemaQueryParameter（自维护） 把 x[schema-to-parameters] 展开成 query parameters
- *  - InjectDefault200Response（自维护） 在 validate() 之前给未声明响应的 operation 补 200 响应
- *  - OpenApiModifier（自维护） 在 validate() 之后注入 401/403、补 tags/summary/description、设置 Info/Servers
+ *  - SchemaQueryParameter 把 x[schema-to-parameters] 展开成 query parameters
+ *  - InjectDefault200Response 在 validate() 之前给未声明响应的 operation 补 200 响应
+ *  - OpenApiModifier 在 validate() 之后注入 401/403、补 tags/summary/description、设置 Info/Servers
+ *
+ * 不是 webman 控制器，仅作为内部组件被 OpenApiBootstrap 注册的路由闭包调用。
  *
  * 历史：
  *   早期用 webman-tech/swagger 的 OpenapiController，后来发现它不暴露 addProcessor 扩展点，
  *   无法解决 "@OA\\Post() requires at least one @OA\\Response()" 报错，索性直接基于 zircote 写。
  */
-class OpenapiDocController
+class OpenApiDocGenerator
 {
     /** doc YAML 输出缓存 */
     private static array $docCache = [];
@@ -41,7 +41,7 @@ class OpenapiDocController
      *  - auto_complete: array{default_tag?:string}
      *  - cache_key: string|null
      */
-    public function openapiDoc(array $config): Response
+    public function generate(array $config): string
     {
         $cacheKey = $config['cache_key'] ?? $this->buildCacheKey($config);
 
@@ -62,7 +62,15 @@ class OpenapiDocController
             self::$docCache[$cacheKey] = $openapi->toYaml();
         }
 
-        return response(self::$docCache[$cacheKey], 200, [
+        return self::$docCache[$cacheKey];
+    }
+
+    /**
+     * 渲染 OpenAPI YAML 响应（webman Response 风格）
+     */
+    public function toResponse(array $config): \support\Response
+    {
+        return response($this->generate($config), 200, [
             'Content-Type' => 'application/x-yaml',
         ]);
     }

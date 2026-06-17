@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace plugin\nanoadmin\app\swagger\Processors;
+namespace plugin\nanoadmin\app\library\swagger\Processors;
 
 use OpenApi\Analysis;
 use OpenApi\Annotations\Operation;
@@ -11,7 +11,7 @@ use OpenApi\Annotations\Schema as AnSchema;
 use OpenApi\Attributes\Schema;
 use OpenApi\Generator;
 use OpenApi\Processors\ProcessorInterface;
-use plugin\nanoadmin\app\swagger\SchemaConstants;
+use plugin\nanoadmin\app\library\swagger\SchemaConstants;
 
 /**
  * 把 operation 上的 x[schema-to-parameters] 指向的 schema 类展开成 query parameters。

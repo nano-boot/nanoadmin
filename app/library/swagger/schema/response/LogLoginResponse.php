@@ -1,9 +1,9 @@
 <?php
 
-namespace plugin\nanoadmin\app\schema\response;
+namespace plugin\nanoadmin\app\library\swagger\schema\response;
 
 use OpenApi\Attributes as OA;
-use plugin\nanoadmin\app\swagger\ResponseSchema;
+use plugin\nanoadmin\app\library\swagger\ResponseSchema;
 
 /**
  * 登录日志响应结构

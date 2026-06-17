@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\nanoadmin\app\swagger;
+namespace plugin\nanoadmin\app\library\swagger;
 
 /**
  * OpenAPI 注解扩展字段（x-*）的常量定义

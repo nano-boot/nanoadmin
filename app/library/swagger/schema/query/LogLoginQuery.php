@@ -1,9 +1,9 @@
 <?php
 
-namespace plugin\nanoadmin\app\schema\query;
+namespace plugin\nanoadmin\app\library\swagger\schema\query;
 
 use OpenApi\Attributes as OA;
-use plugin\nanoadmin\app\swagger\QuerySchema;
+use plugin\nanoadmin\app\library\swagger\QuerySchema;
 
 /**
  * 登录日志查询参数

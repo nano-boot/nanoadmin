@@ -1,9 +1,9 @@
 <?php
 
-namespace plugin\nanoadmin\app\swagger;
+namespace plugin\nanoadmin\app\library\swagger;
 
 use OpenApi\Attributes as OA;
-use plugin\nanoadmin\app\swagger\SchemaConstants;
+use plugin\nanoadmin\app\library\swagger\SchemaConstants;
 
 /**
  * CRUD 注解片段工厂

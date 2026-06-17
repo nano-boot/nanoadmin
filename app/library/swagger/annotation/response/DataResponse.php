@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace plugin\nanoadmin\app\swagger\annotation\response;
+namespace plugin\nanoadmin\app\library\swagger\annotation\response;
 
 use OpenApi\Attributes\JsonContent;
 use OpenApi\Attributes\Property;

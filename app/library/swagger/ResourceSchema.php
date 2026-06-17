@@ -1,6 +1,6 @@
 <?php
 
-namespace plugin\nanoadmin\app\swagger;
+namespace plugin\nanoadmin\app\library\swagger;
 
 /**
  * 资源级 Schema 基类（统一继承点）

@@ -1,11 +1,11 @@
 <?php
 
-namespace plugin\nanoadmin\app\swagger;
+namespace plugin\nanoadmin\app\library\swagger;
 
 use OpenApi\Annotations as OA;
 use OpenApi\Annotations\OpenApi;
 use OpenApi\Generator;
-use plugin\nanoadmin\app\swagger\ApiResponseDocs;
+use plugin\nanoadmin\app\library\swagger\ApiResponseDocs;
 
 /**
  * OpenAPI 文档后处理工具
