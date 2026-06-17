@@ -119,7 +119,7 @@ final class OpenApiModifier
                     }
 
                     $parameter = new OA\Parameter([
-                        'parameter' => $name,
+                        'name' => $name,
                         'in' => 'path',
                         'required' => true,
                         'schema' => new OA\Schema([
@@ -127,6 +127,9 @@ final class OpenApiModifier
                         ]),
                         'description' => $config['description'] ?? '',
                     ]);
+                    if (Generator::isDefault($operation->parameters) || !is_array($operation->parameters)) {
+                        $operation->parameters = [];
+                    }
                     $operation->parameters[] = $parameter;
                 }
 
@@ -137,7 +140,7 @@ final class OpenApiModifier
 
     private static function hasPathParameter(OA\Operation $operation, string $name): bool
     {
-        if (empty($operation->parameters)) {
+        if (Generator::isDefault($operation->parameters) || !is_array($operation->parameters)) {
             return false;
         }
         foreach ($operation->parameters as $p) {
@@ -237,6 +240,9 @@ final class OpenApiModifier
                             'schema' => new OA\Schema(['ref' => ApiResponseDocs::class]),
                         ]),
                     ];
+                    if (Generator::isDefault($operation->responses) || !is_array($operation->responses)) {
+                        $operation->responses = [];
+                    }
                     $operation->responses[] = $response;
                 }
             }
@@ -282,7 +288,7 @@ final class OpenApiModifier
 
     private static function hasResponse(OA\Operation $operation, int $status): bool
     {
-        if (empty($operation->responses)) {
+        if (Generator::isDefault($operation->responses) || !is_array($operation->responses)) {
             return false;
         }
         foreach ($operation->responses as $r) {
