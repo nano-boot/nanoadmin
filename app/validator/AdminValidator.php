@@ -89,7 +89,7 @@ class AdminValidator extends ValidatorBase
         'batch_delete' => ['ids'],
         'show' => ['id'],
         'delete' => ['id'],
-        'list' => ['page', 'limit', 'keyword', 'status'],
+        'page' => ['page', 'limit', 'keyword', 'status'],
         'updatePassword' => ['id', 'password'],
         'updateProfile' => ['nickname', 'phone', 'email', 'avatar', 'gender'],
         'updateCurrentPassword' => ['old_password', 'password', 'confirm_password']

@@ -67,16 +67,10 @@ Route::group('/sys/files', function () {
 });
 
 // 配置管理相关路由
-Route::group('/sys/config', function () {
-    Route::get('', [plugin\nanoadmin\app\controller\ConfigController::class, 'page']);
-    Route::get('/group', [plugin\nanoadmin\app\controller\ConfigController::class, 'getByGroup']);
-    Route::post('', [plugin\nanoadmin\app\controller\ConfigController::class, 'create']);
-    Route::put('/batch', [plugin\nanoadmin\app\controller\ConfigController::class, 'batchUpdate']);
-    Route::get('/{id}', [plugin\nanoadmin\app\controller\ConfigController::class, 'show']);
-    Route::put('/{id}', [plugin\nanoadmin\app\controller\ConfigController::class, 'update']);
-    Route::delete('/batch', [plugin\nanoadmin\app\controller\ConfigController::class, 'batchDestroy']);
-    Route::delete('/{id}', [plugin\nanoadmin\app\controller\ConfigController::class, 'destroy']);
-});
+// ConfigController 已通过类级/方法级 #[OA\Get]、#[OA\Post]、#[OA\Put]、#[OA\Delete] 注解注册，
+// 由 OpenApiRouteRegister 自动扫描注册（详见 plugin/nanoadmin/app/library/swagger/OpenApiRouteRegister）。
+// 中间件走类级 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]。
+// 不再在此手写 Route::group('/sys/config', ...)。
 
 // 操作日志相关路由
 Route::group('/sys/operation-log', function () {

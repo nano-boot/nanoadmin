@@ -12,7 +12,7 @@ class ConfigValidator extends ValidatorBase
      * @var array
      */
     protected $rule = [
-        'id' => 'number',
+        'id' => 'require|integer|gt:0',
         'name' => 'require|max:100',
         'key' => 'require|max:100|alphaDash',
         'value' => 'max:255',
@@ -22,6 +22,14 @@ class ConfigValidator extends ValidatorBase
         'description' => 'max:500',
         'sort' => 'number|max:999999',
         'status' => 'in:0,1',
+        'current' => 'integer|min:1',
+        'size' => 'integer|min:1|max:200',
+        'keyword' => 'string|max:100',
+        'ids' => 'require|array|min:1',
+        'ids.*' => 'integer|gt:0',
+        'items' => 'require|array|min:1',
+        'items.*.key' => 'require|max:100|alphaDash',
+        'items.*.value' => 'max:255',
     ];
 
     /**
@@ -29,6 +37,9 @@ class ConfigValidator extends ValidatorBase
      * @var array
      */
     protected $message = [
+        'id.require' => '配置ID不能为空',
+        'id.integer' => '配置ID必须为整数',
+        'id.gt' => '配置ID必须大于0',
         'name.require' => '请输入配置名称',
         'name.max' => '配置名称最多100个字符',
         'key.require' => '请输入配置键名',
@@ -40,6 +51,13 @@ class ConfigValidator extends ValidatorBase
         'group.require' => '请选择配置分组',
         'group.max' => '配置分组最多50个字符',
         'description.max' => '配置描述最多500个字符',
+        'ids.require' => '请选择要删除的配置',
+        'ids.array' => '配置ID列表格式错误',
+        'ids.min' => '至少选择一个配置',
+        'items.require' => '请提交配置项列表',
+        'items.array' => '配置项必须为数组',
+        'items.min' => '至少提交一个配置项',
+        'items.*.key.require' => '配置项键名不能为空',
     ];
 
     /**
@@ -47,7 +65,14 @@ class ConfigValidator extends ValidatorBase
      * @var array
      */
     protected $scene = [
-        'store' => ['name', 'key', 'type', 'group', 'value', 'options', 'description', 'sort', 'status'],
-        'update' => ['id', 'name', 'key', 'type', 'group', 'value', 'options', 'description', 'sort', 'status'],
+        'store'        => ['name', 'key', 'type', 'group', 'value', 'options', 'description', 'sort', 'status'],
+        'update'       => ['id', 'name', 'key', 'type', 'group', 'value', 'options', 'description', 'sort', 'status'],
+        'index'        => ['current', 'size', 'keyword', 'group', 'type', 'status'],
+        'page'         => ['current', 'size', 'keyword', 'group', 'type', 'status'],
+        'show'         => ['id'],
+        'destroy'      => ['id'],
+        'batch_destroy'=> ['ids'],
+        'batch_update' => ['items'],
+        'get_by_group' => ['group'],
     ];
 }

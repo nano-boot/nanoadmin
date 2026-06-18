@@ -32,9 +32,29 @@ class AdminController extends CommonController
 {
     private AdminService $adminService;
 
+    /**
+     * 查询参数校验器
+     * 启用父类 CommonController::validateQuery()，
+     * 用于 page 接口的分页/搜索参数校验（'page' 场景）。
+     */
+    protected ?string $queryValidator = AdminValidator::class;
+
+    /**
+     * 创建参数校验器
+     * 启用父类 CommonController::validateCreate()，
+     * 由父类负责 new AdminValidator()->validated()，
+     * 内部推断到 create 场景并完成校验。
+     */
+    protected ?string $createValidator = AdminValidator::class;
+
+    /**
+     * 更新参数校验器
+     * 启用父类 CommonController::validateUpdate()。
+     */
+    protected ?string $updateValidator = AdminValidator::class;
+
     public function __construct(AdminService $adminService)
     {
-        new AdminValidator(true);
         $this->adminService = $adminService;
     }
 
@@ -57,6 +77,7 @@ class AdminController extends CommonController
     #[PageResponse(schema: AdminResponse::class)]
     public function page(Request $request): Response
     {
+        $this->validateQuery($request);
         return parent::page($request);
     }
 
@@ -71,6 +92,7 @@ class AdminController extends CommonController
     #[DataResponse(schema: AdminResponse::class)]
     public function show(int $id = 0): Response
     {
+        (new AdminValidator())->validateId($id);
         return parent::show($id);
     }
 
@@ -116,6 +138,7 @@ class AdminController extends CommonController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
+        (new AdminValidator())->validateId($id);
         return parent::destroy($id);
     }
 
@@ -127,6 +150,7 @@ class AdminController extends CommonController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
+        (new AdminValidator())->validateBatchIds($request->post());
         return parent::batchDestroy($request);
     }
 

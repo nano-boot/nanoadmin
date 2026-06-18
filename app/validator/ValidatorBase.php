@@ -60,58 +60,89 @@ class ValidatorBase extends Validate
 
     /**
      * 智能获取场景名
-     * @return string|null
+     *
+     * 推断顺序：
+     *   1. request()->action      框架约定（最优先）
+     *   2. 路由回调里的方法名     Workerman 路由 [Controller, method] 形态
+     *   3. HTTP 方法 + 路径       标准 REST 推断
+     *
+     * 所有返回值都经过 isValidSceneName() 防御性校验，
+     * 避免 Closure / null / 空串 / 非标识符 等异常值流入 think-orm。
+     *
+     * @return string|null 无法识别时返回 null（hasScene(null) === false，构造方法会静默跳过）
      */
     protected function getSceneName(): ?string
     {
-        $request = $this->supportRequest;
-        
-        // 方法1: 从 request()->action 获取
-        if (isset($request->action) && $request->action) {
-            return $request->action;
+        if ($scene = $this->sceneFromRequestAction()) {
+            return $scene;
         }
-        
-        // 方法2: 从路由回调中获取
-        if ($request->route && method_exists($request->route, 'getCallback')) {
-            $callback = $request->route->getCallback();
-            if (is_array($callback) && isset($callback[1])) {
-                return $callback[1]; // 返回方法名
-            }
+
+        if ($scene = $this->sceneFromRouteCallback()) {
+            return $scene;
         }
-        
-        // 方法3: 根据请求方法和路由路径推断
-        $method = $request->method();
-        $path = $request->path();
-        
-        // POST 请求通常是 store（创建）
-        if ($method === 'POST') {
-            // 如果路径不包含 ID 参数，通常是创建操作
-            if (!preg_match('/\/\d+/', $path)) {
-                return 'store';
-            }
+
+        return $this->sceneFromHttpMethod();
+    }
+
+    /**
+     * 方法 1：从 request()->action 推断
+     * 适用框架：think-orm/Laravel 等将控制器方法名写入 request()->action 的栈
+     */
+    private function sceneFromRequestAction(): ?string
+    {
+        $action = $this->supportRequest->action ?? null;
+        return $this->isValidSceneName($action) ? $action : null;
+    }
+
+    /**
+     * 方法 2：从路由回调 [Controller::class, 'methodName'] 推断
+     * 适用框架：Workerman Route（项目当前所用）
+     */
+    private function sceneFromRouteCallback(): ?string
+    {
+        $route = $this->supportRequest->route ?? null;
+        if (!$route || !method_exists($route, 'getCallback')) {
+            return null;
         }
-        
-        // PUT 请求通常是 update（更新）
-        if ($method === 'PUT' && preg_match('/\/\d+/', $path)) {
-            return 'update';
+        $callback = $route->getCallback();
+        if (!is_array($callback) || !isset($callback[1])) {
+            return null;
         }
-        
-        // DELETE 请求通常是 destroy（删除）
-        if ($method === 'DELETE' && preg_match('/\/\d+/', $path)) {
-            return 'destroy';
-        }
-        
-        // GET 请求且有 ID 参数，通常是 show（查看）
-        if ($method === 'GET' && preg_match('/\/\d+/', $path)) {
-            return 'show';
-        }
-        
-        // GET 请求且没有 ID 参数，通常是 index（列表）
-        if ($method === 'GET') {
-            return 'index';
-        }
-        
-        return null;
+        return $this->isValidSceneName($callback[1]) ? $callback[1] : null;
+    }
+
+    /**
+     * 方法 3：基于 HTTP 方法 + 路径数字段推断
+     * 仅覆盖标准 REST 5 场景（store/update/destroy/show/index），
+     * 其它路径（含数字的 POST、batch_* 等）返回 null。
+     */
+    private function sceneFromHttpMethod(): ?string
+    {
+        $method = strtoupper((string)$this->supportRequest->method());
+        $path   = (string)$this->supportRequest->path();
+        $hasId  = (bool)preg_match('/\/\d+/', $path);
+
+        return match (true) {
+            $method === 'POST'   && !$hasId => 'store',
+            $method === 'PUT'    &&  $hasId => 'update',
+            $method === 'DELETE' &&  $hasId => 'destroy',
+            $method === 'GET'    &&  $hasId => 'show',
+            $method === 'GET'               => 'index',
+            default                         => null,
+        };
+    }
+
+    /**
+     * 防御性校验：合法的场景名应当是合法 PHP 标识符
+     *  - 必须是字符串
+     *  - 非空
+     *  - 匹配 /^[a-zA-Z_][a-zA-Z0-9_]*$/
+     */
+    private function isValidSceneName(mixed $name): bool
+    {
+        return is_string($name)
+            && $name !== ''
+            && preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $name) === 1;
     }
 
     /**
