@@ -91,7 +91,7 @@
     <div class="auth-modal-content">
       <h3>设置 Authorization Token</h3>
       <p style="color: #666; font-size: 14px;">输入 Bearer Token 用于接口测试</p>
-      <input type="text" id="tokenInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+      <input type="text" id="tokenInput" />
       <div class="btn-group">
         <button class="cancel-btn" onclick="hideAuthModal()">取消</button>
         <button class="confirm-btn" onclick="applyToken()">确定</button>
@@ -100,8 +100,7 @@
   </div>
 
   <script>
-    // spec URL 必须基于 UI 根路径（而不是当前 pathname），避免 deepLinking
-    // 让 URL 变成 /sys/openapi/assets/... 时 spec 跑去 /sys/openapi/assets/doc
+
     window.onload = () => {
       window.ui = SwaggerUIBundle({
         url: '{{DOC_URL}}',
