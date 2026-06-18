@@ -11,7 +11,7 @@ use plugin\nanoadmin\app\service\LogLoginService;
 use plugin\nanoadmin\app\library\swagger\OpenApiModifier;
 use plugin\nanoadmin\app\library\swagger\annotation\response\PageResponse;
 use plugin\nanoadmin\app\library\swagger\annotation\response\DataResponse;
-use plugin\nanoadmin\app\validator\LogLoginValidator;
+use plugin\nanoadmin\app\validator\log\LogLoginValidator;
 use support\annotation\Middleware;
 use support\Request;
 use support\Response;

@@ -17,6 +17,7 @@
         "firebase/php-jwt": "^6.11",
         "ext-pdo": "*",
         "webman/database": "^2.1",
+        "webman/validation": "^2.2",
         "illuminate/pagination": "^12.22",
         "illuminate/events": "^12.53",
         "symfony/var-dumper": "^7.3",
@@ -29,6 +30,7 @@
         "webman/redis": "^2.1",
         "w7corp/easywechat": "^6.19",
         "zircote/swagger-php": "^4.8"
+
     },
     "autoload": {
         "psr-4": {

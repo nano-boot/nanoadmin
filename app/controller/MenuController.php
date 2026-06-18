@@ -3,7 +3,7 @@
 namespace plugin\nanoadmin\app\controller;
 
 use plugin\nanoadmin\app\common\R;
-use plugin\nanoadmin\app\validator\MenuValidator;
+use plugin\nanoadmin\app\validator\menu\MenuValidator;
 use support\Request;
 use support\Response;
 use plugin\nanoadmin\app\common\ApiException;

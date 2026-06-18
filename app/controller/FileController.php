@@ -8,7 +8,7 @@ use support\Response;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\service\FileService;
-use plugin\nanoadmin\app\validator\FileValidator;
+use plugin\nanoadmin\app\validator\file\FileValidator;
 
 /**
  * 文件控制器

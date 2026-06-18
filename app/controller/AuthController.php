@@ -18,7 +18,7 @@ use plugin\nanoadmin\app\schema\auth\PermissionItem;
 use plugin\nanoadmin\app\schema\auth\RefreshRequest;
 use plugin\nanoadmin\app\schema\auth\TokenResponse;
 use plugin\nanoadmin\app\service\AuthService;
-use plugin\nanoadmin\app\validator\AuthValidator;
+use plugin\nanoadmin\app\validator\auth\AuthValidator;
 use support\annotation\Middleware;
 use support\Request;
 use support\Response;

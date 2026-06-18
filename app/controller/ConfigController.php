@@ -16,7 +16,7 @@ use plugin\nanoadmin\app\library\swagger\OpenApiModifier;
 use plugin\nanoadmin\app\library\swagger\SchemaConstants;
 use plugin\nanoadmin\app\library\swagger\annotation\response\DataResponse;
 use plugin\nanoadmin\app\library\swagger\annotation\response\PageResponse;
-use plugin\nanoadmin\app\validator\ConfigValidator;
+use plugin\nanoadmin\app\validator\config\ConfigValidator;
 use plugin\nanoadmin\app\service\ConfigService;
 use support\annotation\Middleware;
 use support\Request;
