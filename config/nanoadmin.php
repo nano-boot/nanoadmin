@@ -38,6 +38,9 @@ return [
             '/sys/auth/login',
             '/sys/auth/refresh',
             '/sys/install',
+            // Swagger UI 和 OpenAPI 文档不需要认证
+            '/sys/openapi',
+            '/sys/openapi/doc',
         ],
 
         // 登录失败时是否记录到登录日志
@@ -55,6 +58,9 @@ return [
             '/sys/auth/info',
             '/sys/auth/permissions',
             '/sys/auth/menus',
+            // Swagger UI 和 OpenAPI 文档不记录日志
+            '/sys/openapi',
+            '/sys/openapi/doc',
         ],
 
         // 不记录操作日志的 HTTP 方法
@@ -83,6 +89,9 @@ return [
             '/sys/auth/menus',
             '/sys/menu/route',
             '/sys/install',
+            // Swagger UI 和 OpenAPI 文档不需要权限验证
+            '/sys/openapi',
+            '/sys/openapi/doc',
         ],
 
         // 超级管理员角色代码（命中其一即放行所有权限）
