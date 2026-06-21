@@ -3,8 +3,6 @@
 namespace plugin\nanoadmin\app\controller;
 
 use OpenApi\Attributes as OA;
-use plugin\nanoadmin\app\common\ApiException;
-use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\middleware\AuthMiddleware;
 use plugin\nanoadmin\app\middleware\PermissionMiddleware;
@@ -25,29 +23,18 @@ use support\Response;
 
 /**
  * 系统配置控制器
- *
  */
 #[OA\Tag(name: '系统配置', description: '系统配置管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class ConfigController extends BaseController
 {
-    private ConfigService $configService;
+    private ConfigService $service;
     private ConfigValidator $validator;
 
-    public function __construct(ConfigService $configService)
+    public function __construct(ConfigService $service, ConfigValidator $validator)
     {
-        $this->configService = $configService;
-        $this->validator = new ConfigValidator();
-    }
-
-    protected function getService(): ConfigService
-    {
-        return $this->configService;
-    }
-
-    protected function getModelName(): string
-    {
-        return 'Config';
+        $this->service = $service;
+        $this->validator = $validator;
     }
 
     #[OA\Get(
@@ -59,14 +46,8 @@ class ConfigController extends BaseController
     #[PageResponse(schema: ConfigResponse::class)]
     public function page(Request $request): Response
     {
-        try {
-            $params = $this->validator->validateData($request->get(), 'page');
-            return R::paginate($this->configService->getPage($params));
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('获取列表失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        $params = $this->validator->validateData($request->get(), 'page');
+        return R::paginate($this->service->getPage($params));
     }
 
     /**
@@ -88,10 +69,8 @@ class ConfigController extends BaseController
     #[DataResponse(schema: ConfigItemResponse::class)]
     public function getByGroup(Request $request): Response
     {
-        $this->validator->validateRequest('get_by_group');
-        $group = (string)$request->get('group', 'basic');
-        $configs = $this->configService->getByGroup($group);
-        return R::data($configs, '获取配置成功');
+        $group = $this->validator->validateData($request->get(), 'get_by_group')['group'] ?? 'basic';
+        return R::data($this->service->getByGroup($group), '获取配置成功');
     }
 
     #[OA\Get(
@@ -103,14 +82,10 @@ class ConfigController extends BaseController
         ]]
     )]
     #[DataResponse(schema: ConfigResponse::class)]
-    public function show(int $id = 0): Response
+    public function show(int $id): Response
     {
-        try {
-            $this->validator->validateId($id);
-            return parent::show($id);
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        }
+        $this->validator->validateId($id);
+        return R::success($this->service->getById($id), '获取详情成功');
     }
 
     #[OA\Post(
@@ -122,14 +97,8 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function create(Request $request): Response
     {
-        try {
-            $data = $this->validator->validateData($request->post(), 'store');
-            return R::created($this->configService->create($data));
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('创建配置失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        $data = $this->validator->validateData($request->post(), 'store');
+        return R::created($this->service->create($data));
     }
 
     #[OA\Put(
@@ -146,14 +115,8 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
-        try {
-            $data = $this->validator->validateUpdateData($request->post(), $id);
-            return R::data($this->configService->update($id, $data), '更新成功');
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('更新配置失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        $data = $this->validator->validateUpdateData($request->post(), $id);
+        return R::data($this->service->update($id, $data), '更新成功');
     }
 
     /**
@@ -169,13 +132,8 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function batchUpdate(Request $request): Response
     {
-        $this->validator->validateRequest('batch_update');
-
-        $items = $request->post('items', []);
-        if (!is_array($items) || empty($items)) {
-            return R::error('参数错误：缺少 items 字段', Code::PARAMETER_ERROR->value);
-        }
-        $count = $this->configService->batchUpdateValues($items);
+        $data = $this->validator->validateData($request->post(), 'batch_update');
+        $count = $this->service->batchUpdateValues($data['items'] ?? []);
         return R::success(['updated' => $count], '保存成功');
     }
 
@@ -187,15 +145,8 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        try {
-            $data = $this->validator->validateData($request->post(), 'batch_destroy');
-            $result = $this->configService->batchDelete($data['ids']);
-            return R::success(['count' => $result], '批量删除配置成功');
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('批量删除配置失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        $data = $this->validator->validateData($request->post(), 'batch_destroy');
+        return R::success(['count' => $this->service->batchDelete($data['ids'])], '批量删除成功');
     }
 
     #[OA\Delete(
@@ -209,11 +160,8 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        try {
-            $this->validator->validateId($id);
-            return parent::destroy($id);
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        }
+        $this->validator->validateId($id);
+        $this->service->delete($id);
+        return R::success(null, '删除成功');
     }
 }
