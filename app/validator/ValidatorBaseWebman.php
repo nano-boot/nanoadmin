@@ -4,48 +4,169 @@ declare(strict_types=1);
 namespace plugin\nanoadmin\app\validator;
 
 use Closure;
-use InvalidArgumentException;
+use Webman\Validation\Validator as BaseValidator;
 use support\validation\Rule as IlluminateRule;
-use support\validation\ValidationException;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
 
 /**
- * 基于 webman/validation（illuminate/validation）的表单验证器基类
+ * 基于 webman/validation（support\validation\Validator）的表单验证器基类
  *
  * 对齐 think-validate 风格的使用方式：
- * - 支持 scenes() 定义验证场景
+ * - 支持 scenes() 定义验证场景（支持闭包）
  * - 支持 validateData() 核心校验方法
  * - 支持闭包注入 excludeId 用于 update unique 校验
  *
- * 注意：不继承 webman/validation Validator，而是直接使用其 ValidationFactory。
- * 原因：webman/validation Validator::make() 是 static 方法，内部通过 Container::make()
- * 创建新实例时会丢失子类的 scenes 场景定义，导致 withScene() 失效。
+ * 继承 support\validation\Validator，提供：
+ * - make() 静态工厂方法
+ * - withScene() 场景方法
+ * - validate() / fails() / errors() 验证方法
  *
- * @method string get(string $name, mixed $default = null) 获取GET参数
- * @method string post(string $name, mixed $default = null) 获取POST参数
- * @method mixed input(string $name, mixed $default = null) 获取输入参数
- * @method array all() 获取所有参数
+ * @method static self make(array $data, ?array $rules = null, ?array $messages = null, ?array $attributes = null)
+ * @method self withScene(string $scene)
+ * @method void validate()
+ * @method bool fails()
+ * @method \support\validation\MessageBag errors()
+ * @method array validated()
+ *
+ * @author NanoAdmin Team
+ * @since 1.0.0
  */
-abstract class ValidatorBaseWebman
+abstract class ValidatorBaseWebman extends BaseValidator
 {
     use ValidatorRequestTrait;
 
     /**
+     * 验证规则（由子类通过 rules() 方法提供）
+     *
+     * @var array<string, array<string>|Closure|string>
+     */
+    protected array $rules = [];
+
+    /**
+     * 场景定义
+     *
+     * @var array<string, array<string>|Closure>
+     */
+    protected array $scenes = [];
+
+    /**
+     * 自定义消息
+     *
+     * @var array<string, string>
+     */
+    protected array $messages = [];
+
+    /**
+     * 自定义属性名
+     *
+     * @var array<string, string>
+     */
+    protected array $attributes = [];
+
+    /**
      * 获取验证规则
      *
-     * @return array<string, array<string>|Closure>
+     * 兼容两种写法：
+     * 1. 属性定义：protected array $rules = ['field' => 'required'];
+     * 2. 方法定义：public function rules(): array { return ['field' => 'required']; }
+     *
+     * 如果设置了场景，则返回场景对应的规则（支持闭包）
+     *
+     * @return array<string, array<string>|Closure|string>
      */
-    abstract public function rules(): array;
+    public function rules(): array
+    {
+        // 获取当前场景
+        $scene = $this->scene();
+        
+        // 获取全部规则
+        $allRules = $this->getAllRules();
+        
+        if ($scene === null) {
+            return $allRules;
+        }
+
+        // 获取场景定义的规则
+        return $this->getRulesByScene($scene, $allRules);
+    }
+
+    /**
+     * 获取全部验证规则
+     *
+     * @return array<string, array<string>|Closure|string>
+     */
+    private function getAllRules(): array
+    {
+        $class = static::class;
+        
+        try {
+            // 检测子类是否覆盖了 rules() 方法
+            $reflection = new \ReflectionMethod($class, 'rules');
+            if ($reflection->getDeclaringClass()->getName() === $class) {
+                // 创建临时实例调用子类的方法
+                $tempValidator = new $class();
+                return $reflection->invoke($tempValidator);
+            }
+        } catch (\Throwable) {
+            // 忽略
+        }
+        
+        // 回退到属性
+        return $this->rules;
+    }
+
+    /**
+     * 根据场景获取规则
+     *
+     * @param string $scene
+     * @param array $allRules
+     * @return array
+     */
+    private function getRulesByScene(string $scene, array $allRules): array
+    {
+        // 通过反射调用 scenes() 方法
+        $class = static::class;
+        try {
+            $reflection = new \ReflectionMethod($class, 'scenes');
+            if ($reflection->getDeclaringClass()->getName() === $class) {
+                $tempValidator = new $class();
+                $sceneDefs = $reflection->invoke($tempValidator);
+            } else {
+                $sceneDefs = $this->scenes;
+            }
+        } catch (\Throwable) {
+            $sceneDefs = $this->scenes;
+        }
+
+        if (!isset($sceneDefs[$scene])) {
+            return $allRules;
+        }
+
+        $sceneFields = $sceneDefs[$scene];
+
+        // 支持闭包场景
+        if ($sceneFields instanceof \Closure) {
+            return $sceneFields($allRules, $this->data());
+        }
+
+        // 返回场景定义的字段对应的规则
+        return array_intersect_key($allRules, array_flip($sceneFields));
+    }
 
     /**
      * 获取场景定义
+     *
+     * 兼容两种写法：
+     * 1. 属性定义：protected array $scenes = ['create' => ['field']];
+     * 2. 方法定义：public function scenes(): array { return ['create' => ['field']]; }
      *
      * @return array<string, array<string>|Closure>
      */
     public function scenes(): array
     {
-        return [];
+        // 子类覆盖时会返回自己的场景
+        return $this->scenes;
     }
 
     /**
@@ -55,7 +176,7 @@ abstract class ValidatorBaseWebman
      */
     public function messages(): array
     {
-        return [];
+        return $this->messages;
     }
 
     /**
@@ -65,11 +186,77 @@ abstract class ValidatorBaseWebman
      */
     public function attributes(): array
     {
-        return [];
+        return $this->attributes;
     }
 
     /**
-     * 获取场景对应的验证规则
+     * 创建验证器实例
+     *
+     * 注意：不覆盖 $this->rules 属性，让子类通过 rules() 方法提供规则
+     *
+     * @param array $data
+     * @param array|null $rules 如果为 null，则使用子类 rules() 方法
+     * @param array|null $messages
+     * @param array|null $attributes
+     * @return static
+     */
+    public static function make(
+        array $data,
+        ?array $rules = null,
+        ?array $messages = null,
+        ?array $attributes = null
+    ): static {
+        $instance = new static();
+        $instance->data = $data;
+        
+        // 只设置 messages 和 attributes，不设置 rules
+        // 让 rules() 方法始终返回子类定义的规则
+        if ($messages !== null) {
+            $instance->messages = $messages;
+        }
+        if ($attributes !== null) {
+            $instance->attributes = $attributes;
+        }
+
+        return $instance;
+    }
+
+    /**
+     * 创建 Illuminate 验证器
+     *
+     * 覆盖父类方法，使用子类 rules() 方法获取规则
+     */
+    public function toIlluminate(): \Illuminate\Validation\Validator
+    {
+        $factory = \Webman\Validation\Factory\ValidationFactory::getFactory();
+        
+        // 清除父类的缓存
+        $reflection = new \ReflectionClass(\Webman\Validation\Validator::class);
+        $prop = $reflection->getProperty('validator');
+        $prop->setAccessible(true);
+        $prop->setValue($this, null);
+        
+        // 创建验证器
+        $this->illuminateValidator = $factory->make(
+            $this->data(),
+            $this->rules(),
+            $this->messages(),
+            $this->attributes()
+        );
+        
+        // 缓存到父类属性
+        $prop->setValue($this, $this->illuminateValidator);
+        
+        return $this->illuminateValidator;
+    }
+    
+    /**
+     * 缓存的 Illuminate 验证器实例
+     */
+    private ?\Illuminate\Validation\Validator $illuminateValidator = null;
+
+    /**
+     * 获取场景对应的验证规则（支持闭包）
      *
      * @param string|null $scene
      * @param array $context 上下文数据
@@ -82,7 +269,7 @@ abstract class ValidatorBaseWebman
             return $allRules;
         }
 
-        $sceneDefs = $this->scenes();
+        $sceneDefs = array_merge($this->scenes, $this->scenes());
         if (!isset($sceneDefs[$scene])) {
             return $allRules;
         }
@@ -93,25 +280,6 @@ abstract class ValidatorBaseWebman
         }
 
         return array_intersect_key($allRules, array_flip($sceneFields));
-    }
-
-    /**
-     * 直接使用 illuminate/validation factory 创建 validator（绕开 webman/validation 的 static make 陷阱）
-     *
-     * @param array $data
-     * @param array $rules
-     * @param array|null $messages
-     * @param array|null $attributes
-     * @return \Illuminate\Validation\Validator
-     */
-    protected function buildValidator(
-        array $data,
-        array $rules,
-        ?array $messages = null,
-        ?array $attributes = null
-    ): \Illuminate\Validation\Validator {
-        $factory = \Webman\Validation\Factory\ValidationFactory::getFactory();
-        return $factory->make($data, $rules, $messages ?? $this->messages(), $attributes ?? $this->attributes());
     }
 
     /**
@@ -139,7 +307,12 @@ abstract class ValidatorBaseWebman
     }
 
     /**
-     * 验证数据
+     * 是否启用快速失败模式
+     */
+    protected bool $stopOnFirstFailure = true;
+
+    /**
+     * 验证数据（核心方法，支持闭包场景）
      *
      * @param array $data 要验证的数据
      * @param string|null $scene 验证场景
@@ -152,7 +325,12 @@ abstract class ValidatorBaseWebman
         $rules = $this->getSceneRules($scene, $context);
         $rules = $this->resolveRulesWithContext($rules, $context);
 
-        $validator = $this->buildValidator($data, $rules);
+        $factory = \Webman\Validation\Factory\ValidationFactory::getFactory();
+        $validator = $factory->make($data, $rules, $this->messages(), $this->attributes());
+
+        if ($this->stopOnFirstFailure) {
+            $validator->stopOnFirstFailure();
+        }
 
         if ($validator->fails()) {
             $errors = $validator->errors()->all();
@@ -213,28 +391,6 @@ abstract class ValidatorBaseWebman
     {
         $data = $this->validateData(['id' => $id], 'show');
         return (int) $data['id'];
-    }
-
-    /**
-     * 获取当前请求的所有参数（包含路由参数）
-     *
-     * @return array
-     */
-    public function all(): array
-    {
-        return request()->all() + request()->route->param();
-    }
-
-    /**
-     * 检查字段是否存在
-     *
-     * @param string $key
-     * @return bool
-     */
-    public function has(string $key): bool
-    {
-        $data = request()->all() + request()->route->param();
-        return isset($data[$key]) && $data[$key] !== '' && $data[$key] !== null;
     }
 
     /**

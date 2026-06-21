@@ -55,8 +55,11 @@ trait UpdateUniqueTrait
             $newRules = [];
             foreach ($fieldRules as $rule) {
                 if ($rule instanceof \Illuminate\Validation\Rules\Unique) {
-                    // 注入 excludeId
+                    // 对象格式的 unique 规则
                     $newRules[] = $rule->ignore($excludeId, $this->primaryKey);
+                } elseif (is_string($rule) && str_starts_with($rule, 'unique:')) {
+                    // 字符串格式的 unique 规则：unique:table,column
+                    $newRules[] = $this->buildUniqueRuleFromString($rule, $excludeId);
                 } else {
                     $newRules[] = $rule;
                 }
@@ -66,6 +69,32 @@ trait UpdateUniqueTrait
         }
 
         return $sceneRules;
+    }
+
+    /**
+     * 从字符串格式构建 unique 规则
+     *
+     * @param string $rule 格式：unique:table,column 或 unique:table,column,idColumn
+     * @param int $excludeId 排除的ID
+     * @return \Illuminate\Validation\Rules\Unique
+     */
+    protected function buildUniqueRuleFromString(string $rule, int $excludeId): \Illuminate\Validation\Rules\Unique
+    {
+        // 解析 unique:table,column 或 unique:table,column,idColumn
+        $parts = explode(':', $rule);
+        $params = isset($parts[1]) ? explode(',', $parts[1]) : [];
+        
+        $table = $params[0] ?? '';
+        $column = $params[1] ?? '';
+        $idColumn = $params[2] ?? 'id';
+
+        $uniqueRule = IlluminateRule::unique($table, $column);
+        
+        if ($excludeId > 0) {
+            $uniqueRule = $uniqueRule->ignore($excludeId, $idColumn);
+        }
+
+        return $uniqueRule;
     }
 
     /**

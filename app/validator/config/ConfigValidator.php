@@ -24,7 +24,7 @@ class ConfigValidator extends ValidatorBaseWebman
     /**
      * 表名
      */
-    protected string $table = 'th_sys_config';
+    protected string $table = 'sys_config';
 
     /**
      * 主键字段
@@ -52,7 +52,7 @@ class ConfigValidator extends ValidatorBaseWebman
                 'string',
                 'max:100',
                 'regex:/^[a-zA-Z0-9_]+$/',
-                IlluminateRule::unique('th_sys_config', 'key'),
+                IlluminateRule::unique($this->table, 'key'),
             ],
             'value' => [
                 'nullable',

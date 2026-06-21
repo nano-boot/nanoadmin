@@ -134,6 +134,19 @@ trait ValidatorRequestTrait
     }
 
     /**
+     * 获取当前验证场景
+     *
+     * @return string|null
+     */
+    public function scene(): ?string
+    {
+        $reflection = new \ReflectionClass(\Webman\Validation\Validator::class);
+        $prop = $reflection->getProperty('scene');
+        $prop->setAccessible(true);
+        return $prop->getValue($this);
+    }
+
+    /**
      * 获取已验证的数据（返回验证通过后的数据）
      * 类似于 Laravel Request::validated()
      */
