@@ -172,7 +172,10 @@ class FileController extends BaseController
                 'original_name', 'file_name', 'file_path', 'status'
             ]);
 
-            $validatedData = $validator->validateUpdateData(array_merge(['id' => $id], $requestData));
+            $validatedData = $validator->validateUpdateData(
+                array_merge(['id' => $id], $requestData),
+                $id
+            );
 
             // 添加更新者信息
             $validatedData['updated_by'] = $request->post('updated_by', 0);

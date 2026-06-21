@@ -20,14 +20,41 @@ use plugin\nanoadmin\app\service\LogLoginService;
 class AuthMiddleware implements MiddlewareInterface
 {
     /**
-     * 不需要认证的路由
+     * 不需要认证的路由（前缀匹配，从 config('plugin.nanoadmin.nanoadmin.auth.exclude_routes') 读取）
      * @var array
      */
-    protected array $excludeRoutes = [
-        '/sys/auth/login',
-        '/sys/auth/refresh',
-        '/sys/install',
-    ];
+    protected array $excludeRoutes = [];
+
+    /**
+     * 登录失败是否记录到登录日志
+     * @var bool
+     */
+    protected bool $recordFailedLogin = true;
+
+    /**
+     * 解析后的配置缓存（避免每次请求重复解析）
+     * @var array|null
+     */
+    protected static ?array $cachedConfig = null;
+
+    public function __construct()
+    {
+        $this->loadConfig();
+    }
+
+    /**
+     * 从配置文件加载默认排除路由等设置
+     */
+    protected function loadConfig(): void
+    {
+        if (self::$cachedConfig === null) {
+            $config = function_exists('config') ? config('plugin.nanoadmin.nanoadmin.auth', []) : [];
+            self::$cachedConfig = is_array($config) ? $config : [];
+        }
+
+        $this->excludeRoutes     = self::$cachedConfig['exclude_routes'] ?? [];
+        $this->recordFailedLogin = (bool) (self::$cachedConfig['record_failed_login'] ?? true);
+    }
 
     /**
      * 处理请求
@@ -81,10 +108,14 @@ class AuthMiddleware implements MiddlewareInterface
             return $handler($request);
 
         } catch (ApiException $e) {
-            $this->recordFailedLogin($request, $e->getMessage());
+            if ($this->recordFailedLogin) {
+                $this->recordFailedLogin($request, $e->getMessage());
+            }
             return $this->unauthorizedResponse($e->getMessage(), $e->getErrorCode());
         } catch (\Exception $e) {
-            $this->recordFailedLogin($request, '认证失败');
+            if ($this->recordFailedLogin) {
+                $this->recordFailedLogin($request, '认证失败');
+            }
             return $this->unauthorizedResponse('认证失败', Code::UNAUTHORIZED->value);
         }
     }

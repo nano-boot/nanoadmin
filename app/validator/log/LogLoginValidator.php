@@ -19,9 +19,14 @@ class LogLoginValidator extends ValidatorBaseWebman
     /**
      * 验证规则
      */
-    protected function rules(): array
+    public function rules(): array
     {
         return [
+            'id' => [
+                'nullable',
+                'integer',
+                'gt:0',
+            ],
             'current' => [
                 'nullable',
                 'integer',
@@ -74,9 +79,12 @@ class LogLoginValidator extends ValidatorBaseWebman
     /**
      * 自定义消息
      */
-    protected function messages(): array
+    public function messages(): array
     {
         return [
+            'id.integer' => 'ID必须是整数',
+            'id.gt' => 'ID必须大于0',
+
             'current.integer' => '页码必须是整数',
             'current.min' => '页码必须大于0',
 
@@ -109,11 +117,12 @@ class LogLoginValidator extends ValidatorBaseWebman
     /**
      * 场景定义
      */
-    protected function scenes(): array
+    public function scenes(): array
     {
         return [
             'index' => ['current', 'size', 'username', 'status', 'ip', 'start_time', 'end_time'],
             'page' => ['page', 'limit', 'username', 'status', 'ip', 'start_time', 'end_time'],
+            'show' => ['id'],
         ];
     }
 }

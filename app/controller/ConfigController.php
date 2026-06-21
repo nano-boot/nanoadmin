@@ -3,6 +3,7 @@
 namespace plugin\nanoadmin\app\controller;
 
 use OpenApi\Attributes as OA;
+use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\middleware\AuthMiddleware;
@@ -28,15 +29,15 @@ use support\Response;
  */
 #[OA\Tag(name: '系统配置', description: '系统配置管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
-class ConfigController extends CommonController
+class ConfigController extends BaseController
 {
     private ConfigService $configService;
     private ConfigValidator $validator;
 
     public function __construct(ConfigService $configService)
     {
-        $this->validator = new ConfigValidator();
         $this->configService = $configService;
+        $this->validator = new ConfigValidator();
     }
 
     protected function getService(): ConfigService
@@ -49,15 +50,6 @@ class ConfigController extends CommonController
         return 'Config';
     }
 
-    /**
-     * 用指定场景对请求做校验，校验失败抛 ApiException。
-     */
-    private function validateScene(Request $request, string $scene, array $extra = []): void
-    {
-        $data = $request->all() + $request->route->param() + $extra;
-        $this->validator->validateData($data, $scene);
-    }
-
     #[OA\Get(
         path: '/sys/config',
         summary: '配置分页列表',
@@ -67,8 +59,14 @@ class ConfigController extends CommonController
     #[PageResponse(schema: ConfigResponse::class)]
     public function page(Request $request): Response
     {
-        $this->validateScene($request, 'page');
-        return parent::page($request);
+        try {
+            $params = $this->validator->validateData($request->get(), 'page');
+            return R::paginate($this->configService->getPage($params));
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('获取列表失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
     }
 
     /**
@@ -90,7 +88,7 @@ class ConfigController extends CommonController
     #[DataResponse(schema: ConfigItemResponse::class)]
     public function getByGroup(Request $request): Response
     {
-        $this->validateScene($request, 'get_by_group');
+        $this->validator->validateRequest('get_by_group');
         $group = (string)$request->get('group', 'basic');
         $configs = $this->configService->getByGroup($group);
         return R::data($configs, '获取配置成功');
@@ -107,8 +105,12 @@ class ConfigController extends CommonController
     #[DataResponse(schema: ConfigResponse::class)]
     public function show(int $id = 0): Response
     {
-        $this->validateScene(request(), 'show', ['id' => $id]);
-        return parent::show($id);
+        try {
+            $this->validator->validateId($id);
+            return parent::show($id);
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        }
     }
 
     #[OA\Post(
@@ -120,8 +122,14 @@ class ConfigController extends CommonController
     #[DataResponse()]
     public function create(Request $request): Response
     {
-        $this->validateScene($request, 'store');
-        return parent::create($request);
+        try {
+            $data = $this->validator->validateData($request->post(), 'store');
+            return R::created($this->configService->create($data));
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('创建配置失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
     }
 
     #[OA\Put(
@@ -138,8 +146,14 @@ class ConfigController extends CommonController
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
-        $this->validateScene($request, 'update', ['id' => $id]);
-        return parent::update($request, $id);
+        try {
+            $data = $this->validator->validateUpdateData($request->post(), $id);
+            return R::data($this->configService->update($id, $data), '更新成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('更新配置失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
     }
 
     /**
@@ -155,7 +169,7 @@ class ConfigController extends CommonController
     #[DataResponse()]
     public function batchUpdate(Request $request): Response
     {
-        $this->validateScene($request, 'batch_update');
+        $this->validator->validateRequest('batch_update');
 
         $items = $request->post('items', []);
         if (!is_array($items) || empty($items)) {
@@ -173,8 +187,15 @@ class ConfigController extends CommonController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        $this->validateScene($request, 'batch_destroy');
-        return parent::batchDestroy($request);
+        try {
+            $data = $this->validator->validateData($request->post(), 'batch_destroy');
+            $result = $this->configService->batchDelete($data['ids']);
+            return R::success(['count' => $result], '批量删除配置成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('批量删除配置失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
     }
 
     #[OA\Delete(
@@ -188,7 +209,11 @@ class ConfigController extends CommonController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        $this->validateScene(request(), 'destroy', ['id' => $id]);
-        return parent::destroy($id);
+        try {
+            $this->validator->validateId($id);
+            return parent::destroy($id);
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        }
     }
 }

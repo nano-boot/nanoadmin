@@ -5,6 +5,7 @@ namespace plugin\nanoadmin\app\controller;
 use OpenApi\Attributes as OA;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\middleware\AuthMiddleware;
 use plugin\nanoadmin\app\middleware\PermissionMiddleware;
 use plugin\nanoadmin\app\schema\admin\AdminQuery;
@@ -25,37 +26,20 @@ use support\Response;
 
 /**
  * 管理员控制器
+ *
+ * 直接使用 ValidatorBaseWebman 进行参数校验，不再依赖 CommonController
  */
 #[OA\Tag(name: '管理员', description: '系统管理员管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
-class AdminController extends CommonController
+class AdminController extends BaseController
 {
+    private AdminValidator $validator;
     private AdminService $adminService;
-
-    /**
-     * 查询参数校验器
-     * 启用父类 CommonController::validateQuery()，
-     * 用于 page 接口的分页/搜索参数校验（'page' 场景）。
-     */
-    protected ?string $queryValidator = AdminValidator::class;
-
-    /**
-     * 创建参数校验器
-     * 启用父类 CommonController::validateCreate()，
-     * 由父类负责 new AdminValidator()->validated()，
-     * 内部推断到 create 场景并完成校验。
-     */
-    protected ?string $createValidator = AdminValidator::class;
-
-    /**
-     * 更新参数校验器
-     * 启用父类 CommonController::validateUpdate()。
-     */
-    protected ?string $updateValidator = AdminValidator::class;
 
     public function __construct(AdminService $adminService)
     {
         $this->adminService = $adminService;
+        $this->validator = new AdminValidator();
     }
 
     protected function getService(): AdminService
@@ -77,8 +61,15 @@ class AdminController extends CommonController
     #[PageResponse(schema: AdminResponse::class)]
     public function page(Request $request): Response
     {
-        $this->validateQuery($request);
-        return parent::page($request);
+        try {
+            // 直接使用 AdminValidator 校验查询参数
+            $params = $this->validator->validateData($request->get(), 'page');
+            return R::paginate($this->getService()->getPage($params));
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('获取列表失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
     }
 
     #[OA\Get(
@@ -92,8 +83,12 @@ class AdminController extends CommonController
     #[DataResponse(schema: AdminResponse::class)]
     public function show(int $id = 0): Response
     {
-        (new AdminValidator())->validateId($id);
-        return parent::show($id);
+        try {
+            $this->validator->validateId($id);
+            return parent::show($id);
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        }
     }
 
     #[OA\Post(
@@ -105,8 +100,15 @@ class AdminController extends CommonController
     #[DataResponse()]
     public function create(Request $request): Response
     {
-        $data = $this->validateCreate($request);
-        return parent::create($request);
+        try {
+            // 直接使用 AdminValidator 校验创建参数
+            $data = $this->validator->validateData($request->post(), 'create');
+            return R::created($this->getService()->create($data));
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('创建管理员失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
     }
 
     #[OA\Put(
@@ -123,8 +125,15 @@ class AdminController extends CommonController
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
-        $this->validateUpdate($request);
-        return parent::update($request, $id);
+        try {
+            // 使用 validateUpdateData 方法，排除当前记录的唯一性校验
+            $data = $this->validator->validateUpdateData($request->post(), $id);
+            return R::data($this->getService()->update($id, $data), '更新成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('更新管理员失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
     }
 
     #[OA\Delete(
@@ -138,8 +147,12 @@ class AdminController extends CommonController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        (new AdminValidator())->validateId($id);
-        return parent::destroy($id);
+        try {
+            $this->validator->validateId($id);
+            return parent::destroy($id);
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        }
     }
 
     #[OA\Delete(
@@ -150,8 +163,16 @@ class AdminController extends CommonController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        (new AdminValidator())->validateBatchIds($request->post());
-        return parent::batchDestroy($request);
+        try {
+            // 使用 AdminValidator 校验批量删除参数
+            $data = $this->validator->validateData($request->post(), 'batch_delete');
+            $result = $this->getService()->batchDeleteAdmins($data['ids']);
+            return R::success($result, '批量删除管理员成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('批量删除管理员失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
     }
 
     #[OA\Post(
@@ -170,9 +191,13 @@ class AdminController extends CommonController
     public function assignRoles(Request $request, int $id): Response
     {
         try {
-            $data = $this->validateRoleAssign($request);
+            $this->validator->validateId($id);
+            // 使用 AdminValidator 校验角色分配数据
+            $data = $this->validator->validateData($request->post(), 'assign_roles');
             $result = $this->adminService->assignRoles($id, $data['role_ids']);
             return R::success($result, '分配角色成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
             return R::error($e->getMessage(), Code::SYSTEM_ERROR->value);
         }
@@ -190,8 +215,11 @@ class AdminController extends CommonController
     public function getRoles(int $id): Response
     {
         try {
+            $this->validator->validateId($id);
             $roles = $this->adminService->getAdminRoles($id);
             return R::success($roles, '获取管理员角色成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
             return R::error($e->getMessage(), Code::SYSTEM_ERROR->value);
         }
@@ -212,7 +240,8 @@ class AdminController extends CommonController
                 return R::error('用户未登录', 401);
             }
 
-            $data = $this->validatePasswordUpdate($request);
+            // 使用 AdminValidator 校验密码修改参数
+            $data = $this->validator->validateData($request->post(), 'updateCurrentPassword');
 
             // 验证旧密码是否正确
             $admin = $this->adminService->getById($currentUser->id);
@@ -223,6 +252,8 @@ class AdminController extends CommonController
             $this->adminService->resetAdminPassword($currentUser->id, $data['password']);
 
             return R::success(null, '密码修改成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
             return R::error('密码修改失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
         }
@@ -243,7 +274,8 @@ class AdminController extends CommonController
                 return R::error('用户未登录', 401);
             }
 
-            $data = $this->validateProfileUpdate($request);
+            // 使用 AdminValidator 校验个人资料更新参数
+            $data = $this->validator->validateData($request->post(), 'updateProfile');
 
             // 更新用户资料
             $admin = $this->adminService->update($currentUser->id, $data);
@@ -259,35 +291,10 @@ class AdminController extends CommonController
                 'gender' => $admin->gender,
                 'roles' => $admin->roles->pluck('name')->toArray()
             ], '更新用户资料成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
             return R::error('更新用户资料失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
         }
-    }
-
-    /**
-     * 验证角色分配数据
-     */
-    private function validateRoleAssign(Request $request): array
-    {
-        $validator = new AdminValidator();
-        return $validator->validateRoleAssignData($request->post());
-    }
-
-    /**
-     * 验证密码修改数据
-     */
-    private function validatePasswordUpdate(Request $request): array
-    {
-        $validator = new AdminValidator();
-        return $validator->validateData($request->post(), 'updateCurrentPassword');
-    }
-
-    /**
-     * 验证个人资料更新数据
-     */
-    private function validateProfileUpdate(Request $request): array
-    {
-        $validator = new AdminValidator();
-        return $validator->validateData($request->post(), 'updateProfile');
     }
 }

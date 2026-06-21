@@ -30,7 +30,7 @@ abstract class BaseController
      * @param int $id
      * @return Response
      */
-    public function show(int $id = 0): Response
+    public function show(int $id): Response
     {
         try {
             $data = $this->getService()->getById($id);

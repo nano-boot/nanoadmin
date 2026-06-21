@@ -18,24 +18,35 @@ trait UpdateUniqueTrait
     protected string $primaryKey = 'id';
 
     /**
+     * 当前验证的上下文数据
+     */
+    protected array $validationContext = [];
+
+    /**
      * 在 update 场景中构建排除自身后的 unique 规则
      *
      * @param array $allRules 完整规则
      * @param array $uniqueFields 需要 unique 校验的字段列表
+     * @param array $context 上下文数据（包含 excludeId 和可选的 fields）
      * @return array
      */
-    protected function buildUpdateUnique(array $allRules, array $uniqueFields): array
+    protected function buildUpdateUnique(array $allRules, array $uniqueFields, array $context = []): array
     {
-        $excludeId = $this->getExcludeId();
-        $sceneRules = $allRules;
+        // 优先从 context 获取 excludeId
+        $excludeId = $context['excludeId'] ?? 0;
+        $this->validationContext = $context;
+
+        // 如果 context 指定了 fields，只返回这些字段的规则
+        $fields = $context['fields'] ?? array_keys($allRules);
+        $sceneRules = array_intersect_key($allRules, array_flip($fields));
 
         foreach ($uniqueFields as $field) {
-            if (!isset($allRules[$field])) {
+            if (!isset($sceneRules[$field])) {
                 continue;
             }
 
             // 获取原始规则
-            $fieldRules = $allRules[$field];
+            $fieldRules = $sceneRules[$field];
             if (!is_array($fieldRules)) {
                 $fieldRules = is_string($fieldRules) ? explode('|', $fieldRules) : [$fieldRules];
             }
@@ -58,14 +69,31 @@ trait UpdateUniqueTrait
     }
 
     /**
+     * 从上下文数据中获取 excludeId
+     *
+     * @param array $context
+     * @return int
+     */
+    protected function getExcludeIdFromData(array $context = []): int
+    {
+        // 优先使用 context 中的 excludeId
+        if (isset($context['excludeId'])) {
+            return (int)$context['excludeId'];
+        }
+
+        // 其次尝试从 all() 获取 id
+        $data = method_exists($this, 'all') ? $this->all() : [];
+        return (int)($data[$this->primaryKey] ?? 0);
+    }
+
+    /**
      * 获取要排除的记录ID
      *
      * @return int
      */
     protected function getExcludeId(): int
     {
-        $data = $this->data();
-        return (int)($data[$this->primaryKey] ?? 0);
+        return $this->getExcludeIdFromData($this->validationContext);
     }
 
     /**

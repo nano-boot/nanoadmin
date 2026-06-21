@@ -4,114 +4,114 @@ declare(strict_types=1);
 namespace plugin\nanoadmin\app\validator;
 
 use Closure;
+use InvalidArgumentException;
 use support\validation\Rule as IlluminateRule;
-use support\validation\Validator as BaseValidator;
 use support\validation\ValidationException;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
 
 /**
- * 基于 webman/validation 的表单验证器基类
+ * 基于 webman/validation（illuminate/validation）的表单验证器基类
  *
  * 对齐 think-validate 风格的使用方式：
  * - 支持 scenes() 定义验证场景
  * - 支持 validateData() 核心校验方法
  * - 支持闭包注入 excludeId 用于 update unique 校验
  *
+ * 注意：不继承 webman/validation Validator，而是直接使用其 ValidationFactory。
+ * 原因：webman/validation Validator::make() 是 static 方法，内部通过 Container::make()
+ * 创建新实例时会丢失子类的 scenes 场景定义，导致 withScene() 失效。
+ *
  * @method string get(string $name, mixed $default = null) 获取GET参数
  * @method string post(string $name, mixed $default = null) 获取POST参数
  * @method mixed input(string $name, mixed $default = null) 获取输入参数
  * @method array all() 获取所有参数
  */
-abstract class ValidatorBaseWebman extends BaseValidator
+abstract class ValidatorBaseWebman
 {
     use ValidatorRequestTrait;
 
     /**
-     * 获取验证规则（兼容 webman/validation 基类）
+     * 获取验证规则
+     *
+     * @return array<string, array<string>|Closure>
      */
-    public function rules(): array
-    {
-        return $this->resolveRules();
-    }
+    abstract public function rules(): array;
 
     /**
-     * 自定义消息（兼容 webman/validation 基类）
-     */
-    public function messages(): array
-    {
-        return $this->messages;
-    }
-
-    /**
-     * 自定义属性名（兼容 webman/validation 基类）
-     */
-    public function attributes(): array
-    {
-        return $this->attributes;
-    }
-
-    /**
-     * 场景定义（兼容 webman/validation 基类）
+     * 获取场景定义
      *
      * @return array<string, array<string>|Closure>
      */
     public function scenes(): array
     {
-        return $this->scenes;
+        return [];
+    }
+
+    /**
+     * 获取自定义消息
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [];
+    }
+
+    /**
+     * 获取自定义属性名
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [];
     }
 
     /**
      * 获取场景对应的验证规则
      *
      * @param string|null $scene
+     * @param array $context 上下文数据
      * @return array
      */
-    protected function getSceneRules(?string $scene): array
+    protected function getSceneRules(?string $scene, array $context = []): array
     {
         $allRules = $this->rules();
         if ($scene === null) {
             return $allRules;
         }
 
-        $scenes = $this->scenes();
-        if (!isset($scenes[$scene])) {
+        $sceneDefs = $this->scenes();
+        if (!isset($sceneDefs[$scene])) {
             return $allRules;
         }
 
-        $sceneFields = $scenes[$scene];
-        if ($sceneFields instanceof Closure) {
-            // 闭包场景返回动态规则
-            return $sceneFields($allRules);
+        $sceneFields = $sceneDefs[$scene];
+        if ($sceneFields instanceof \Closure) {
+            return $sceneFields($allRules, $context);
         }
 
-        // 按字段过滤
         return array_intersect_key($allRules, array_flip($sceneFields));
     }
 
     /**
-     * 验证数据
+     * 直接使用 illuminate/validation factory 创建 validator（绕开 webman/validation 的 static make 陷阱）
      *
-     * @param array $data 要验证的数据
-     * @param string|null $scene 验证场景
-     * @param array $context 额外的上下文数据（如 excludeId）
-     * @return array 验证通过的数据
-     * @throws ApiException
+     * @param array $data
+     * @param array $rules
+     * @param array|null $messages
+     * @param array|null $attributes
+     * @return \Illuminate\Validation\Validator
      */
-    public function validateData(array $data, ?string $scene = null, array $context = []): array
-    {
-        $rules = $this->getSceneRules($scene);
-        $rules = $this->resolveRulesWithContext($rules, $context);
-
-        $validator = self::make($data, $rules, $this->messages(), $this->attributes());
-
-        if ($validator->fails()) {
-            $errors = $validator->errors()->all();
-            $message = implode('; ', $errors);
-            throw new ApiException(Code::VALIDATION_ERROR->value, $message);
-        }
-
-        return $validator->validated();
+    protected function buildValidator(
+        array $data,
+        array $rules,
+        ?array $messages = null,
+        ?array $attributes = null
+    ): \Illuminate\Validation\Validator {
+        $factory = \Webman\Validation\Factory\ValidationFactory::getFactory();
+        return $factory->make($data, $rules, $messages ?? $this->messages(), $attributes ?? $this->attributes());
     }
 
     /**
@@ -139,6 +139,31 @@ abstract class ValidatorBaseWebman extends BaseValidator
     }
 
     /**
+     * 验证数据
+     *
+     * @param array $data 要验证的数据
+     * @param string|null $scene 验证场景
+     * @param array $context 额外的上下文数据（如 excludeId）
+     * @return array 验证通过的数据
+     * @throws ApiException
+     */
+    public function validateData(array $data, ?string $scene = null, array $context = []): array
+    {
+        $rules = $this->getSceneRules($scene, $context);
+        $rules = $this->resolveRulesWithContext($rules, $context);
+
+        $validator = $this->buildValidator($data, $rules);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors()->all();
+            $message = implode('; ', $errors);
+            throw new ApiException(Code::VALIDATION_ERROR->value, $message);
+        }
+
+        return $validator->validated();
+    }
+
+    /**
      * 验证更新数据（排除当前记录的唯一性检查）
      *
      * @param array $data 要验证的数据
@@ -160,7 +185,7 @@ abstract class ValidatorBaseWebman extends BaseValidator
      * @return array
      * @throws ApiException
      */
-    public function validated(?string $scene = null, array $context = []): array
+    public function validateRequest(?string $scene = null, array $context = []): array
     {
         return $this->validateData($this->all(), $scene, $context);
     }
@@ -187,17 +212,17 @@ abstract class ValidatorBaseWebman extends BaseValidator
     public function validateId($id): int
     {
         $data = $this->validateData(['id' => $id], 'show');
-        return (int)$data['id'];
+        return (int) $data['id'];
     }
 
     /**
-     * 获取当前请求的所有参数
+     * 获取当前请求的所有参数（包含路由参数）
      *
      * @return array
      */
     public function all(): array
     {
-        return request()->all();
+        return request()->all() + request()->route->param();
     }
 
     /**
@@ -208,7 +233,8 @@ abstract class ValidatorBaseWebman extends BaseValidator
      */
     public function has(string $key): bool
     {
-        return isset(request()->all()[$key]);
+        $data = request()->all() + request()->route->param();
+        return isset($data[$key]) && $data[$key] !== '' && $data[$key] !== null;
     }
 
     /**
@@ -227,7 +253,7 @@ abstract class ValidatorBaseWebman extends BaseValidator
     }
 
     /**
-     * 生成 unique 规则（用于 webman/validation）
+     * 生成 unique 规则（用于 illuminate/validation）
      *
      * @param string $table 表名
      * @param string $column 字段名
@@ -235,8 +261,12 @@ abstract class ValidatorBaseWebman extends BaseValidator
      * @param string $idColumn 主键字段名
      * @return \Illuminate\Validation\Rules\Unique
      */
-    protected static function unique(string $table, string $column, ?int $excludeId = null, string $idColumn = 'id'): \Illuminate\Validation\Rules\Unique
-    {
+    protected static function unique(
+        string $table,
+        string $column,
+        ?int $excludeId = null,
+        string $idColumn = 'id'
+    ): \Illuminate\Validation\Rules\Unique {
         $rule = IlluminateRule::unique($table, $column);
         if ($excludeId !== null) {
             $rule = $rule->ignore($excludeId, $idColumn);
@@ -264,8 +294,11 @@ abstract class ValidatorBaseWebman extends BaseValidator
      * @param array|null $defaultRules
      * @return array
      */
-    protected static function when(Closure|bool $condition, array $rules, ?array $defaultRules = null): array
-    {
+    protected static function when(
+        Closure|bool $condition,
+        array $rules,
+        ?array $defaultRules = null
+    ): array {
         if ($condition instanceof Closure) {
             $condition = $condition(request()->all());
         }

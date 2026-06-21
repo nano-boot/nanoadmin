@@ -12,6 +12,7 @@ use plugin\nanoadmin\app\library\swagger\OpenApiModifier;
 use plugin\nanoadmin\app\library\swagger\annotation\response\PageResponse;
 use plugin\nanoadmin\app\library\swagger\annotation\response\DataResponse;
 use plugin\nanoadmin\app\validator\log\LogLoginValidator;
+use plugin\nanoadmin\app\common\R;
 use support\annotation\Middleware;
 use support\Request;
 use support\Response;
@@ -20,24 +21,26 @@ use plugin\nanoadmin\app\library\swagger\SchemaConstants;
 /**
  * 登录日志控制器
  *
- * 使用 CommonController 抽象：
- *  - schema 类通过 $querySchema / $responseSchema 声明
- *  - validateQuery($request) 自动完成参数校验
- *  - CRUD 方法直接继承 BaseController
+ * 继承 BaseController + 手动调用验证器（推荐方式）：
+ *  - schema 类通过 OA 注解声明
+ *  - 使用 validateData() 获取验证后的干净数据
+ *  - CRUD 方法直接调用 Service
  *
- * RequestBody 自动注入（通过 modify 回调）：
- *  - create 方法声明 x: [OpenApiModifier::X_REQUEST_BODY => LogLoginResponse::class]
- *  - modify 回调自动追加 OA\RequestBody(application/json + ref)
+ * 验证器使用方式：
+ *  - page: validateData($request->get(), 'page')
+ *  - show: validateId($id)
  */
 #[OA\Tag(name: '登录日志', description: '登录日志管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
-class LogLoginController extends CommonController
+class LogLoginController extends BaseController
 {
     private LogLoginService $logLoginService;
+    private LogLoginValidator $validator;
 
     public function __construct(LogLoginService $logLoginService)
     {
         $this->logLoginService = $logLoginService;
+        $this->validator = new LogLoginValidator();
     }
 
     protected function getService(): LogLoginService
@@ -59,8 +62,13 @@ class LogLoginController extends CommonController
     #[PageResponse(schema: LogLoginResponse::class)]
     public function page(Request $request): Response
     {
-        $this->validateQuery($request);
-        return parent::page($request);
+        try {
+            // ✅ 使用 validateData() 获取验证后的数据
+            $params = $this->validator->validateData($request->get(), 'page');
+            return R::paginate($this->getService()->getPage($params));
+        } catch (\Exception $e) {
+            return R::error($e->getMessage());
+        }
     }
 
     #[OA\Get(
@@ -69,9 +77,14 @@ class LogLoginController extends CommonController
         tags: ['登录日志']
     )]
     #[DataResponse(schema: LogLoginResponse::class)]
-    public function show(int $id = 0): Response
+    public function show(int $id): Response
     {
-        return parent::show($id);
+        try {
+            $this->validator->validateId($id);
+            return parent::show($id);
+        } catch (\Exception $e) {
+            return R::error($e->getMessage());
+        }
     }
 
     #[OA\Post(

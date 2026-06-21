@@ -37,7 +37,7 @@ class RoleValidator extends ValidatorBaseWebman
     /**
      * 验证规则
      */
-    protected function rules(): array
+    public function rules(): array
     {
         return [
             'id' => [
@@ -120,7 +120,7 @@ class RoleValidator extends ValidatorBaseWebman
     /**
      * 自定义消息
      */
-    protected function messages(): array
+    public function messages(): array
     {
         return [
             'id.required' => 'ID不能为空',
@@ -180,7 +180,7 @@ class RoleValidator extends ValidatorBaseWebman
      *
      * 注意：update 场景包含 code 字段，这是修复原有 bug
      */
-    protected function scenes(): array
+    public function scenes(): array
     {
         return [
             'store' => [

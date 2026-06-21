@@ -22,9 +22,9 @@ class AdminValidator extends ValidatorBaseWebman
     }
 
     /**
-     * 表名
+     * 表名（不含前缀，前缀由连接配置自动添加）
      */
-    protected string $table = 'th_sys_admin';
+    protected string $table = 'sys_admin';
 
     /**
      * 主键字段
@@ -34,7 +34,7 @@ class AdminValidator extends ValidatorBaseWebman
     /**
      * 验证规则
      */
-    protected function rules(): array
+    public function rules(): array
     {
         return [
             'username' => [
@@ -43,7 +43,7 @@ class AdminValidator extends ValidatorBaseWebman
                 'min:3',
                 'max:20',
                 'regex:/^[a-zA-Z0-9_]+$/',
-                IlluminateRule::unique('th_sys_admin', 'username'),
+                IlluminateRule::unique($this->table, 'username'),
             ],
             'password' => [
                 'nullable',
@@ -74,13 +74,13 @@ class AdminValidator extends ValidatorBaseWebman
                 'nullable',
                 'string',
                 'regex:/^1[3-9]\d{9}$/',
-                IlluminateRule::unique('th_sys_admin', 'phone'),
+                IlluminateRule::unique($this->table, 'phone'),
             ],
             'email' => [
                 'nullable',
                 'email',
                 'max:100',
-                IlluminateRule::unique('th_sys_admin', 'email'),
+                IlluminateRule::unique($this->table, 'email'),
             ],
             'avatar' => [
                 'nullable',
@@ -141,7 +141,7 @@ class AdminValidator extends ValidatorBaseWebman
     /**
      * 自定义消息
      */
-    protected function messages(): array
+    public function messages(): array
     {
         return [
             'username.required' => '用户名不能为空',
@@ -207,7 +207,7 @@ class AdminValidator extends ValidatorBaseWebman
     /**
      * 场景定义
      */
-    protected function scenes(): array
+    public function scenes(): array
     {
         return [
             'login' => ['username', 'password'],
@@ -223,12 +223,11 @@ class AdminValidator extends ValidatorBaseWebman
                 'gender',
             ],
 
-            // update 场景使用闭包注入 excludeId
-            'update' => function (array $allRules): array {
-                return $this->buildUpdateUnique($allRules, [
-                    'username',
-                    'phone',
-                    'email',
+            // update 场景
+            'update' => function (array $allRules, array $context = []): array {
+                return $this->buildUpdateUnique($allRules, ['username', 'phone', 'email'], [
+                    'fields' => ['id', 'username', 'password', 'nickname', 'phone', 'email', 'avatar', 'status', 'gender', 'role_ids'],
+                    'excludeId' => $context['excludeId'] ?? 0,
                 ]);
             },
 
@@ -244,7 +243,13 @@ class AdminValidator extends ValidatorBaseWebman
 
             'updatePassword' => ['id', 'password'],
 
-            'updateProfile' => ['nickname', 'phone', 'email', 'avatar', 'gender'],
+            // updateProfile 场景：只校验指定字段，排除 phone 和 email 的唯一性校验
+            'updateProfile' => function (array $allRules, array $context = []): array {
+                return $this->buildUpdateUnique($allRules, ['phone', 'email'], [
+                    'fields' => ['nickname', 'phone', 'email', 'avatar', 'gender'],
+                    'excludeId' => $context['excludeId'] ?? 0,
+                ]);
+            },
 
             'updateCurrentPassword' => ['old_password', 'password', 'confirm_password'],
         ];

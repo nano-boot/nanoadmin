@@ -16,102 +16,49 @@ use plugin\nanoadmin\app\common\ApiException;
 class PermissionMiddleware implements MiddlewareInterface
 {
     /**
-     * 路由权限映射
-     * 格式：['路由模式' => '权限代码']
+     * 路由权限映射（从 config('plugin.nanoadmin.nanoadmin.permission.route_permissions') 读取）
+     * 格式：['METHOD:/path' => '权限代码']
      * @var array
      */
-    protected array $routePermissions = [
-        // 管理员管理
-        'GET:/sys/admin' => 'sys:admin:page',
-        'POST:/sys/admin' => 'sys:admin:create',
-        'GET:/sys/admin/*' => 'sys:admin:view',
-        'PUT:/sys/admin/*' => 'sys:admin:update',
-        // 'DELETE:/sys/admin/*' => 'sys:admin:delete',
-        'POST:/sys/admin/*/roles' => 'sys:admin:assign-role',
-
-        // 角色管理
-        'GET:/sys/role' => 'sys:role:page',
-        'POST:/sys/role' => 'sys:role:create',
-        'GET:/sys/role/*' => 'sys:role:view',
-        'PUT:/sys/role/*' => 'sys:role:update',
-        // 'DELETE:/sys/role/*' => 'sys:role:delete',
-        'POST:/sys/role/*/permissions' => 'sys:role:assign-permission',
-        'POST:/sys/role/*/menus' => 'sys:role:assign-menu',
-
-        // 权限管理
-        'GET:/sys/permissions' => 'sys:permission:page',
-        'POST:/sys/permissions' => 'sys:permission:create',
-        'GET:/sys/permissions/*' => 'sys:permission:view',
-        'PUT:/sys/permissions/*' => 'sys:permission:update',
-        // 'DELETE:/sys/permissions/*' => 'sys:permission:delete',
-
-        // 字典类型管理
-        'GET:/sys/dict-type' => 'sys:dict:type:page',
-        'POST:/sys/dict-type' => 'sys:dict:type:create',
-        'GET:/sys/dict-type/*' => 'sys:dict:type:page',
-        'PUT:/sys/dict-type/*' => 'sys:dict:type:update',
-        'DELETE:/sys/dict-type/batch' => 'sys:dict:type:delete',
-        'DELETE:/sys/dict-type/*' => 'sys:dict:type:delete',
-
-        // 字典数据管理（沿用字典类型权限）
-        'GET:/sys/dict-data' => 'sys:dict:type:page',
-        'POST:/sys/dict-data' => 'sys:dict:type:create',
-        'GET:/sys/dict-data/*' => 'sys:dict:type:page',
-        'PUT:/sys/dict-data/*' => 'sys:dict:type:update',
-        'DELETE:/sys/dict-data/batch' => 'sys:dict:type:delete',
-        'DELETE:/sys/dict-data/*' => 'sys:dict:type:delete',
-
-        // 文件管理
-        'GET:/sys/files' => 'sys:file:list',
-        'POST:/sys/files' => 'sys:file:create',
-        'POST:/sys/files/batch' => 'sys:file:create',
-        'GET:/sys/files/stats' => 'sys:file:list',
-        'GET:/sys/files/*/download' => 'sys:file:list',
-        'GET:/sys/files/*' => 'sys:file:list',
-        'PUT:/sys/files/*' => 'sys:file:update',
-        'DELETE:/sys/files/batch' => 'sys:file:delete',
-        'DELETE:/sys/files/*' => 'sys:file:delete',
-
-        // 配置管理
-        'GET:/sys/config' => 'sys:config:page',
-        'GET:/sys/config/group' => 'sys:config:page',
-        'POST:/sys/config' => 'sys:config:create',
-        'PUT:/sys/config/batch' => 'sys:config:update',
-        'GET:/sys/config/*' => 'sys:config:page',
-        'PUT:/sys/config/*' => 'sys:config:update',
-        'DELETE:/sys/config/batch' => 'sys:config:delete',
-        'DELETE:/sys/config/*' => 'sys:config:delete',
-
-        // 登录日志
-        'GET:/sys/login-log' => 'sys:log:page',
-        'GET:/sys/login-log/*' => 'sys:log:page',
-
-        // 操作日志
-        'GET:/sys/operation-log' => 'sys:log:page',
-        'GET:/sys/operation-log/*' => 'sys:log:page',
-
-    ];
+    protected array $routePermissions = [];
 
     /**
-     * 不需要权限验证的路由
+     * 不需要权限验证的路由（从 config 读取）
      * @var array
      */
-    protected array $excludeRoutes = [
-        '/sys/auth/login',
-        '/sys/auth/logout',
-        '/sys/auth/refresh',
-        '/sys/auth/info',
-        '/sys/auth/permissions',
-        '/sys/auth/menus',
-        '/sys/menu/route',
-        '/sys/install',
-    ];
+    protected array $excludeRoutes = [];
 
     /**
-     * 超级管理员角色代码
+     * 超级管理员角色代码（从 config 读取）
      * @var array
      */
-    protected array $superAdminRoles = ['R_SUPER', 'super_admin', 'administrator'];
+    protected array $superAdminRoles = [];
+
+    /**
+     * 解析后的配置缓存
+     * @var array|null
+     */
+    protected static ?array $cachedConfig = null;
+
+    public function __construct()
+    {
+        $this->loadConfig();
+    }
+
+    /**
+     * 从配置文件加载默认配置
+     */
+    protected function loadConfig(): void
+    {
+        if (self::$cachedConfig === null) {
+            $config = function_exists('config') ? config('plugin.nanoadmin.nanoadmin.permission', []) : [];
+            self::$cachedConfig = is_array($config) ? $config : [];
+        }
+
+        $this->routePermissions = self::$cachedConfig['route_permissions'] ?? [];
+        $this->excludeRoutes     = self::$cachedConfig['exclude_routes'] ?? [];
+        $this->superAdminRoles   = self::$cachedConfig['super_admin_roles'] ?? [];
+    }
 
     /**
      * 处理请求
@@ -124,7 +71,6 @@ class PermissionMiddleware implements MiddlewareInterface
         try {
             // 检查是否需要权限验证
             if ($this->shouldSkipPermissionCheck($request)) {
-                var_dump('跳过权限验证');
                 return $handler($request);
             }
 

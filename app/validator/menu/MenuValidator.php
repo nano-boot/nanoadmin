@@ -38,7 +38,7 @@ class MenuValidator extends ValidatorBaseWebman
     /**
      * 验证规则
      */
-    protected function rules(): array
+    public function rules(): array
     {
         return [
             'id' => [
@@ -181,7 +181,7 @@ class MenuValidator extends ValidatorBaseWebman
     /**
      * 自定义消息
      */
-    protected function messages(): array
+    public function messages(): array
     {
         return [
             'parent_id.integer' => '父菜单ID必须是整数',
@@ -263,7 +263,7 @@ class MenuValidator extends ValidatorBaseWebman
     /**
      * 场景定义
      */
-    protected function scenes(): array
+    public function scenes(): array
     {
         return [
             'store' => [

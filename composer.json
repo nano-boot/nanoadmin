@@ -40,6 +40,14 @@
             "app/functions.php"
         ]
     },
+    "scripts": {
+        "post-install-cmd": [
+            "php scripts/copy-config-if-not-exists.php"
+        ],
+        "post-update-cmd": [
+            "php scripts/copy-config-if-not-exists.php"
+        ]
+    },
     "minimum-stability": "dev",
     "prefer-stable": true,
     "extra": {

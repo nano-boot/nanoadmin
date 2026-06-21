@@ -15,24 +15,48 @@ use Webman\Http\Request;
 class LogOperationMiddleware implements MiddlewareInterface
 {
     /**
-     * 不记录日志的路由（支持前缀匹配）
+     * 不记录日志的路由（支持前缀匹配，从 config 读取）
      * @var array
      */
-    protected array $excludeRoutes = [
-        '/sys/auth/login',          // 登录
-        '/sys/auth/refresh',        // 刷新Token
-        '/sys/auth/check',          // 检查Token
-        '/sys/menu/route',         // 动态路由
-        '/sys/auth/info',           // 当前用户信息
-        '/sys/auth/permissions',    // 权限列表
-        '/sys/auth/menus',          // 菜单列表
-    ];
+    protected array $excludeRoutes = [];
 
     /**
-     * 不记录日志的 HTTP 方法
+     * 不记录日志的 HTTP 方法（从 config 读取）
      * @var array
      */
-    protected array $excludeMethods = ['OPTIONS'];
+    protected array $excludeMethods = [];
+
+    /**
+     * 请求参数中需要脱敏的字段（从 config 读取）
+     * @var array
+     */
+    protected array $sensitiveKeys = [];
+
+    /**
+     * 解析后的配置缓存
+     * @var array|null
+     */
+    protected static ?array $cachedConfig = null;
+
+    public function __construct()
+    {
+        $this->loadConfig();
+    }
+
+    /**
+     * 从配置文件加载默认配置
+     */
+    protected function loadConfig(): void
+    {
+        if (self::$cachedConfig === null) {
+            $config = function_exists('config') ? config('plugin.nanoadmin.nanoadmin.log_operation', []) : [];
+            self::$cachedConfig = is_array($config) ? $config : [];
+        }
+
+        $this->excludeRoutes  = self::$cachedConfig['exclude_routes'] ?? [];
+        $this->excludeMethods = array_map('strtoupper', self::$cachedConfig['exclude_methods'] ?? []);
+        $this->sensitiveKeys  = array_map('strtolower', self::$cachedConfig['sensitive_keys'] ?? []);
+    }
 
     /**
      * 处理请求
@@ -296,9 +320,8 @@ class LogOperationMiddleware implements MiddlewareInterface
         // POST 参数（排除敏感字段）
         $postParams = $request->post();
         if (!empty($postParams)) {
-            $sensitiveKeys = ['password', 'password_confirm', 'old_password', 'new_password', 'token', 'secret'];
             foreach ($postParams as $key => $value) {
-                if (in_array(strtolower($key), $sensitiveKeys)) {
+                if (in_array(strtolower($key), $this->sensitiveKeys, true)) {
                     $postParams[$key] = '******';
                 }
             }

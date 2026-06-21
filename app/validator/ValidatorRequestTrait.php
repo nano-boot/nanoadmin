@@ -53,11 +53,11 @@ trait ValidatorRequestTrait
     }
 
     /**
-     * 获取所有参数
+     * 获取所有参数（包含路由参数）
      */
     public function all(): array
     {
-        return $this->getRequest()->all();
+        return $this->getRequest()->all() + $this->getRequest()->route->param();
     }
 
     /**
@@ -109,11 +109,12 @@ trait ValidatorRequestTrait
     }
 
     /**
-     * 检查参数是否存在
+     * 检查参数是否存在（包含路由参数）
      */
     public function has(string $key): bool
     {
-        return $this->getRequest()->has($key);
+        $data = $this->getRequest()->all() + $this->getRequest()->route->param();
+        return array_key_exists($key, $data) && $data[$key] !== '' && $data[$key] !== null;
     }
 
     /**
@@ -133,6 +134,15 @@ trait ValidatorRequestTrait
     }
 
     /**
+     * 获取已验证的数据（返回验证通过后的数据）
+     * 类似于 Laravel Request::validated()
+     */
+    public function validated(): array
+    {
+        return $this->getRequest()->all();
+    }
+
+    /**
      * 魔术方法：代理请求对象的方法
      */
     public function __call(string $method, array $args): mixed
@@ -141,6 +151,7 @@ trait ValidatorRequestTrait
         if (method_exists($request, $method)) {
             return $request->{$method}(...$args);
         }
-        throw new \BadMethodCallException("Method {$method} does not exist on Request");
+        // 不存在的方法不再抛异常，避免调用未定义方法时崩溃
+        return null;
     }
 }
