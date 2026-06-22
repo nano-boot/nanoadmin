@@ -64,6 +64,20 @@ abstract class ValidatorBaseWebman extends BaseValidator
      */
     protected array $attributes = [];
 
+    // ── goCheck 兼容层状态属性 ──────────────────────────────
+    /** @var array 当前待校验数据 */
+    protected array $_data = [];
+    /** @var string|null 当前绑定场景名 */
+    protected ?string $_scene = null;
+    /** @var array 上下文（excludeId 等） */
+    protected array $_context = [];
+    /** @var array only() 收集的字段 */
+    protected array $_sceneFields = [];
+    /** @var array append() 收集的 field => [methods] */
+    protected array $_sceneAppends = [];
+    /** @var array remove() 收集的字段 */
+    protected array $_sceneRemoves = [];
+
     /**
      * 获取验证规则
      *
@@ -459,5 +473,209 @@ abstract class ValidatorBaseWebman extends BaseValidator
             $condition = $condition(request()->all());
         }
         return $condition ? $rules : ($defaultRules ?? []);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // goCheck 兼容层：likeadmin 风格链式 API
+    // ═══════════════════════════════════════════════════════
+
+    /**
+     * 注入上下文（如 excludeId），在 sceneXxx() 之前调用
+     */
+    public function withContext(array $context): static
+    {
+        $this->_context = array_merge($this->_context, $context);
+        return $this;
+    }
+
+    /**
+     * 捕获 POST 数据（替代有冲突的 post() 方法）
+     */
+    public function setPost(): static
+    {
+        $this->_data = request()->post();
+        return $this;
+    }
+
+    /**
+     * 捕获 GET 数据（替代有冲突的 get() 方法）
+     */
+    public function setGet(): static
+    {
+        $this->_data = request()->get();
+        return $this;
+    }
+
+    /**
+     * 自定义数据源（用于测试或手动传参）
+     * 注意：父类已有 data(): array 方法，此处用 setData 避免冲突
+     */
+    public function setData(array $data): static
+    {
+        $this->_data = $data;
+        return $this;
+    }
+
+    /**
+     * Magic __call：将 ->sceneXxx() 反射到 sceneXxx() 方法并返回 $this
+     * 配合 goCheck() 无参数使用（推荐风格 B）
+     */
+    public function __call(string $name, array $args): static
+    {
+        if (str_starts_with($name, 'scene')) {
+            $scene = lcfirst(substr($name, 5));
+            return $this->_bindScene($scene);
+        }
+        throw new \BadMethodCallException("方法 {$name} 不存在");
+    }
+
+    /**
+     * 内部：绑定场景，调用 sceneXxx() 方法
+     */
+    protected function _bindScene(string $scene): static
+    {
+        $this->_scene = $scene;
+        // 同步到 webman validator 内部属性，使 rules() 中的 scene() 调用能读到正确值
+        $reflection = new \ReflectionClass(\Webman\Validation\Validator::class);
+        $prop = $reflection->getProperty('scene');
+        $prop->setAccessible(true);
+        $prop->setValue($this, $scene);
+        return $this;
+    }
+
+    /**
+     * 场景白名单：等价于 think-validate 的 only()
+     */
+    public function only(array $fields): static
+    {
+        $this->_sceneFields = array_unique(array_merge($this->_sceneFields ?? [], $fields));
+        return $this;
+    }
+
+    /**
+     * 追加字段 + 自定义校验方法：等价于 think-validate 的 append()
+     * 例：->append('business_type_other', 'checkBusinessTypeOther')
+     */
+    public function append(string $field, string $method): static
+    {
+        $this->_sceneAppends[$field][] = $method;
+        return $this;
+    }
+
+    /**
+     * 场景移除字段：等价于 think-validate 的 remove()
+     */
+    public function remove(string $field): static
+    {
+        $this->_sceneRemoves[] = $field;
+        return $this;
+    }
+
+    /**
+     * 字段中文名映射：等价于 think-validate 的 $field
+     */
+    public function field(string $name, string $label): static
+    {
+        $this->attributes[$name] = $label;
+        return $this;
+    }
+
+    /**
+     * 执行校验（无参数，推荐风格 B）
+     * 场景已在前面通过 sceneXxx() / _bindScene() 绑定
+     *
+     * @return array 验证通过的数据
+     * @throws ApiException
+     */
+    public function goCheck(): array
+    {
+        if ($this->_scene === null) {
+            throw new ApiException(Code::VALIDATION_ERROR->value, '未指定场景，请先调用 sceneXxx()');
+        }
+
+        $data = $this->_data ?? request()->all();
+
+        // 如果有 only/append/remove，修改规则
+        if (!empty($this->_sceneFields) || !empty($this->_sceneAppends) || !empty($this->_sceneRemoves)) {
+            return $this->_goCheckWithChain($data);
+        }
+
+        return $this->validateData($data, $this->_scene, $this->_context);
+    }
+
+    /**
+     * 内部：使用链式 only/append/remove 执行校验
+     */
+    protected function _goCheckWithChain(array $data): array
+    {
+        // 优先使用 sceneXxx() 方法返回的规则；若没有则走 scenes() 数组
+        $allRules = $this->rules();
+        $sceneRules = $this->getSceneRules($this->_scene, $this->_context);
+
+        // 应用 only 白名单
+        if (!empty($this->_sceneFields)) {
+            $sceneRules = array_intersect_key($sceneRules, array_flip($this->_sceneFields));
+        }
+
+        // 应用 remove 移除字段
+        if (!empty($this->_sceneRemoves)) {
+            foreach ($this->_sceneRemoves as $field) {
+                unset($sceneRules[$field]);
+            }
+        }
+
+        // 应用 append 追加自定义方法
+        if (!empty($this->_sceneAppends)) {
+            foreach ($this->_sceneAppends as $field => $methods) {
+                foreach ($methods as $method) {
+                    if (method_exists($this, $method)) {
+                        $sceneRules[$field][] = function ($attr, $value, $fail) use ($method, $data) {
+                            $result = $this->{$method}($value, null, $data);
+                            if ($result !== true) {
+                                $fail(is_string($result) ? $result : '校验失败');
+                            }
+                        };
+                    }
+                }
+            }
+        }
+
+        // resolveContext 占位符
+        $sceneRules = $this->resolveRulesWithContext($sceneRules, $this->_context);
+
+        $factory = \Webman\Validation\Factory\ValidationFactory::getFactory();
+        $validator = $factory->make($data, $sceneRules, $this->messages(), $this->attributes());
+
+        if ($this->stopOnFirstFailure) {
+            $validator->stopOnFirstFailure();
+        }
+
+        if ($validator->fails()) {
+            $errors = $validator->errors()->all();
+            throw new ApiException(Code::VALIDATION_ERROR->value, implode('; ', $errors));
+        }
+
+        // 重置状态
+        $this->_resetChainState();
+
+        return $validator->validated();
+    }
+
+    /**
+     * 重置链式状态
+     */
+    protected function _resetChainState(): void
+    {
+        $this->_data = [];
+        $this->_scene = null;
+        $this->_context = [];
+        $this->_sceneFields = [];
+        $this->_sceneAppends = [];
+        $this->_sceneRemoves = [];
+        // 同步重置 webman validator 内部 scene 属性
+        $reflection = new \ReflectionClass(\Webman\Validation\Validator::class);
+        $prop = $reflection->getProperty('scene');
+        $prop->setAccessible(true);
+        $prop->setValue($this, null);
     }
 }

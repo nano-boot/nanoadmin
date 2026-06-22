@@ -54,7 +54,7 @@ class AdminController extends BaseController
     #[PageResponse(schema: AdminResponse::class)]
     public function page(Request $request): Response
     {
-        $params = $this->validator->validateData($request->get(), 'page');
+        $params = $this->validator->scenePage()->setGet()->goCheck();
         return R::paginate($this->service->getPage($params));
     }
 
@@ -69,7 +69,7 @@ class AdminController extends BaseController
     #[DataResponse(schema: AdminResponse::class)]
     public function show(int $id = 0): Response
     {
-        $this->validator->validateId($id);
+        $this->validator->setData(['id' => $id])->sceneShow()->goCheck();
         return R::success($this->service->getById($id), '获取详情成功');
     }
 
@@ -82,7 +82,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function create(Request $request): Response
     {
-        $data = $this->validator->validateData($request->post(), 'create');
+        $data = $this->validator->sceneCreate()->setPost()->goCheck();
         return R::created($this->service->create($data));
     }
 
@@ -100,7 +100,11 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
-        $data = $this->validator->validateUpdateData($request->post(), $id);
+        $data = $this->validator
+            ->withContext(['excludeId' => $id])
+            ->sceneUpdate()
+            ->setPost()
+            ->goCheck();
         return R::data($this->service->update($id, $data), '更新成功');
     }
 
@@ -115,7 +119,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        $this->validator->validateId($id);
+        $this->validator->setData(['id' => $id])->sceneShow()->goCheck();
         $this->service->delete($id);
         return R::success(null, '删除成功');
     }
@@ -128,7 +132,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        $data = $this->validator->validateData($request->post(), 'batch_delete');
+        $data = $this->validator->sceneBatchDelete()->setPost()->goCheck();
         $result = $this->service->batchDeleteAdmins($data['ids']);
         return R::success($result, '批量删除管理员成功');
     }
@@ -148,8 +152,8 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function assignRoles(Request $request, int $id): Response
     {
-        $this->validator->validateId($id);
-        $data = $this->validator->validateData($request->post(), 'assign_roles');
+        $this->validator->setData(['id' => $id])->sceneShow()->goCheck();
+        $data = $this->validator->sceneAssignRoles()->setPost()->goCheck();
         $this->service->assignRoles($id, $data['role_ids']);
         return R::success(null, '分配角色成功');
     }
@@ -165,7 +169,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function getRoles(int $id): Response
     {
-        $this->validator->validateId($id);
+        $this->validator->setData(['id' => $id])->sceneShow()->goCheck();
         $roles = $this->service->getAdminRoles($id);
         return R::success($roles, '获取管理员角色成功');
     }
@@ -209,7 +213,11 @@ class AdminController extends BaseController
             throw new ApiException('用户未登录', Code::UNAUTHORIZED->value);
         }
 
-        $data = $this->validator->validateData($request->post(), 'updateProfile');
+        $data = $this->validator
+            ->withContext(['excludeId' => $currentUser->id])
+            ->sceneUpdateProfile()
+            ->setPost()
+            ->goCheck();
         $admin = $this->service->update($currentUser->id, $data);
 
         return R::success([

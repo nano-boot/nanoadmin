@@ -255,6 +255,94 @@ class AdminValidator extends ValidatorBaseWebman
         ];
     }
 
+    // ═══════════════════════════════════════════════════════
+    // goCheck 兼容层：链式场景方法（sceneXxx 返回 $this）
+    // ═══════════════════════════════════════════════════════
+
+    /**
+     * 场景：创建管理员
+     */
+    public function sceneCreate(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
+    {
+        return $this->_bindScene('create')->only([
+            'username',
+            'password',
+            'nickname',
+            'phone',
+            'email',
+            'avatar',
+            'status',
+            'gender',
+        ]);
+    }
+
+    /**
+     * 场景：更新管理员
+     * excludeId 通过 ->withContext(['excludeId' => $id]) 注入
+     */
+    public function sceneUpdate(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
+    {
+        return $this->_bindScene('update')->only([
+            'id',
+            'username',
+            'password',
+            'nickname',
+            'phone',
+            'email',
+            'avatar',
+            'status',
+            'gender',
+            'role_ids',
+        ]);
+    }
+
+    /**
+     * 场景：更新个人资料（排除唯一性）
+     * excludeId 通过 ->withContext(['excludeId' => $id]) 注入
+     */
+    public function sceneUpdateProfile(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
+    {
+        return $this->_bindScene('updateProfile')->only([
+            'nickname',
+            'phone',
+            'email',
+            'avatar',
+            'gender',
+        ]);
+    }
+
+    /**
+     * 场景：分页列表
+     */
+    public function scenePage(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
+    {
+        return $this->_bindScene('page')->only(['page', 'limit', 'keyword']);
+    }
+
+    /**
+     * 场景：查看详情
+     */
+    public function sceneShow(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
+    {
+        return $this->_bindScene('show')->only(['id']);
+    }
+
+    /**
+     * 场景：批量删除
+     */
+    public function sceneBatchDelete(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
+    {
+        return $this->_bindScene('batchDelete')->only(['ids']);
+    }
+
+    /**
+     * 场景：分配角色
+     */
+    public function sceneAssignRoles(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
+    {
+        return $this->_bindScene('assignRoles')->only(['role_ids']);
+    }
+
     /**
      * 验证登录参数
      */
@@ -286,14 +374,5 @@ class AdminValidator extends ValidatorBaseWebman
     public function validateBatchIds(array $data): array
     {
         return $this->validateData($data, 'batch_delete');
-    }
-
-    /**
-     * 获取指定字段的验证数据
-     */
-    public function only(array $fields): array
-    {
-        $data = $this->all();
-        return array_intersect_key($data, array_flip($fields));
     }
 }
