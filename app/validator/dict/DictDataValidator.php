@@ -3,25 +3,30 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator\dict;
 
+use plugin\nanoadmin\app\model\DictData;
 use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use plugin\nanoadmin\app\validator\traits\UpdateUniqueTrait;
 use support\validation\Rule as IlluminateRule;
 
 /**
  * 字典数据验证器
  *
- * 使用 webman/validation（基于 illuminate/validation）
+ * 使用示例：
+ * ```php
+ * // 创建字典数据
+ * $data = $validator->setScene('store')->setPost()->check();
+ * ```
+ *
+ * @author NanoAdmin Team
+ * @since 1.0.0
  */
 class DictDataValidator extends ValidatorBaseWebman
 {
-    use UpdateUniqueTrait {
-        buildUpdateUnique as protected _buildUpdateUnique;
-    }
-
     /**
-     * 表名
+     * 模型类（用于 unique/exists 规则自动解析表名）
+     *
+     * @var string|null
      */
-    protected string $table = 'sys_dict_data';
+    protected ?string $model = DictData::class;
 
     /**
      * 主键字段
@@ -164,31 +169,17 @@ class DictDataValidator extends ValidatorBaseWebman
                 'sort',
                 'status',
             ],
-            'update' => function (array $allRules): array {
-                return $this->buildUpdateUnique($allRules, ['label', 'value'], [
-                    'fields' => ['label', 'value', 'sort', 'status'],
-                ]);
-            },
+            'update' => [
+                'id',
+                'dict_type_id',
+                'label',
+                'value',
+                'sort',
+                'status',
+            ],
             'show' => ['id'],
             'destroy' => ['id'],
-            'batch_delete' => ['ids'],
+            'batchDelete' => ['ids'],
         ];
-    }
-
-    /**
-     * 验证ID
-     */
-    public function validateId($id): int
-    {
-        $data = $this->validateData(['id' => $id], 'show');
-        return (int)$data['id'];
-    }
-
-    /**
-     * 验证批量ID
-     */
-    public function validateBatchIds(array $data): array
-    {
-        return $this->validateData($data, 'batch_delete');
     }
 }

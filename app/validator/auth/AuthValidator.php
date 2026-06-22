@@ -8,9 +8,13 @@ use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
 /**
  * 认证验证器
  *
- * 使用 webman/validation（基于 illuminate/validation）
- *
  * 用于登录、刷新 Token、检查 Token 等接口的参数校验。
+ *
+ * 使用示例：
+ * ```php
+ * // 登录验证
+ * $data = $validator->setScene('login')->setPost()->check();
+ * ```
  *
  * @author NanoAdmin Team
  * @since 1.0.0
@@ -101,29 +105,5 @@ class AuthValidator extends ValidatorBaseWebman
             'refresh' => ['refresh_token'],
             'check' => ['token'],
         ];
-    }
-
-    /**
-     * 验证登录参数
-     */
-    public function validateLoginData(array $data): array
-    {
-        return $this->validateData($data, 'login');
-    }
-
-    /**
-     * 验证刷新 Token 参数
-     */
-    public function validateRefreshData(array $data): array
-    {
-        return $this->validateData($data, 'refresh');
-    }
-
-    /**
-     * 验证检查 Token 参数
-     */
-    public function validateCheckData(array $data): array
-    {
-        return $this->validateData($data, 'check');
     }
 }

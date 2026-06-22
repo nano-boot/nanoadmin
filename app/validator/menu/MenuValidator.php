@@ -3,32 +3,33 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator\menu;
 
+use plugin\nanoadmin\app\model\Menu;
 use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use plugin\nanoadmin\app\validator\traits\UpdateUniqueTrait;
 use support\validation\Rule as IlluminateRule;
 
 /**
  * 菜单验证器
  *
- * 使用 webman/validation（基于 illuminate/validation）
+ * 使用示例：
+ * ```php
+ * // 控制器中
+ * $data = $validator->setScene('store')->setPost()->check();
  *
- * 特殊处理：
- * - Rule::when() 条件规则（根据菜单类型验证必填字段）
- * - 自定义按钮权限唯一性校验
+ * // 带上下文（排除自身）
+ * $data = $validator->withContext(['excludeId' => $id])->setScene('update')->setPost()->check();
+ * ```
  *
  * @author NanoAdmin Team
  * @since 1.0.0
  */
 class MenuValidator extends ValidatorBaseWebman
 {
-    use UpdateUniqueTrait {
-        buildUpdateUnique as protected _buildUpdateUnique;
-    }
-
     /**
-     * 表名
+     * 模型类（用于 unique/exists 规则自动解析表名）
+     *
+     * @var string|null
      */
-    protected string $table = 'th_sys_menu';
+    protected ?string $model = Menu::class;
 
     /**
      * 主键字段
@@ -289,23 +290,39 @@ class MenuValidator extends ValidatorBaseWebman
                 'sort',
             ],
 
-            'update' => function (array $allRules): array {
-                return array_merge(
-                    $this->buildUpdateUnique($allRules, []),
-                    $this->buildButtonPermissionRules($allRules),
-                    $this->buildMenuTypeFieldRules($allRules)
-                );
-            },
+            'update' => [
+                'id',
+                'parent_id',
+                'name',
+                'path',
+                'component',
+                'redirect',
+                'icon',
+                'type',
+                'permission',
+                'hidden',
+                'hide_tab',
+                'full_page',
+                'keep_alive',
+                'fixed_tab',
+                'link',
+                'iframe',
+                'show_badge',
+                'badge_text',
+                'active_path',
+                'status',
+                'sort',
+            ],
 
             'show' => ['id'],
             'destroy' => ['id'],
-            'batchDestroy' => ['ids'],
+            'batchDelete' => ['ids'],
             'index' => ['page', 'limit', 'keyword', 'status', 'type_filter', 'parent_id_filter'],
         ];
     }
 
     /**
-     * 构建按钮权限校验规则
+     * 构建按钮权限校验规则（更新场景使用）
      *
      * @param array $allRules
      * @return array
@@ -328,7 +345,7 @@ class MenuValidator extends ValidatorBaseWebman
                             return;
                         }
 
-                        $query = \plugin\nanoadmin\app\model\Menu::query()
+                        $query = Menu::query()
                             ->where('type', 'B')
                             ->where('permission', $permission);
 
@@ -428,22 +445,5 @@ class MenuValidator extends ValidatorBaseWebman
         }
 
         return $extraRules;
-    }
-
-    /**
-     * 验证ID
-     */
-    public function validateId($id): int
-    {
-        $data = $this->validateData(['id' => $id], 'show');
-        return (int)$data['id'];
-    }
-
-    /**
-     * 验证批量ID
-     */
-    public function validateBatchIds(array $data): array
-    {
-        return $this->validateData($data, 'batchDestroy');
     }
 }

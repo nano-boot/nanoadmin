@@ -101,7 +101,7 @@ class AdminController extends BaseController
     public function update(Request $request, int $id): Response
     {
         $data = $request->post();
-        // $data = $this->validator->sceneUpdate()->setPost()->check();
+        // $data = $this->validator->setScene('update')->setPost()->check();
         $this->validator->make($data)->withScene('update')->validate();
         return R::data($this->service->update($id, $data), '更新成功');
     }

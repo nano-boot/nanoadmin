@@ -3,25 +3,30 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator\dict;
 
+use plugin\nanoadmin\app\model\DictType;
 use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use plugin\nanoadmin\app\validator\traits\UpdateUniqueTrait;
 use support\validation\Rule as IlluminateRule;
 
 /**
  * 字典类型验证器
  *
- * 使用 webman/validation（基于 illuminate/validation）
+ * 使用示例：
+ * ```php
+ * // 创建字典类型
+ * $data = $validator->setScene('store')->setPost()->check();
+ * ```
+ *
+ * @author NanoAdmin Team
+ * @since 1.0.0
  */
 class DictTypeValidator extends ValidatorBaseWebman
 {
-    use UpdateUniqueTrait {
-        buildUpdateUnique as protected _buildUpdateUnique;
-    }
-
     /**
-     * 表名
+     * 模型类（用于 unique/exists 规则自动解析表名）
+     *
+     * @var string|null
      */
-    protected string $table = 'sys_dict_type';
+    protected ?string $model = DictType::class;
 
     /**
      * 主键字段
@@ -44,7 +49,7 @@ class DictTypeValidator extends ValidatorBaseWebman
                 'string',
                 'min:1',
                 'max:100',
-                IlluminateRule::unique($this->table, 'name'),
+                $this->unique('name'),
             ],
             'code' => [
                 'required',
@@ -52,7 +57,7 @@ class DictTypeValidator extends ValidatorBaseWebman
                 'min:1',
                 'max:100',
                 'regex:/^[a-zA-Z][a-zA-Z0-9_]*$/',
-                IlluminateRule::unique($this->table, 'code'),
+                $this->unique('code'),
             ],
             'description' => [
                 'nullable',
@@ -112,12 +117,14 @@ class DictTypeValidator extends ValidatorBaseWebman
             'name.string' => '字典名称必须是字符串',
             'name.min' => '字典名称长度至少1个字符',
             'name.max' => '字典名称长度不能超过100个字符',
+            'name.unique' => '字典名称已存在',
 
             'code.required' => '字典编码不能为空',
             'code.string' => '字典编码必须是字符串',
             'code.min' => '字典编码长度至少1个字符',
             'code.max' => '字典编码长度不能超过100个字符',
             'code.regex' => '字典编码必须以字母开头，只能包含字母、数字和下划线',
+            'code.unique' => '字典编码已存在',
 
             'description.string' => '字典描述必须是字符串',
             'description.max' => '字典描述长度不能超过255个字符',
@@ -166,32 +173,17 @@ class DictTypeValidator extends ValidatorBaseWebman
                 'sort',
                 'status',
             ],
-            'update' => function (array $allRules, array $context = []): array {
-                return $this->buildUpdateUnique($allRules, ['name', 'code'], [
-                    'fields' => ['name', 'code', 'description', 'sort', 'status'],
-                    'excludeId' => $context['excludeId'] ?? 0,
-                ]);
-            },
+            'update' => [
+                'id',
+                'name',
+                'code',
+                'description',
+                'sort',
+                'status',
+            ],
             'show' => ['id'],
             'destroy' => ['id'],
-            'batch_delete' => ['ids'],
+            'batchDelete' => ['ids'],
         ];
-    }
-
-    /**
-     * 验证ID
-     */
-    public function validateId($id): int
-    {
-        $data = $this->validateData(['id' => $id], 'show');
-        return (int)$data['id'];
-    }
-
-    /**
-     * 验证批量ID
-     */
-    public function validateBatchIds(array $data): array
-    {
-        return $this->validateData($data, 'batch_delete');
     }
 }

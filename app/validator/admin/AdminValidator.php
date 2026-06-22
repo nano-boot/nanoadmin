@@ -10,7 +10,17 @@ use support\validation\Rule;
 /**
  * 管理员验证器
  *
- * 使用 webman/validation（基于 illuminate/validation）
+ * 使用示例：
+ * ```php
+ * // 方式1：控制器中（使用请求数据）
+ * $data = $validator->setScene('create')->setPost()->check();
+ *
+ * // 方式2：传入自定义数据（check 支持接收数据参数）
+ * $data = $validator->setScene('create')->check($customData);
+ *
+ * // 方式3：带上下文（排除自身）
+ * $data = $validator->withContext(['excludeId' => $id])->setScene('update')->setPost()->check();
+ * ```
  *
  * @author NanoAdmin Team
  * @since 1.0.0
@@ -19,8 +29,10 @@ class AdminValidator extends ValidatorBaseWebman
 {
     /**
      * 模型类（用于 unique/exists 规则自动解析表名）
+     *
+     * @var string|null
      */
-    protected string $model = Admin::class;
+    protected ?string $model = Admin::class;
 
     /**
      * 主键字段
@@ -32,13 +44,6 @@ class AdminValidator extends ValidatorBaseWebman
      */
     public function rules(): array
     {
-        // 从路由参数 {id} 中提取当前记录 ID，用于 unique 校验自动排除自身
-        // create 场景（无 {id}）：$ignoreId 为 null，Laravel 的 ignore(null) 不生效，等同于严格唯一校验
-        // update 场景（PUT /sys/admin/{id}）：$ignoreId = 当前记录 ID，unique 规则自动排除该记录
-        // updateProfile 场景由闭包通过 withContext(['excludeId' => $currentUser->id]) 覆盖 ignore
-        $routeId = request()->route->param('id');
-        $ignoreId = ($routeId !== null && (int)$routeId > 0) ? (int)$routeId : null;
-
         return [
             'username' => [
                 'required',
@@ -46,7 +51,7 @@ class AdminValidator extends ValidatorBaseWebman
                 'min:3',
                 'max:20',
                 'regex:/^[a-zA-Z0-9_]+$/',
-                Rule::unique($this->model, 'username')->ignore($ignoreId, $this->primaryKey),
+                $this->unique('username'),
             ],
             'password' => [
                 'nullable',
@@ -77,13 +82,13 @@ class AdminValidator extends ValidatorBaseWebman
                 'nullable',
                 'string',
                 'regex:/^1[3-9]\d{9}$/',
-                Rule::unique($this->model, 'phone')->ignore($ignoreId, $this->primaryKey),
+                $this->unique('phone'),
             ],
             'email' => [
                 'nullable',
                 'email',
                 'max:100',
-                Rule::unique($this->model, 'email')->ignore($ignoreId, $this->primaryKey),
+                $this->unique('email'),
             ],
             'avatar' => [
                 'nullable',
@@ -226,11 +231,22 @@ class AdminValidator extends ValidatorBaseWebman
                 'gender',
             ],
 
-            'update' => ['id', 'username', 'password', 'nickname', 'phone', 'email', 'avatar', 'status', 'gender', 'role_ids'],
+            'update' => [
+                'id',
+                'username',
+                'password',
+                'nickname',
+                'phone',
+                'email',
+                'avatar',
+                'status',
+                'gender',
+                'role_ids',
+            ],
 
-            'assign_roles' => ['role_ids'],
+            'assignRoles' => ['role_ids'],
 
-            'batch_delete' => ['ids'],
+            'batchDelete' => ['ids'],
 
             'show' => ['id'],
 
@@ -244,123 +260,5 @@ class AdminValidator extends ValidatorBaseWebman
 
             'updateCurrentPassword' => ['old_password', 'password', 'confirm_password'],
         ];
-    }
-
-    /**
-     * 场景：创建管理员
-     */
-    public function sceneCreate(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
-    {
-        return $this->bindScen('create')->only([
-            'username',
-            'password',
-            'nickname',
-            'phone',
-            'email',
-            'avatar',
-            'status',
-            'gender',
-        ]);
-    }
-
-    /**
-     * 场景：更新管理员
-     * excludeId 通过 ->withContext(['excludeId' => $id]) 注入
-     */
-    public function sceneUpdate(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
-    {
-        return $this->bindScen('update');
-    }
-
-    /**
-     * 场景：更新个人资料（排除唯一性）
-     * excludeId 通过 ->withContext(['excludeId' => $id]) 注入
-     */
-    public function sceneUpdateProfile(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
-    {
-        return $this->bindScen('updateProfile')->only([
-            'nickname',
-            'phone',
-            'email',
-            'avatar',
-            'gender',
-        ]);
-    }
-
-    /**
-     * 场景：分页列表
-     */
-    public function scenePage(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
-    {
-        return $this->bindScen('page')->only(['page', 'limit', 'keyword']);
-    }
-
-    /**
-     * 场景：查看详情
-     */
-    public function sceneShow(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
-    {
-        return $this->bindScen('show')->only(['id']);
-    }
-
-    /**
-     * 场景：批量删除
-     */
-    public function sceneBatchDelete(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
-    {
-        return $this->bindScen('batchDelete')->only(['ids']);
-    }
-
-    /**
-     * 场景：分配角色
-     */
-    public function sceneAssignRoles(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
-    {
-        return $this->bindScen('assignRoles')->only(['role_ids']);
-    }
-
-    /**
-     * 场景：修改当前用户密码
-     */
-    public function sceneUpdateCurrentPassword(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
-    {
-        return $this->bindScen('updateCurrentPassword')->only([
-            'old_password',
-            'password',
-            'confirm_password',
-        ]);
-    }
-
-    /**
-     * 验证登录参数
-     */
-    public function validateLoginData(array $data): array
-    {
-        return $this->validateData($data, 'login');
-    }
-
-    /**
-     * 验证ID参数
-     */
-    public function validateId($id): int
-    {
-        $data = $this->validateData(['id' => $id], 'show');
-        return (int)$data['id'];
-    }
-
-    /**
-     * 验证角色分配数据
-     */
-    public function validateRoleAssignData(array $data): array
-    {
-        return $this->validateData($data, 'assign_roles');
-    }
-
-    /**
-     * 验证批量ID数据
-     */
-    public function validateBatchIds(array $data): array
-    {
-        return $this->validateData($data, 'batch_delete');
     }
 }

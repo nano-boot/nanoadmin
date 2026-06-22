@@ -9,7 +9,11 @@ use support\validation\Rule as IlluminateRule;
 /**
  * 文件验证器
  *
- * 使用 webman/validation（基于 illuminate/validation）
+ * 使用示例：
+ * ```php
+ * // 上传验证
+ * $data = $validator->setScene('upload')->setPost()->check();
+ * ```
  *
  * @author NanoAdmin Team
  * @since 1.0.0
@@ -245,64 +249,14 @@ class FileValidator extends ValidatorBaseWebman
     {
         return [
             'upload' => ['file', 'file_type'],
-            'batch_upload' => ['files'],
+            'batchUpload' => ['files'],
             'download' => ['id'],
             'delete' => ['id'],
-            'batch_delete' => ['ids'],
+            'batchDelete' => ['ids'],
             'show' => ['id'],
             'list' => ['page', 'limit', 'keyword', 'status', 'file_type_filter', 'storage_type_filter', 'created_by'],
             'index' => ['page', 'limit', 'keyword', 'status', 'file_type_filter', 'storage_type_filter', 'created_by'],
             'update' => ['id', 'original_name', 'file_name', 'file_path', 'status'],
         ];
-    }
-
-    /**
-     * 验证文件上传数据
-     */
-    public function validateUploadData(array $data): array
-    {
-        return $this->validateData($data, 'upload');
-    }
-
-    /**
-     * 验证批量上传数据
-     */
-    public function validateBatchUploadData(array $data): array
-    {
-        return $this->validateData($data, 'batch_upload');
-    }
-
-    /**
-     * 验证列表参数
-     */
-    public function validateListParams(array $data): array
-    {
-        return $this->validateData($data, 'list');
-    }
-
-    /**
-     * 验证ID
-     */
-    public function validateId($id): int
-    {
-        $data = $this->validateData(['id' => $id], 'show');
-        return (int)$data['id'];
-    }
-
-    /**
-     * 验证批量ID
-     */
-    public function validateBatchIds(array $data): array
-    {
-        return $this->validateData($data, 'batch_delete');
-    }
-
-    /**
-     * 获取指定字段的验证数据
-     */
-    public function only(array $fields): array
-    {
-        $data = $this->all();
-        return array_intersect_key($data, array_flip($fields));
     }
 }

@@ -3,31 +3,33 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator\role;
 
+use plugin\nanoadmin\app\model\Role;
 use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use plugin\nanoadmin\app\validator\traits\UpdateUniqueTrait;
 use support\validation\Rule as IlluminateRule;
 
 /**
  * 角色验证器
  *
- * 使用 webman/validation（基于 illuminate/validation）
+ * 使用示例：
+ * ```php
+ * // 控制器中
+ * $data = $validator->setScene('store')->setPost()->check();
  *
- * 特殊处理：
- * - 修复 code 字段 update unique bug（code 不在 update 场景中）
+ * // 带上下文（排除自身）
+ * $data = $validator->withContext(['excludeId' => $id])->setScene('update')->setPost()->check();
+ * ```
  *
  * @author NanoAdmin Team
  * @since 1.0.0
  */
 class RoleValidator extends ValidatorBaseWebman
 {
-    use UpdateUniqueTrait {
-        buildUpdateUnique as protected _buildUpdateUnique;
-    }
-
     /**
-     * 表名
+     * 模型类（用于 unique/exists 规则自动解析表名）
+     *
+     * @var string|null
      */
-    protected string $table = 'th_sys_role';
+    protected ?string $model = Role::class;
 
     /**
      * 主键字段
@@ -50,7 +52,7 @@ class RoleValidator extends ValidatorBaseWebman
                 'string',
                 'min:2',
                 'max:50',
-                IlluminateRule::unique('th_sys_role', 'name'),
+                $this->unique('name'),
             ],
             'code' => [
                 'required',
@@ -58,7 +60,7 @@ class RoleValidator extends ValidatorBaseWebman
                 'min:2',
                 'max:50',
                 'regex:/^[a-zA-Z0-9_-]+$/',
-                IlluminateRule::unique('th_sys_role', 'code'),
+                $this->unique('code'),
             ],
             'description' => [
                 'nullable',
@@ -177,8 +179,6 @@ class RoleValidator extends ValidatorBaseWebman
 
     /**
      * 场景定义
-     *
-     * 注意：update 场景包含 code 字段，这是修复原有 bug
      */
     public function scenes(): array
     {
@@ -191,33 +191,21 @@ class RoleValidator extends ValidatorBaseWebman
                 'status',
             ],
 
-            'update' => function (array $allRules): array {
-                return $this->buildUpdateUnique($allRules, ['name', 'code']);
-            },
+            'update' => [
+                'id',
+                'name',
+                'code',
+                'description',
+                'sort',
+                'status',
+            ],
 
-            'assign_roles' => ['id', 'role_ids'],
+            'assignRoles' => ['id', 'role_ids'],
 
             'delete' => ['id'],
-            'batch_delete' => ['ids'],
+            'batchDelete' => ['ids'],
             'show' => ['id'],
             'index' => ['page', 'limit', 'keyword', 'status_filter'],
         ];
-    }
-
-    /**
-     * 验证ID
-     */
-    public function validateId($id): int
-    {
-        $data = $this->validateData(['id' => $id], 'show');
-        return (int)$data['id'];
-    }
-
-    /**
-     * 验证批量ID
-     */
-    public function validateBatchIds(array $data): array
-    {
-        return $this->validateData($data, 'batch_delete');
     }
 }

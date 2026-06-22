@@ -3,28 +3,30 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator\config;
 
+use plugin\nanoadmin\app\model\Config;
 use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use plugin\nanoadmin\app\validator\traits\UpdateUniqueTrait;
 use support\validation\Rule as IlluminateRule;
 
 /**
  * 系统配置验证器
  *
- * 使用 webman/validation（基于 illuminate/validation）
+ * 使用示例：
+ * ```php
+ * // 创建配置
+ * $data = $validator->setScene('store')->setPost()->check();
+ * ```
  *
  * @author NanoAdmin Team
  * @since 1.0.0
  */
 class ConfigValidator extends ValidatorBaseWebman
 {
-    use UpdateUniqueTrait {
-        buildUpdateUnique as protected _buildUpdateUnique;
-    }
-
     /**
-     * 表名
+     * 模型类（用于 unique/exists 规则自动解析表名）
+     *
+     * @var string|null
      */
-    protected string $table = 'sys_config';
+    protected ?string $model = Config::class;
 
     /**
      * 主键字段
@@ -52,7 +54,7 @@ class ConfigValidator extends ValidatorBaseWebman
                 'string',
                 'max:100',
                 'regex:/^[a-zA-Z0-9_]+$/',
-                IlluminateRule::unique($this->table, 'key'),
+                $this->unique('key', 'key'),
             ],
             'value' => [
                 'nullable',
@@ -250,35 +252,27 @@ class ConfigValidator extends ValidatorBaseWebman
                 'status',
             ],
 
-            'update' => function (array $allRules): array {
-                return $this->buildUpdateUnique($allRules, ['key']);
-            },
+            'update' => [
+                'id',
+                'name',
+                'key',
+                'type',
+                'group',
+                'value',
+                'options',
+                'description',
+                'sort',
+                'status',
+            ],
 
             'index' => ['current', 'size', 'keyword', 'group_filter', 'type_filter', 'status_filter'],
             'page' => ['current', 'size', 'keyword', 'group_filter', 'type_filter', 'status_filter'],
 
             'show' => ['id'],
             'destroy' => ['id'],
-            'batch_destroy' => ['ids'],
-            'batch_update' => ['items'],
-            'get_by_group' => ['group'],
+            'batchDestroy' => ['ids'],
+            'batchUpdate' => ['items'],
+            'getByGroup' => ['group'],
         ];
-    }
-
-    /**
-     * 验证ID
-     */
-    public function validateId($id): int
-    {
-        $data = $this->validateData(['id' => $id], 'show');
-        return (int)$data['id'];
-    }
-
-    /**
-     * 验证批量ID
-     */
-    public function validateBatchIds(array $data): array
-    {
-        return $this->validateData($data, 'batch_destroy');
     }
 }

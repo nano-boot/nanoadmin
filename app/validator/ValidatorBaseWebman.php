@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator;
 
-use Closure;
 use Webman\Validation\Validator as BaseValidator;
 use support\validation\Rule as IlluminateRule;
 use plugin\nanoadmin\app\common\ApiException;
@@ -12,22 +11,15 @@ use plugin\nanoadmin\app\common\Code;
 /**
  * 基于 webman/validation（support\validation\Validator）的表单验证器基类
  *
- * 对齐 think-validate 风格的使用方式：
- * - 支持 scenes() 定义验证场景（支持闭包）
- * - 支持 validateData() 核心校验方法
- * - 支持闭包注入 excludeId 用于 update unique 校验
+ * 特性：
+ * - 自动生成 sceneXxx() 方法（通过 __call 拦截）
+ * - 统一 unique 规则处理（基于路由参数或上下文）
+ * - 通用辅助方法（validateId, validateBatchIds 等）
  *
  * 继承 support\validation\Validator，提供：
  * - make() 静态工厂方法
  * - withScene() 场景方法
  * - validate() / fails() / errors() 验证方法
- *
- * @method static self make(array $data, ?array $rules = null, ?array $messages = null, ?array $attributes = null)
- * @method self withScene(string $scene)
- * @method void validate()
- * @method bool fails()
- * @method \support\validation\MessageBag errors()
- * @method array validated()
  *
  * @author NanoAdmin Team
  * @since 1.0.0
@@ -36,19 +28,23 @@ abstract class ValidatorBaseWebman extends BaseValidator
 {
     use ValidatorRequestTrait;
 
+    // ═══════════════════════════════════════════════════════════════
+    // 子类配置属性
+    // ═══════════════════════════════════════════════════════════════
+
     /**
      * 验证规则（由子类通过 rules() 方法提供）
      *
-     * @var array<string, array<string>|Closure|string>
+     * @var array<string, array<string>|string>
      */
     protected array $rules = [];
 
     /**
      * 场景定义
      *
-     * @var array<string, array<string>|Closure>
+     * @var array<string, array<string>>
      */
-    protected array $scenes = [];
+    protected array $sceneDefinitions = [];
 
     /**
      * 自定义消息
@@ -64,82 +60,79 @@ abstract class ValidatorBaseWebman extends BaseValidator
      */
     protected array $attributes = [];
 
-    // ── check 兼容层状态属性 ──────────────────────────────
+    /**
+     * 模型类（用于 unique/exists 规则自动解析表名）
+     *
+     * @var string|null
+     */
+    protected ?string $model = null;
+
+    /**
+     * 主键字段
+     *
+     * @var string
+     */
+    protected string $primaryKey = 'id';
+
+    // ═══════════════════════════════════════════════════════════════
+    // 内部状态属性
+    // ═══════════════════════════════════════════════════════════════
+
     /** @var array 当前待校验数据 */
     protected array $_data = [];
     /** @var string|null 当前绑定场景名 */
     protected ?string $_scene = null;
     /** @var array 上下文（excludeId 等） */
     protected array $_context = [];
-    /** @var array only() 收集的字段 */
-    protected array $_sceneFields = [];
-    /** @var array append() 收集的 field => [methods] */
-    protected array $_sceneAppends = [];
-    /** @var array remove() 收集的字段 */
-    protected array $_sceneRemoves = [];
+    /** @var bool 快速失败模式 */
+    protected bool $stopOnFirstFailure = true;
+
+    // ═══════════════════════════════════════════════════════════════
+    // 核心方法
+    // ═══════════════════════════════════════════════════════════════
 
     /**
      * 获取验证规则
-     *
-     * 兼容两种写法：
-     * 1. 属性定义：protected array $rules = ['field' => 'required'];
-     * 2. 方法定义：public function rules(): array { return ['field' => 'required']; }
-     *
-     * 如果设置了场景，则返回场景对应的规则（支持闭包）
-     *
-     * @return array<string, array<string>|Closure|string>
      */
     public function rules(): array
     {
-        // 获取当前场景
         $scene = $this->scene();
-        
-        // 获取全部规则
         $allRules = $this->getAllRules();
-        
+
         if ($scene === null) {
             return $allRules;
         }
 
-        // 获取场景定义的规则
         return $this->getRulesByScene($scene, $allRules);
     }
 
     /**
      * 获取全部验证规则
      *
-     * @return array<string, array<string>|Closure|string>
+     * @return array<string, array<string>|string>
      */
     private function getAllRules(): array
     {
         $class = static::class;
-        
+
         try {
-            // 检测子类是否覆盖了 rules() 方法
             $reflection = new \ReflectionMethod($class, 'rules');
             if ($reflection->getDeclaringClass()->getName() === $class) {
-                // 创建临时实例调用子类的方法
                 $tempValidator = new $class();
                 return $reflection->invoke($tempValidator);
             }
         } catch (\Throwable) {
             // 忽略
         }
-        
-        // 回退到属性
+
         return $this->rules;
     }
 
     /**
      * 根据场景获取规则
-     *
-     * @param string $scene
-     * @param array $allRules
-     * @return array
      */
     private function getRulesByScene(string $scene, array $allRules): array
     {
-        // 通过反射调用 scenes() 方法
         $class = static::class;
         try {
             $reflection = new \ReflectionMethod($class, 'scenes');
@@ -147,10 +140,10 @@ abstract class ValidatorBaseWebman extends BaseValidator
                 $tempValidator = new $class();
                 $sceneDefs = $reflection->invoke($tempValidator);
             } else {
-                $sceneDefs = $this->scenes;
+                $sceneDefs = $this->sceneDefinitions;
             }
         } catch (\Throwable) {
-            $sceneDefs = $this->scenes;
+            $sceneDefs = $this->sceneDefinitions;
         }
 
         if (!isset($sceneDefs[$scene])) {
@@ -159,34 +152,36 @@ abstract class ValidatorBaseWebman extends BaseValidator
 
         $sceneFields = $sceneDefs[$scene];
 
-        // 支持闭包场景
-        if ($sceneFields instanceof \Closure) {
-            return $sceneFields($allRules, $this->data());
-        }
-
-        // 返回场景定义的字段对应的规则
         return array_intersect_key($allRules, array_flip($sceneFields));
     }
 
     /**
      * 获取场景定义
      *
-     * 兼容两种写法：
-     * 1. 属性定义：protected array $scenes = ['create' => ['field']];
-     * 2. 方法定义：public function scenes(): array { return ['create' => ['field']]; }
+     * 优先使用子类的 scenes() 方法（如果被覆盖），否则使用 $sceneDefinitions 属性
      *
-     * @return array<string, array<string>|Closure>
+     * @return array<string, array<string>>
      */
-    public function scenes(): array
+    public function getScenes(): array
     {
-        // 子类覆盖时会返回自己的场景
-        return $this->scenes;
+        $class = static::class;
+
+        try {
+            $reflection = new \ReflectionMethod($class, 'scenes');
+            if ($reflection->getDeclaringClass()->getName() === $class) {
+                // 子类覆盖了 scenes() 方法
+                $tempValidator = new $class();
+                return $reflection->invoke($tempValidator);
+            }
+        } catch (\Throwable) {
+            // 忽略
+        }
+
+        return $this->sceneDefinitions;
     }
 
     /**
      * 获取自定义消息
-     *
-     * @return array<string, string>
      */
     public function messages(): array
     {
@@ -195,149 +190,95 @@ abstract class ValidatorBaseWebman extends BaseValidator
 
     /**
      * 获取自定义属性名
-     *
-     * @return array<string, string>
      */
     public function attributes(): array
     {
         return $this->attributes;
     }
 
-    /**
-     * 创建验证器实例
-     *
-     * 注意：不覆盖 $this->rules 属性，让子类通过 rules() 方法提供规则
-     *
-     * @param array $data
-     * @param array|null $rules 如果为 null，则使用子类 rules() 方法
-     * @param array|null $messages
-     * @param array|null $attributes
-     * @return static
-     */
-    public static function make(
-        array $data,
-        ?array $rules = null,
-        ?array $messages = null,
-        ?array $attributes = null
-    ): static {
-        $instance = new static();
-        $instance->data = $data;
-
-        if ($messages !== null) {
-            $instance->messages = $messages;
-        }
-        if ($attributes !== null) {
-            $instance->attributes = $attributes;
-        }
-
-        return $instance;
-    }
+    // ═══════════════════════════════════════════════════════════════
+    // unique/exists 规则辅助方法
+    // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 创建 Illuminate 验证器
+     * 获取唯一性排除ID
      *
-     * 覆盖父类方法，使用子类 rules() 方法获取规则
+     * 优先级：
+     * 1. 上下文中的 excludeId
+     * 2. 路由参数中的 id
+     *
+     * @return int|null
      */
-    public function toIlluminate(): \Illuminate\Validation\Validator
+    protected function getUniqueIgnoreId(): ?int
     {
-        $factory = \Webman\Validation\Factory\ValidationFactory::getFactory();
+        // 1. 优先从上下文获取
+        if (!empty($this->_context['excludeId'])) {
+            $id = (int)$this->_context['excludeId'];
+            return $id > 0 ? $id : null;
+        }
 
-        // 清除父类的缓存
-        $reflection = new \ReflectionClass(\Webman\Validation\Validator::class);
-        $prop = $reflection->getProperty('validator');
-        $prop->setAccessible(true);
-        $prop->setValue($this, null);
+        // 2. 从路由参数获取
+        $routeId = request()->route->param('id');
+        if ($routeId !== null && (int)$routeId > 0) {
+            return (int)$routeId;
+        }
 
-        file_put_contents('/tmp/validator_debug.log', date('c') . ' ' . get_class($this) . ' scene=' . ($this->scene() ?? 'null') . ' rules keys=' . json_encode(array_keys($this->rules())) . "\n", FILE_APPEND);
-
-        // 创建验证器
-        $this->illuminateValidator = $factory->make(
-            $this->data(),
-            $this->rules(),
-            $this->messages(),
-            $this->attributes()
-        );
-
-        // 缓存到父类属性
-        $prop->setValue($this, $this->illuminateValidator);
-
-        return $this->illuminateValidator;
+        return null;
     }
-    
-    /**
-     * 缓存的 Illuminate 验证器实例
-     */
-    private ?\Illuminate\Validation\Validator $illuminateValidator = null;
 
     /**
-     * 获取场景对应的验证规则（支持闭包）
+     * 构建 unique 规则（自动处理排除自身）
      *
-     * @param string|null $scene
-     * @param array $context 上下文数据
-     * @return array
+     * @param string $column 字段名
+     * @param string|null $table 表名（从 $model 自动推断）
+     * @return \Illuminate\Validation\Rules\Unique
      */
-    protected function getSceneRules(?string $scene, array $context = []): array
+    protected function unique(string $column, ?string $table = null): \Illuminate\Validation\Rules\Unique
     {
-        $allRules = $this->rules();
-        if ($scene === null) {
-            return $allRules;
+        if ($table === null && $this->model) {
+            $modelInstance = new $this->model();
+            $table = $modelInstance->getTable();
         }
 
-        $sceneDefs = array_merge($this->scenes, $this->scenes());
-        if (!isset($sceneDefs[$scene])) {
-            return $allRules;
+        $rule = IlluminateRule::unique($table, $column);
+        $ignoreId = $this->getUniqueIgnoreId();
+
+        if ($ignoreId !== null) {
+            $rule = $rule->ignore($ignoreId, $this->primaryKey);
         }
 
-        $sceneFields = $sceneDefs[$scene];
-        if ($sceneFields instanceof \Closure) {
-            return $sceneFields($allRules, $context);
-        }
-
-        return array_intersect_key($allRules, array_flip($sceneFields));
+        return $rule;
     }
 
     /**
-     * 解析规则中的上下文占位符
+     * 生成 exists 规则
      *
-     * @param array $rules
-     * @param array $context
-     * @return array
+     * @param string $table
+     * @param string $column
+     * @return \Illuminate\Validation\Rules\Exists
      */
-    protected function resolveRulesWithContext(array $rules, array $context): array
+    protected static function exists(string $table, string $column): \Illuminate\Validation\Rules\Exists
     {
-        foreach ($rules as $field => &$fieldRules) {
-            if (is_array($fieldRules)) {
-                foreach ($fieldRules as $i => &$rule) {
-                    if (is_string($rule) && isset($context[$rule])) {
-                        $rule = $context[$rule];
-                    }
-                }
-                unset($rule);
-            }
-        }
-        unset($fieldRules);
-
-        return $rules;
+        return IlluminateRule::exists($table, $column);
     }
 
-    /**
-     * 是否启用快速失败模式
-     */
-    protected bool $stopOnFirstFailure = true;
+    // ═══════════════════════════════════════════════════════════════
+    // 通用验证方法
+    // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 验证数据（核心方法，支持闭包场景）
+     * 验证数据（核心方法）
      *
      * @param array $data 要验证的数据
      * @param string|null $scene 验证场景
-     * @param array $context 额外的上下文数据（如 excludeId）
-     * @return array 验证通过的数据
+     * @param array $context 额外的上下文数据
+     * @return array
      * @throws ApiException
      */
     public function validateData(array $data, ?string $scene = null, array $context = []): array
     {
-        $rules = $this->getSceneRules($scene, $context);
-        $rules = $this->resolveRulesWithContext($rules, $context);
+        $rules = $this->getSceneRules($scene);
+        $rules = $this->resolveContextPlaceholders($rules, $context);
 
         $factory = \Webman\Validation\Factory\ValidationFactory::getFactory();
         $validator = $factory->make($data, $rules, $this->messages(), $this->attributes());
@@ -356,50 +297,10 @@ abstract class ValidatorBaseWebman extends BaseValidator
     }
 
     /**
-     * 验证更新数据（排除当前记录的唯一性检查）
-     *
-     * @param array $data 要验证的数据
-     * @param int $excludeId 要排除的记录ID
-     * @param string|null $scene 验证场景，默认 'update'
-     * @return array
-     * @throws ApiException
-     */
-    public function validateUpdateData(array $data, int $excludeId, ?string $scene = 'update'): array
-    {
-        return $this->validateData($data, $scene, ['excludeId' => $excludeId]);
-    }
-
-    /**
-     * 获取经过验证的请求数据
-     *
-     * @param string|null $scene 验证场景
-     * @param array $context 额外的上下文数据
-     * @return array
-     * @throws ApiException
-     */
-    public function validateRequest(?string $scene = null, array $context = []): array
-    {
-        return $this->validateData($this->all(), $scene, $context);
-    }
-
-    /**
-     * 验证登录参数
-     *
-     * @param array $data
-     * @return array
-     * @throws ApiException
-     */
-    public function validateLoginData(array $data): array
-    {
-        return $this->validateData($data, 'login');
-    }
-
-    /**
      * 验证ID参数
      *
      * @param int|string $id
      * @return int
-     * @throws ApiException
      */
     public function validateId($id): int
     {
@@ -408,61 +309,35 @@ abstract class ValidatorBaseWebman extends BaseValidator
     }
 
     /**
-     * 生成 unique 规则（用于 illuminate/validation）
+     * 验证批量ID数组
      *
-     * @param string $table 表名
-     * @param string $column 字段名
-     * @param int|null $excludeId 排除的ID
-     * @param string $idColumn 主键字段名
-     * @return \Illuminate\Validation\Rules\Unique
-     */
-    protected static function unique(
-        string $table,
-        string $column,
-        ?int $excludeId = null,
-        string $idColumn = 'id'
-    ): \Illuminate\Validation\Rules\Unique {
-        $rule = IlluminateRule::unique($table, $column);
-        if ($excludeId !== null) {
-            $rule = $rule->ignore($excludeId, $idColumn);
-        }
-        return $rule;
-    }
-
-    /**
-     * 生成 exists 规则
-     *
-     * @param string $table
-     * @param string $column
-     * @return \Illuminate\Validation\Rules\Exists
-     */
-    protected static function exists(string $table, string $column): \Illuminate\Validation\Rules\Exists
-    {
-        return IlluminateRule::exists($table, $column);
-    }
-
-    /**
-     * 条件规则
-     *
-     * @param Closure|bool $condition
-     * @param array $rules
-     * @param array|null $defaultRules
+     * @param array|null $data
      * @return array
      */
-    protected static function when(
-        Closure|bool $condition,
-        array $rules,
-        ?array $defaultRules = null
-    ): array {
-        if ($condition instanceof Closure) {
-            $condition = $condition(request()->all());
-        }
-        return $condition ? $rules : ($defaultRules ?? []);
+    public function validateBatchIds(?array $data = null): array
+    {
+        $data = $data ?? $this->all();
+        return $this->validateData($data, 'batchDelete');
     }
 
+    /**
+     * 验证分页参数
+     *
+     * @param array|null $data
+     * @return array
+     */
+    public function validatePageParams(?array $data = null): array
+    {
+        $data = $data ?? $this->all();
+        return $this->validateData($data, 'page');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 链式调用方法
+    // ═══════════════════════════════════════════════════════════════
 
     /**
-     * 注入上下文（如 excludeId），在 sceneXxx() 之前调用
+     * 注入上下文
      */
     public function withContext(array $context): static
     {
@@ -471,7 +346,7 @@ abstract class ValidatorBaseWebman extends BaseValidator
     }
 
     /**
-     * 捕获 POST 数据（替代有冲突的 post() 方法）
+     * 捕获 POST 数据
      */
     public function setPost(): static
     {
@@ -480,7 +355,7 @@ abstract class ValidatorBaseWebman extends BaseValidator
     }
 
     /**
-     * 捕获 GET 数据（替代有冲突的 get() 方法）
+     * 捕获 GET 数据
      */
     public function setGet(): static
     {
@@ -489,8 +364,7 @@ abstract class ValidatorBaseWebman extends BaseValidator
     }
 
     /**
-     * 自定义数据源（用于测试或手动传参）
-     * 注意：父类已有 data(): array 方法，此处用 setData 避免冲突
+     * 自定义数据源
      */
     public function setData(array $data): static
     {
@@ -499,164 +373,140 @@ abstract class ValidatorBaseWebman extends BaseValidator
     }
 
     /**
-     * Magic __call：将 ->sceneXxx() 反射到 sceneXxx() 方法并返回 $this
-     * 配合 check() 无参数使用（推荐风格 B）
+     * 魔术方法：自动生成 sceneXxx() 方法
+     *
+     * 场景方法统一由基类自动生成，子类无需再定义。
+     * 例如：scenes() 返回 ['create' => [...]]，则自动生成 sceneCreate() 方法。
      */
     public function __call(string $name, array $args): static
     {
         if (str_starts_with($name, 'scene')) {
             $scene = lcfirst(substr($name, 5));
-            return $this->bindScen($scene);
+            return $this->bindScene($scene);
         }
+
         throw new \BadMethodCallException("方法 {$name} 不存在");
     }
 
     /**
-     * 内部：绑定场景，调用 sceneXxx() 方法
+     * 设置验证场景
+     *
+     * 注意：方法名为 setScene() 而非 scene()，是为了避免与父类
+     * Webman\Validation\Validator::scene() (protected) 冲突
+     *
+     * @param string $name 场景名称
+     * @return $this
+     * @throws \InvalidArgumentException
+     *
+     * @example
+     * $data = $validator->setScene('update')->setPost()->check();
+     * // 或使用魔术方法：$validator->sceneUpdate()->setPost()->check();
      */
-    protected function bindScen(string $scene): static
+    public function setScene(string $name): static
     {
+        return $this->bindScene($name);
+    }
+
+    /**
+     * 绑定场景
+     */
+    public function bindScene(string $scene): static
+    {
+        $scenes = $this->getScenes();
+        if (!isset($scenes[$scene])) {
+            throw new \InvalidArgumentException("场景 '{$scene}' 未定义");
+        }
+
         $this->_scene = $scene;
-        // 同步到 webman validator 内部属性，使 rules() 中的 scene() 调用能读到正确值
+
         $reflection = new \ReflectionClass(\Webman\Validation\Validator::class);
         $prop = $reflection->getProperty('scene');
         $prop->setAccessible(true);
         $prop->setValue($this, $scene);
-        return $this;
-    }
 
-    /**
-     * 场景白名单：等价于 think-validate 的 only()
-     */
-    public function only(array $fields): static
-    {
-        $this->_sceneFields = array_unique(array_merge($this->_sceneFields ?? [], $fields));
-        return $this;
-    }
-
-    /**
-     * 追加字段 + 自定义校验方法：等价于 think-validate 的 append()
-     * 例：->append('business_type_other', 'checkBusinessTypeOther')
-     */
-    public function append(string $field, string $method): static
-    {
-        $this->_sceneAppends[$field][] = $method;
-        return $this;
-    }
-
-    /**
-     * 场景移除字段：等价于 think-validate 的 remove()
-     */
-    public function remove(string $field): static
-    {
-        $this->_sceneRemoves[] = $field;
-        return $this;
-    }
-
-    /**
-     * 字段中文名映射：等价于 think-validate 的 $field
-     */
-    public function field(string $name, string $label): static
-    {
-        $this->attributes[$name] = $label;
         return $this;
     }
 
     /**
      * 执行校验
      *
-     * @return array 验证通过的数据
+     * @param array|null $data 要验证的数据，默认为空（使用请求数据或 setData 设置的数据）
+     * @return array
      * @throws ApiException
+     *
+     * 使用示例：
+     * ```php
+     * // 方式1：使用请求数据
+     * $data = $validator->setScene('create')->setPost()->check();
+     *
+     * // 方式2：传入自定义数据
+     * $data = $validator->setScene('create')->check(['username' => 'test', 'password' => '123456']);
+     *
+     * // 方式3：使用 setData 设置数据
+     * $data = $validator->setData($customData)->setScene('create')->check();
+     * ```
      */
-    public function check(): array
+    public function check(?array $data = null): array
     {
         if ($this->_scene === null) {
-            throw new ApiException(Code::VALIDATION_ERROR->value, '未指定场景，请先调用 sceneXxx()');
+            throw new ApiException(Code::VALIDATION_ERROR->value, '未指定场景，请先调用 setScene() 或 sceneXxx()');
         }
 
-        $data = $this->_data ?? request()->all();
-
-        // 如果有 only/append/remove，修改规则
-        if (!empty($this->_sceneFields) || !empty($this->_sceneAppends) || !empty($this->_sceneRemoves)) {
-            return $this->_goCheckWithChain($data);
-        }
+        $data = $data ?? $this->_data ?? request()->all();
 
         return $this->validateData($data, $this->_scene, $this->_context);
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // 内部辅助方法
+    // ═══════════════════════════════════════════════════════════════
+
     /**
-     * 内部：使用链式 only/append/remove 执行校验
+     * 获取场景规则
      */
-    protected function _goCheckWithChain(array $data): array
+    protected function getSceneRules(?string $scene): array
     {
-        // 优先使用 sceneXxx() 方法返回的规则；若没有则走 scenes() 数组
         $allRules = $this->rules();
-        $sceneRules = $this->getSceneRules($this->_scene, $this->_context);
-
-        // 应用 only 白名单
-        if (!empty($this->_sceneFields)) {
-            $sceneRules = array_intersect_key($sceneRules, array_flip($this->_sceneFields));
+        if ($scene === null) {
+            return $allRules;
         }
 
-        // 应用 remove 移除字段
-        if (!empty($this->_sceneRemoves)) {
-            foreach ($this->_sceneRemoves as $field) {
-                unset($sceneRules[$field]);
-            }
-        }
-
-        // 应用 append 追加自定义方法
-        if (!empty($this->_sceneAppends)) {
-            foreach ($this->_sceneAppends as $field => $methods) {
-                foreach ($methods as $method) {
-                    if (method_exists($this, $method)) {
-                        $sceneRules[$field][] = function ($attr, $value, $fail) use ($method, $data) {
-                            $result = $this->{$method}($value, null, $data);
-                            if ($result !== true) {
-                                $fail(is_string($result) ? $result : '校验失败');
-                            }
-                        };
-                    }
-                }
-            }
-        }
-
-        // resolveContext 占位符
-        $sceneRules = $this->resolveRulesWithContext($sceneRules, $this->_context);
-
-        $factory = \Webman\Validation\Factory\ValidationFactory::getFactory();
-        $validator = $factory->make($data, $sceneRules, $this->messages(), $this->attributes());
-
-        if ($this->stopOnFirstFailure) {
-            $validator->stopOnFirstFailure();
-        }
-
-        if ($validator->fails()) {
-            $errors = $validator->errors()->all();
-            throw new ApiException(Code::VALIDATION_ERROR->value, implode('; ', $errors));
-        }
-
-        // 重置状态
-        $this->_resetChainState();
-
-        return $validator->validated();
+        return $this->getRulesByScene($scene, $allRules);
     }
 
     /**
-     * 重置链式状态
+     * 解析上下文占位符
      */
-    protected function _resetChainState(): void
+    protected function resolveContextPlaceholders(array $rules, array $context): array
     {
-        $this->_data = [];
-        $this->_scene = null;
-        $this->_context = [];
-        $this->_sceneFields = [];
-        $this->_sceneAppends = [];
-        $this->_sceneRemoves = [];
-        // 同步重置 webman validator 内部 scene 属性
-        $reflection = new \ReflectionClass(\Webman\Validation\Validator::class);
-        $prop = $reflection->getProperty('scene');
-        $prop->setAccessible(true);
-        $prop->setValue($this, null);
+        foreach ($rules as $field => &$fieldRules) {
+            if (is_array($fieldRules)) {
+                foreach ($fieldRules as $i => &$rule) {
+                    if (is_string($rule) && isset($context[$rule])) {
+                        $rule = $context[$rule];
+                    }
+                }
+                unset($rule);
+            }
+        }
+        unset($fieldRules);
+
+        return $rules;
+    }
+
+    /**
+     * 条件规则
+     *
+     * @param \Closure|bool $condition
+     * @param array $rules
+     * @param array|null $defaultRules
+     * @return array
+     */
+    protected static function when($condition, array $rules, ?array $defaultRules = null): array
+    {
+        if ($condition instanceof \Closure) {
+            $condition = $condition(request()->all());
+        }
+        return $condition ? $rules : ($defaultRules ?? []);
     }
 }
