@@ -64,7 +64,7 @@ abstract class ValidatorBaseWebman extends BaseValidator
      */
     protected array $attributes = [];
 
-    // ── goCheck 兼容层状态属性 ──────────────────────────────
+    // ── check 兼容层状态属性 ──────────────────────────────
     /** @var array 当前待校验数据 */
     protected array $_data = [];
     /** @var string|null 当前绑定场景名 */
@@ -222,9 +222,7 @@ abstract class ValidatorBaseWebman extends BaseValidator
     ): static {
         $instance = new static();
         $instance->data = $data;
-        
-        // 只设置 messages 和 attributes，不设置 rules
-        // 让 rules() 方法始终返回子类定义的规则
+
         if ($messages !== null) {
             $instance->messages = $messages;
         }
@@ -243,13 +241,15 @@ abstract class ValidatorBaseWebman extends BaseValidator
     public function toIlluminate(): \Illuminate\Validation\Validator
     {
         $factory = \Webman\Validation\Factory\ValidationFactory::getFactory();
-        
+
         // 清除父类的缓存
         $reflection = new \ReflectionClass(\Webman\Validation\Validator::class);
         $prop = $reflection->getProperty('validator');
         $prop->setAccessible(true);
         $prop->setValue($this, null);
-        
+
+        file_put_contents('/tmp/validator_debug.log', date('c') . ' ' . get_class($this) . ' scene=' . ($this->scene() ?? 'null') . ' rules keys=' . json_encode(array_keys($this->rules())) . "\n", FILE_APPEND);
+
         // 创建验证器
         $this->illuminateValidator = $factory->make(
             $this->data(),
@@ -257,10 +257,10 @@ abstract class ValidatorBaseWebman extends BaseValidator
             $this->messages(),
             $this->attributes()
         );
-        
+
         // 缓存到父类属性
         $prop->setValue($this, $this->illuminateValidator);
-        
+
         return $this->illuminateValidator;
     }
     
@@ -408,21 +408,6 @@ abstract class ValidatorBaseWebman extends BaseValidator
     }
 
     /**
-     * 静态工厂方法：创建验证器实例并验证数据
-     *
-     * @param array $data
-     * @param string|null $scene
-     * @param array $context
-     * @return array
-     * @throws ApiException
-     */
-    public static function check(array $data, ?string $scene = null, array $context = []): array
-    {
-        $validator = new static();
-        return $validator->validateData($data, $scene, $context);
-    }
-
-    /**
      * 生成 unique 规则（用于 illuminate/validation）
      *
      * @param string $table 表名
@@ -475,9 +460,6 @@ abstract class ValidatorBaseWebman extends BaseValidator
         return $condition ? $rules : ($defaultRules ?? []);
     }
 
-    // ═══════════════════════════════════════════════════════
-    // goCheck 兼容层：likeadmin 风格链式 API
-    // ═══════════════════════════════════════════════════════
 
     /**
      * 注入上下文（如 excludeId），在 sceneXxx() 之前调用
@@ -518,13 +500,13 @@ abstract class ValidatorBaseWebman extends BaseValidator
 
     /**
      * Magic __call：将 ->sceneXxx() 反射到 sceneXxx() 方法并返回 $this
-     * 配合 goCheck() 无参数使用（推荐风格 B）
+     * 配合 check() 无参数使用（推荐风格 B）
      */
     public function __call(string $name, array $args): static
     {
         if (str_starts_with($name, 'scene')) {
             $scene = lcfirst(substr($name, 5));
-            return $this->_bindScene($scene);
+            return $this->bindScen($scene);
         }
         throw new \BadMethodCallException("方法 {$name} 不存在");
     }
@@ -532,7 +514,7 @@ abstract class ValidatorBaseWebman extends BaseValidator
     /**
      * 内部：绑定场景，调用 sceneXxx() 方法
      */
-    protected function _bindScene(string $scene): static
+    protected function bindScen(string $scene): static
     {
         $this->_scene = $scene;
         // 同步到 webman validator 内部属性，使 rules() 中的 scene() 调用能读到正确值
@@ -581,13 +563,12 @@ abstract class ValidatorBaseWebman extends BaseValidator
     }
 
     /**
-     * 执行校验（无参数，推荐风格 B）
-     * 场景已在前面通过 sceneXxx() / _bindScene() 绑定
+     * 执行校验
      *
      * @return array 验证通过的数据
      * @throws ApiException
      */
-    public function goCheck(): array
+    public function check(): array
     {
         if ($this->_scene === null) {
             throw new ApiException(Code::VALIDATION_ERROR->value, '未指定场景，请先调用 sceneXxx()');

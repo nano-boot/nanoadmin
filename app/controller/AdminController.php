@@ -54,7 +54,7 @@ class AdminController extends BaseController
     #[PageResponse(schema: AdminResponse::class)]
     public function page(Request $request): Response
     {
-        $params = $this->validator->scenePage()->setGet()->goCheck();
+        $params = $this->validator->scenePage()->setGet()->check();
         return R::paginate($this->service->getPage($params));
     }
 
@@ -69,7 +69,7 @@ class AdminController extends BaseController
     #[DataResponse(schema: AdminResponse::class)]
     public function show(int $id = 0): Response
     {
-        $this->validator->setData(['id' => $id])->sceneShow()->goCheck();
+        $this->validator->setData(['id' => $id])->sceneShow()->check();
         return R::success($this->service->getById($id), '获取详情成功');
     }
 
@@ -82,7 +82,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function create(Request $request): Response
     {
-        $data = $this->validator->sceneCreate()->setPost()->goCheck();
+        $data = $this->validator->sceneCreate()->setPost()->check();
         return R::created($this->service->create($data));
     }
 
@@ -100,11 +100,9 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
-        $data = $this->validator
-            ->withContext(['excludeId' => $id])
-            ->sceneUpdate()
-            ->setPost()
-            ->goCheck();
+        $data = $request->post();
+        // $data = $this->validator->sceneUpdate()->setPost()->check();
+        $this->validator->make($data)->withScene('update')->validate();
         return R::data($this->service->update($id, $data), '更新成功');
     }
 
@@ -119,7 +117,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        $this->validator->setData(['id' => $id])->sceneShow()->goCheck();
+        $this->validator->setData(['id' => $id])->sceneShow()->check();
         $this->service->delete($id);
         return R::success(null, '删除成功');
     }
@@ -132,7 +130,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        $data = $this->validator->sceneBatchDelete()->setPost()->goCheck();
+        $data = $this->validator->sceneBatchDelete()->setPost()->check();
         $result = $this->service->batchDeleteAdmins($data['ids']);
         return R::success($result, '批量删除管理员成功');
     }
@@ -152,8 +150,8 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function assignRoles(Request $request, int $id): Response
     {
-        $this->validator->setData(['id' => $id])->sceneShow()->goCheck();
-        $data = $this->validator->sceneAssignRoles()->setPost()->goCheck();
+        $this->validator->setData(['id' => $id])->sceneShow()->check();
+        $data = $this->validator->sceneAssignRoles()->setPost()->check();
         $this->service->assignRoles($id, $data['role_ids']);
         return R::success(null, '分配角色成功');
     }
@@ -169,7 +167,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function getRoles(int $id): Response
     {
-        $this->validator->setData(['id' => $id])->sceneShow()->goCheck();
+        $this->validator->setData(['id' => $id])->sceneShow()->check();
         $roles = $this->service->getAdminRoles($id);
         return R::success($roles, '获取管理员角色成功');
     }
@@ -188,7 +186,7 @@ class AdminController extends BaseController
             throw new ApiException('用户未登录', Code::UNAUTHORIZED->value);
         }
 
-        $data = $this->validator->validateData($request->post(), 'updateCurrentPassword');
+        $data = $this->validator->sceneUpdateCurrentPassword()->setPost()->check();
 
         $admin = $this->service->getById($currentUser->id);
         if (!$admin->verifyPassword($data['old_password'])) {
@@ -217,7 +215,7 @@ class AdminController extends BaseController
             ->withContext(['excludeId' => $currentUser->id])
             ->sceneUpdateProfile()
             ->setPost()
-            ->goCheck();
+            ->check();
         $admin = $this->service->update($currentUser->id, $data);
 
         return R::success([

@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator\admin;
 
+use plugin\nanoadmin\app\model\Admin;
 use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use plugin\nanoadmin\app\validator\traits\UpdateUniqueTrait;
-use support\validation\Rule as IlluminateRule;
+use support\validation\Rule;
 
 /**
  * 管理员验证器
@@ -17,14 +17,10 @@ use support\validation\Rule as IlluminateRule;
  */
 class AdminValidator extends ValidatorBaseWebman
 {
-    use UpdateUniqueTrait {
-        buildUpdateUnique as protected _buildUpdateUnique;
-    }
-
     /**
-     * 表名（不含前缀，前缀由连接配置自动添加）
+     * 模型类（用于 unique/exists 规则自动解析表名）
      */
-    protected string $table = 'sys_admin';
+    protected string $model = Admin::class;
 
     /**
      * 主键字段
@@ -36,6 +32,13 @@ class AdminValidator extends ValidatorBaseWebman
      */
     public function rules(): array
     {
+        // 从路由参数 {id} 中提取当前记录 ID，用于 unique 校验自动排除自身
+        // create 场景（无 {id}）：$ignoreId 为 null，Laravel 的 ignore(null) 不生效，等同于严格唯一校验
+        // update 场景（PUT /sys/admin/{id}）：$ignoreId = 当前记录 ID，unique 规则自动排除该记录
+        // updateProfile 场景由闭包通过 withContext(['excludeId' => $currentUser->id]) 覆盖 ignore
+        $routeId = request()->route->param('id');
+        $ignoreId = ($routeId !== null && (int)$routeId > 0) ? (int)$routeId : null;
+
         return [
             'username' => [
                 'required',
@@ -43,7 +46,7 @@ class AdminValidator extends ValidatorBaseWebman
                 'min:3',
                 'max:20',
                 'regex:/^[a-zA-Z0-9_]+$/',
-                IlluminateRule::unique($this->table, 'username'),
+                Rule::unique($this->model, 'username')->ignore($ignoreId, $this->primaryKey),
             ],
             'password' => [
                 'nullable',
@@ -74,13 +77,13 @@ class AdminValidator extends ValidatorBaseWebman
                 'nullable',
                 'string',
                 'regex:/^1[3-9]\d{9}$/',
-                IlluminateRule::unique($this->table, 'phone'),
+                Rule::unique($this->model, 'phone')->ignore($ignoreId, $this->primaryKey),
             ],
             'email' => [
                 'nullable',
                 'email',
                 'max:100',
-                IlluminateRule::unique($this->table, 'email'),
+                Rule::unique($this->model, 'email')->ignore($ignoreId, $this->primaryKey),
             ],
             'avatar' => [
                 'nullable',
@@ -90,12 +93,12 @@ class AdminValidator extends ValidatorBaseWebman
             'status' => [
                 'nullable',
                 'integer',
-                IlluminateRule::in([0, 1]),
+                Rule::in([0, 1]),
             ],
             'gender' => [
                 'nullable',
                 'integer',
-                IlluminateRule::in([0, 1, 2]),
+                Rule::in([0, 1, 2]),
             ],
             'role_ids' => [
                 'nullable',
@@ -223,13 +226,7 @@ class AdminValidator extends ValidatorBaseWebman
                 'gender',
             ],
 
-            // update 场景
-            'update' => function (array $allRules, array $context = []): array {
-                return $this->buildUpdateUnique($allRules, ['username', 'phone', 'email'], [
-                    'fields' => ['id', 'username', 'password', 'nickname', 'phone', 'email', 'avatar', 'status', 'gender', 'role_ids'],
-                    'excludeId' => $context['excludeId'] ?? 0,
-                ]);
-            },
+            'update' => ['id', 'username', 'password', 'nickname', 'phone', 'email', 'avatar', 'status', 'gender', 'role_ids'],
 
             'assign_roles' => ['role_ids'],
 
@@ -243,28 +240,18 @@ class AdminValidator extends ValidatorBaseWebman
 
             'updatePassword' => ['id', 'password'],
 
-            // updateProfile 场景：只校验指定字段，排除 phone 和 email 的唯一性校验
-            'updateProfile' => function (array $allRules, array $context = []): array {
-                return $this->buildUpdateUnique($allRules, ['phone', 'email'], [
-                    'fields' => ['nickname', 'phone', 'email', 'avatar', 'gender'],
-                    'excludeId' => $context['excludeId'] ?? 0,
-                ]);
-            },
+            'updateProfile' => ['nickname', 'phone', 'email', 'avatar', 'gender'],
 
             'updateCurrentPassword' => ['old_password', 'password', 'confirm_password'],
         ];
     }
-
-    // ═══════════════════════════════════════════════════════
-    // goCheck 兼容层：链式场景方法（sceneXxx 返回 $this）
-    // ═══════════════════════════════════════════════════════
 
     /**
      * 场景：创建管理员
      */
     public function sceneCreate(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
     {
-        return $this->_bindScene('create')->only([
+        return $this->bindScen('create')->only([
             'username',
             'password',
             'nickname',
@@ -282,18 +269,7 @@ class AdminValidator extends ValidatorBaseWebman
      */
     public function sceneUpdate(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
     {
-        return $this->_bindScene('update')->only([
-            'id',
-            'username',
-            'password',
-            'nickname',
-            'phone',
-            'email',
-            'avatar',
-            'status',
-            'gender',
-            'role_ids',
-        ]);
+        return $this->bindScen('update');
     }
 
     /**
@@ -302,7 +278,7 @@ class AdminValidator extends ValidatorBaseWebman
      */
     public function sceneUpdateProfile(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
     {
-        return $this->_bindScene('updateProfile')->only([
+        return $this->bindScen('updateProfile')->only([
             'nickname',
             'phone',
             'email',
@@ -316,7 +292,7 @@ class AdminValidator extends ValidatorBaseWebman
      */
     public function scenePage(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
     {
-        return $this->_bindScene('page')->only(['page', 'limit', 'keyword']);
+        return $this->bindScen('page')->only(['page', 'limit', 'keyword']);
     }
 
     /**
@@ -324,7 +300,7 @@ class AdminValidator extends ValidatorBaseWebman
      */
     public function sceneShow(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
     {
-        return $this->_bindScene('show')->only(['id']);
+        return $this->bindScen('show')->only(['id']);
     }
 
     /**
@@ -332,7 +308,7 @@ class AdminValidator extends ValidatorBaseWebman
      */
     public function sceneBatchDelete(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
     {
-        return $this->_bindScene('batchDelete')->only(['ids']);
+        return $this->bindScen('batchDelete')->only(['ids']);
     }
 
     /**
@@ -340,7 +316,19 @@ class AdminValidator extends ValidatorBaseWebman
      */
     public function sceneAssignRoles(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
     {
-        return $this->_bindScene('assignRoles')->only(['role_ids']);
+        return $this->bindScen('assignRoles')->only(['role_ids']);
+    }
+
+    /**
+     * 场景：修改当前用户密码
+     */
+    public function sceneUpdateCurrentPassword(): \plugin\nanoadmin\app\validator\ValidatorBaseWebman
+    {
+        return $this->bindScen('updateCurrentPassword')->only([
+            'old_password',
+            'password',
+            'confirm_password',
+        ]);
     }
 
     /**
