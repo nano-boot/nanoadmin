@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace plugin\nanoadmin\app\validator;
 
 use Webman\Validation\Validator as BaseValidator;
+use support\Container;
 use support\validation\Rule as IlluminateRule;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
@@ -24,9 +25,9 @@ use plugin\nanoadmin\app\common\Code;
  * @author NanoAdmin Team
  * @since 1.0.0
  */
-abstract class ValidatorBaseWebman extends BaseValidator
+abstract class ValidatorBaseWebman
 {
-    use ValidatorRequestTrait;
+
 
     // ═══════════════════════════════════════════════════════════════
     // 子类配置属性
@@ -96,7 +97,7 @@ abstract class ValidatorBaseWebman extends BaseValidator
      */
     public function rules(): array
     {
-        $scene = $this->scene();
+        $scene = $this->_scene;
         $allRules = $this->getAllRules();
 
         if ($scene === null) {
@@ -391,18 +392,15 @@ abstract class ValidatorBaseWebman extends BaseValidator
     /**
      * 设置验证场景
      *
-     * 注意：方法名为 setScene() 而非 scene()，是为了避免与父类
-     * Webman\Validation\Validator::scene() (protected) 冲突
-     *
      * @param string $name 场景名称
      * @return $this
      * @throws \InvalidArgumentException
      *
      * @example
-     * $data = $validator->setScene('update')->setPost()->check();
+     * $data = $validator->scene('update')->setPost()->check();
      * // 或使用魔术方法：$validator->sceneUpdate()->setPost()->check();
      */
-    public function setScene(string $name): static
+    public function scene(string $name): static
     {
         return $this->bindScene($name);
     }
@@ -419,11 +417,6 @@ abstract class ValidatorBaseWebman extends BaseValidator
 
         $this->_scene = $scene;
 
-        $reflection = new \ReflectionClass(\Webman\Validation\Validator::class);
-        $prop = $reflection->getProperty('scene');
-        $prop->setAccessible(true);
-        $prop->setValue($this, $scene);
-
         return $this;
     }
 
@@ -437,19 +430,19 @@ abstract class ValidatorBaseWebman extends BaseValidator
      * 使用示例：
      * ```php
      * // 方式1：使用请求数据
-     * $data = $validator->setScene('create')->setPost()->check();
+     * $data = $validator->scene('create')->setPost()->check();
      *
      * // 方式2：传入自定义数据
-     * $data = $validator->setScene('create')->check(['username' => 'test', 'password' => '123456']);
+     * $data = $validator->scene('create')->check(['username' => 'test', 'password' => '123456']);
      *
      * // 方式3：使用 setData 设置数据
-     * $data = $validator->setData($customData)->setScene('create')->check();
+     * $data = $validator->setData($customData)->scene('create')->check();
      * ```
      */
     public function check(?array $data = null): array
     {
         if ($this->_scene === null) {
-            throw new ApiException(Code::VALIDATION_ERROR->value, '未指定场景，请先调用 setScene() 或 sceneXxx()');
+            throw new ApiException(Code::VALIDATION_ERROR->value, '未指定场景，请先调用 scene() 或 sceneXxx()');
         }
 
         $data = $data ?? $this->_data ?? request()->all();
