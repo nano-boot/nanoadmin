@@ -20,15 +20,6 @@ use plugin\nanoadmin\app\library\swagger\SchemaConstants;
 
 /**
  * 登录日志控制器
- *
- * 继承 BaseController + 手动调用验证器（推荐方式）：
- *  - schema 类通过 OA 注解声明
- *  - 使用 validateData() 获取验证后的干净数据
- *  - CRUD 方法直接调用 Service
- *
- * 验证器使用方式：
- *  - page: validateData($request->get(), 'page')
- *  - show: validateId($id)
  */
 #[OA\Tag(name: '登录日志', description: '登录日志管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
@@ -80,7 +71,6 @@ class LogLoginController extends BaseController
     public function show(int $id): Response
     {
         try {
-            $this->validator->validateId($id);
             return parent::show($id);
         } catch (\Exception $e) {
             return R::error($e->getMessage());

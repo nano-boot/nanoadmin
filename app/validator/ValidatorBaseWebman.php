@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator;
 
-use Webman\Validation\Validator as BaseValidator;
-use support\Container;
 use support\validation\Rule as IlluminateRule;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
@@ -298,46 +296,6 @@ abstract class ValidatorBaseWebman
     }
 
     /**
-     * 验证ID参数
-     *
-     * @param int|string $id
-     * @return int
-     */
-    public function validateId($id): int
-    {
-        $data = $this->validateData(['id' => $id], 'show');
-        return (int) $data['id'];
-    }
-
-    /**
-     * 验证批量ID数组
-     *
-     * @param array|null $data
-     * @return array
-     */
-    public function validateBatchIds(?array $data = null): array
-    {
-        $data = $data ?? $this->all();
-        return $this->validateData($data, 'batchDelete');
-    }
-
-    /**
-     * 验证分页参数
-     *
-     * @param array|null $data
-     * @return array
-     */
-    public function validatePageParams(?array $data = null): array
-    {
-        $data = $data ?? $this->all();
-        return $this->validateData($data, 'page');
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 链式调用方法
-    // ═══════════════════════════════════════════════════════════════
-
-    /**
      * 注入上下文
      */
     public function withContext(array $context): static
@@ -485,21 +443,5 @@ abstract class ValidatorBaseWebman
         unset($fieldRules);
 
         return $rules;
-    }
-
-    /**
-     * 条件规则
-     *
-     * @param \Closure|bool $condition
-     * @param array $rules
-     * @param array|null $defaultRules
-     * @return array
-     */
-    protected static function when($condition, array $rules, ?array $defaultRules = null): array
-    {
-        if ($condition instanceof \Closure) {
-            $condition = $condition(request()->all());
-        }
-        return $condition ? $rules : ($defaultRules ?? []);
     }
 }

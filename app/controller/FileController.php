@@ -165,18 +165,6 @@ class FileController extends BaseController
     public function update(Request $request, int $id, array $fields = []): Response
     {
         try {
-            $validator = new FileValidator();
-            $validator->validateId($id);
-
-            $requestData = $request->only([
-                'original_name', 'file_name', 'file_path', 'status'
-            ]);
-
-            $validatedData = $validator->validateUpdateData(
-                array_merge(['id' => $id], $requestData),
-                $id
-            );
-
             // 添加更新者信息
             $validatedData['updated_by'] = $request->post('updated_by', 0);
 
@@ -199,9 +187,6 @@ class FileController extends BaseController
     public function destroy(int $id): Response
     {
         try {
-            $validator = new FileValidator();
-            $validator->validateId($id);
-
             $result = $this->fileService->deleteFile($id);
             return R::success($result, '删除文件成功');
 
@@ -222,10 +207,7 @@ class FileController extends BaseController
     {
         try {
             $ids = $request->post('ids', []);
-            $validator = new FileValidator();
-            $validatedData = $validator->validateBatchIds(['ids' => $ids]);
-
-            $result = $this->fileService->batchDeleteFiles($validatedData['ids']);
+            $result = $this->fileService->batchDeleteFiles($ids);
             return R::success($result, '批量删除文件成功');
 
         } catch (ApiException $e) {
@@ -245,8 +227,6 @@ class FileController extends BaseController
     public function download(Request $request, int $id): Response
     {
         try {
-            $validator = new FileValidator();
-            $validator->validateId($id);
 
             $downloadInfo = $this->fileService->downloadFile($id);
 

@@ -64,7 +64,6 @@ class DictDataController extends BaseController
     #[DataResponse(schema: DictDataResponse::class)]
     public function show(int $id): Response
     {
-        $this->validator->validateId($id);
         return R::success($this->dictDataService->getById($id), '获取详情成功');
     }
 
@@ -96,7 +95,6 @@ class DictDataController extends BaseController
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
-        $this->validator->validateId($id);
         $data = $this->validator->validateUpdateData($request->post(), $id);
         $result = $this->dictDataService->update($id, $data);
         return R::data($result, '更新成功');
@@ -113,7 +111,6 @@ class DictDataController extends BaseController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        $this->validator->validateId($id);
         $this->dictDataService->delete($id);
         return R::success(null, '删除成功');
     }
@@ -126,7 +123,7 @@ class DictDataController extends BaseController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        $data = $this->validator->validateBatchIds($request->post());
+        $data = $request->post();
         $result = $this->dictDataService->batchDelete($data['ids']);
         return R::success($result, '批量删除成功');
     }

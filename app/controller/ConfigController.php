@@ -84,7 +84,6 @@ class ConfigController extends BaseController
     #[DataResponse(schema: ConfigResponse::class)]
     public function show(int $id): Response
     {
-        $this->validator->validateId($id);
         return R::success($this->service->getById($id), '获取详情成功');
     }
 
@@ -160,7 +159,6 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        $this->validator->validateId($id);
         $this->service->delete($id);
         return R::success(null, '删除成功');
     }
