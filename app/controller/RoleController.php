@@ -27,7 +27,7 @@ use support\Response;
  */
 #[OA\Tag(name: '角色', description: '角色管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
-class RoleController extends CommonController
+class RoleController extends BaseController
 {
     private RoleService $roleService;
 

@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace plugin\nanoadmin\app\validator\role;
 
 use plugin\nanoadmin\app\model\Role;
-use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use support\validation\Rule as IlluminateRule;
+use plugin\nanoadmin\app\validator\ValidatorBase;
+use support\validation\Rule;
 
 /**
  * 角色验证器
@@ -22,7 +22,7 @@ use support\validation\Rule as IlluminateRule;
  * @author NanoAdmin Team
  * @since 1.0.0
  */
-class RoleValidator extends ValidatorBaseWebman
+class RoleValidator extends ValidatorBase
 {
     /**
      * 模型类（用于 unique/exists 规则自动解析表名）
@@ -76,7 +76,7 @@ class RoleValidator extends ValidatorBaseWebman
             'status' => [
                 'nullable',
                 'integer',
-                IlluminateRule::in([0, 1]),
+                Rule::in([0, 1]),
             ],
             'role_ids' => [
                 'nullable',
@@ -105,7 +105,7 @@ class RoleValidator extends ValidatorBaseWebman
             'status_filter' => [
                 'nullable',
                 'integer',
-                IlluminateRule::in([0, 1]),
+                Rule::in([0, 1]),
             ],
             'ids' => [
                 'required',

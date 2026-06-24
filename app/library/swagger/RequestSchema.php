@@ -8,7 +8,6 @@ namespace plugin\nanoadmin\app\library\swagger;
  * 用于创建/更新接口的 body 参数：
  *  - 自动生成 OpenAPI 文档中的 requestBody
  *  - 自动调用 laravel-validation 校验
- *  - 控制器中通过 CommonController::validateCreate()/validateUpdate() 使用
  *
  * 可通过 schemaKind 区分 create / update：
  *   class AdminCreateRequest extends RequestSchema { public string $schemaKind = 'request.create'; }

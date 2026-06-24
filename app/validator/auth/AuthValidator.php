@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator\auth;
 
-use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
+use plugin\nanoadmin\app\validator\ValidatorBase;
 
 /**
  * 认证验证器
@@ -19,7 +19,7 @@ use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
  * @author NanoAdmin Team
  * @since 1.0.0
  */
-class AuthValidator extends ValidatorBaseWebman
+class AuthValidator extends ValidatorBase
 {
     /**
      * 验证规则

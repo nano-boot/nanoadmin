@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace plugin\nanoadmin\app\validator\admin;
 
 use plugin\nanoadmin\app\model\Admin;
-use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
+use plugin\nanoadmin\app\validator\ValidatorBase;
 use support\validation\Rule;
 
 /**
@@ -25,7 +25,7 @@ use support\validation\Rule;
  * @author NanoAdmin Team
  * @since 1.0.0
  */
-class AdminValidator extends ValidatorBaseWebman
+class AdminValidator extends ValidatorBase
 {
     /**
      * 模型类（用于 unique/exists 规则自动解析表名）

@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator\log;
 
-use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use support\validation\Rule as IlluminateRule;
+use plugin\nanoadmin\app\validator\ValidatorBase;
+use support\validation\Rule;
 
 /**
  * 登录日志验证器
@@ -14,7 +14,7 @@ use support\validation\Rule as IlluminateRule;
  * @author NanoAdmin Team
  * @since 1.0.0
  */
-class LogLoginValidator extends ValidatorBaseWebman
+class LogLoginValidator extends ValidatorBase
 {
     /**
      * 验证规则
@@ -57,7 +57,7 @@ class LogLoginValidator extends ValidatorBaseWebman
             'status' => [
                 'nullable',
                 'integer',
-                IlluminateRule::in([0, 1]),
+                Rule::in([0, 1]),
             ],
             'ip' => [
                 'nullable',

@@ -5,7 +5,6 @@ namespace plugin\nanoadmin\app\controller;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\validator\ValidatorBase;
-use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
 use support\Request;
 
 /**
@@ -23,9 +22,6 @@ use support\Request;
  *
  * 错误处理：校验失败统一抛 ApiException(VALIDATION_ERROR)，由异常中间件转 R::error
  *
- * 验证器基类支持：
- *  - ValidatorBase：think-validate 基类
- *  - ValidatorBaseWebman：webman/validation 基类（基于 illuminate/validation）
  *
  * 与 BaseController 的关系：
  *  - BaseController：极简 CRUD 骨架，不做参数校验、无注解约定
@@ -97,7 +93,6 @@ abstract class CommonController extends BaseController
 
         $this->ensureValidatorClass($validatorClass);
 
-        /** @var ValidatorBase|ValidatorBaseWebman $validator */
         $validator = new $validatorClass();
         // validated() 内部会调用 validateData()，校验失败已抛 ApiException
         return $validator->validated();
@@ -118,20 +113,15 @@ abstract class CommonController extends BaseController
             );
         }
 
-        // 兼容两种基类
-        $validBases = [ValidatorBase::class, ValidatorBaseWebman::class];
+        $validBases = ValidatorBase::class;
         $isValid = false;
-        foreach ($validBases as $base) {
-            if (is_subclass_of($class, $base)) {
-                $isValid = true;
-                break;
-            }
+        if (is_subclass_of($class, $validBases)) {
+            $isValid = true;
         }
 
         if (!$isValid) {
-            $baseList = implode(' or ', $validBases);
             throw new ApiException(
-                "Validator class {$class} must extend {$baseList}",
+                "Validator class {$class} must extend {$validBases}",
                 Code::VALIDATION_ERROR->value
             );
         }

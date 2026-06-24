@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace plugin\nanoadmin\app\validator\menu;
 
 use plugin\nanoadmin\app\model\Menu;
-use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use support\validation\Rule as IlluminateRule;
+use plugin\nanoadmin\app\validator\ValidatorBase;
+use support\validation\Rule;
 
 /**
  * 菜单验证器
@@ -22,7 +22,7 @@ use support\validation\Rule as IlluminateRule;
  * @author NanoAdmin Team
  * @since 1.0.0
  */
-class MenuValidator extends ValidatorBaseWebman
+class MenuValidator extends ValidatorBase
 {
     /**
      * 模型类（用于 unique/exists 规则自动解析表名）
@@ -81,7 +81,7 @@ class MenuValidator extends ValidatorBaseWebman
             'type' => [
                 'required',
                 'string',
-                IlluminateRule::in(['D', 'M', 'B', 'L', 'I']),
+                Rule::in(['D', 'M', 'B', 'L', 'I']),
             ],
             'permission' => [
                 'nullable',
@@ -169,7 +169,7 @@ class MenuValidator extends ValidatorBaseWebman
             'type_filter' => [
                 'nullable',
                 'string',
-                IlluminateRule::in(['D', 'M', 'B', 'L', 'I']),
+                Rule::in(['D', 'M', 'B', 'L', 'I']),
             ],
             'parent_id_filter' => [
                 'nullable',

@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\validator\file;
 
-use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use support\validation\Rule as IlluminateRule;
+use plugin\nanoadmin\app\validator\ValidatorBase;
+use support\validation\Rule;
 
 /**
  * 文件验证器
@@ -18,7 +18,7 @@ use support\validation\Rule as IlluminateRule;
  * @author NanoAdmin Team
  * @since 1.0.0
  */
-class FileValidator extends ValidatorBaseWebman
+class FileValidator extends ValidatorBase
 {
     /**
      * 验证规则
@@ -59,27 +59,27 @@ class FileValidator extends ValidatorBaseWebman
             'status' => [
                 'nullable',
                 'integer',
-                IlluminateRule::in([0, 1]),
+                Rule::in([0, 1]),
             ],
             'file_type' => [
                 'nullable',
                 'string',
-                IlluminateRule::in(['image', 'document', 'video', 'audio', 'archive', 'other']),
+                Rule::in(['image', 'document', 'video', 'audio', 'archive', 'other']),
             ],
             'file_type_filter' => [
                 'nullable',
                 'string',
-                IlluminateRule::in(['image', 'document', 'video', 'audio', 'archive', 'other']),
+                Rule::in(['image', 'document', 'video', 'audio', 'archive', 'other']),
             ],
             'storage_type' => [
                 'nullable',
                 'string',
-                IlluminateRule::in(['local', 'cloud']),
+                Rule::in(['local', 'cloud']),
             ],
             'storage_type_filter' => [
                 'nullable',
                 'string',
-                IlluminateRule::in(['local', 'cloud']),
+                Rule::in(['local', 'cloud']),
             ],
             'created_by' => [
                 'nullable',

@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace plugin\nanoadmin\app\validator\dict;
 
 use plugin\nanoadmin\app\model\DictData;
-use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use support\validation\Rule as IlluminateRule;
+use plugin\nanoadmin\app\validator\ValidatorBase;
+use support\validation\Rule;
 
 /**
  * 字典数据验证器
@@ -19,7 +19,7 @@ use support\validation\Rule as IlluminateRule;
  * @author NanoAdmin Team
  * @since 1.0.0
  */
-class DictDataValidator extends ValidatorBaseWebman
+class DictDataValidator extends ValidatorBase
 {
     /**
      * 模型类（用于 unique/exists 规则自动解析表名）
@@ -70,7 +70,7 @@ class DictDataValidator extends ValidatorBaseWebman
             'status' => [
                 'nullable',
                 'integer',
-                IlluminateRule::in([0, 1]),
+                Rule::in([0, 1]),
             ],
             'current' => [
                 'nullable',

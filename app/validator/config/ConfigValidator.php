@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace plugin\nanoadmin\app\validator\config;
 
 use plugin\nanoadmin\app\model\Config;
-use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
-use support\validation\Rule as IlluminateRule;
+use plugin\nanoadmin\app\validator\ValidatorBase;
+use support\validation\Rule;
 
 /**
  * 系统配置验证器
@@ -19,7 +19,7 @@ use support\validation\Rule as IlluminateRule;
  * @author NanoAdmin Team
  * @since 1.0.0
  */
-class ConfigValidator extends ValidatorBaseWebman
+class ConfigValidator extends ValidatorBase
 {
     /**
      * 模型类（用于 unique/exists 规则自动解析表名）
@@ -64,7 +64,7 @@ class ConfigValidator extends ValidatorBaseWebman
             'type' => [
                 'required',
                 'string',
-                IlluminateRule::in(['text', 'number', 'boolean', 'select', 'radio', 'checkbox', 'textarea', 'json']),
+                Rule::in(['text', 'number', 'boolean', 'select', 'radio', 'checkbox', 'textarea', 'json']),
             ],
             'options' => [
                 'nullable',
@@ -90,7 +90,7 @@ class ConfigValidator extends ValidatorBaseWebman
             'status' => [
                 'nullable',
                 'integer',
-                IlluminateRule::in([0, 1]),
+                Rule::in([0, 1]),
             ],
             'current' => [
                 'nullable',
@@ -116,12 +116,12 @@ class ConfigValidator extends ValidatorBaseWebman
             'type_filter' => [
                 'nullable',
                 'string',
-                IlluminateRule::in(['text', 'number', 'boolean', 'select', 'radio', 'checkbox', 'textarea', 'json']),
+                Rule::in(['text', 'number', 'boolean', 'select', 'radio', 'checkbox', 'textarea', 'json']),
             ],
             'status_filter' => [
                 'nullable',
                 'integer',
-                IlluminateRule::in([0, 1]),
+                Rule::in([0, 1]),
             ],
             'ids' => [
                 'required',

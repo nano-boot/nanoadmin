@@ -8,7 +8,7 @@ namespace plugin\nanoadmin\app\library\swagger;
  * 用于列表/搜索接口的 query 参数：
  *  - 自动生成 OpenAPI 文档中的 parameters
  *  - 自动调用 laravel-validation 校验
- *  - 控制器中通过 CommonController::validateQuery() 使用
+ *  - 控制器中通过 NanoAdmin::validateQuery() 使用
  */
 abstract class QuerySchema extends ResourceSchema
 {
