@@ -8,7 +8,6 @@ use plugin\nanoadmin\app\middleware\PermissionMiddleware;
 use plugin\nanoadmin\app\schema\log\LogLoginQuery;
 use plugin\nanoadmin\app\schema\log\LogLoginResponse;
 use plugin\nanoadmin\app\service\LogLoginService;
-use plugin\nanoadmin\app\library\swagger\OpenApiModifier;
 use plugin\nanoadmin\app\library\swagger\annotation\response\PageResponse;
 use plugin\nanoadmin\app\library\swagger\annotation\response\DataResponse;
 use plugin\nanoadmin\app\validator\log\LogLoginValidator;
@@ -75,16 +74,5 @@ class LogLoginController extends BaseController
         } catch (\Exception $e) {
             return R::error($e->getMessage());
         }
-    }
-
-    #[OA\Post(
-        path: '/sys/login-log',
-        summary: '创建登录日志',
-        tags: ['登录日志'],
-        x: [OpenApiModifier::X_REQUEST_BODY => LogLoginResponse::class]
-    )]
-    public function create(Request $request): Response
-    {
-        return parent::create($request);
     }
 }

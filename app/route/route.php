@@ -26,19 +26,6 @@ Route::group('/sys/menu', function () {
 
 });
 
-// 文件管理相关路由
-Route::group('/sys/files', function () {
-    Route::get('', [plugin\nanoadmin\app\controller\FileController::class, 'page']);
-    Route::post('', [plugin\nanoadmin\app\controller\FileController::class, 'upload']);
-    Route::post('/batch', [plugin\nanoadmin\app\controller\FileController::class, 'batchUpload']);
-    Route::get('/stats', [plugin\nanoadmin\app\controller\FileController::class, 'stats']);
-    Route::get('/{id}', [plugin\nanoadmin\app\controller\FileController::class, 'show']);
-    Route::put('/{id}', [plugin\nanoadmin\app\controller\FileController::class, 'update']);
-    Route::get('/{id}/download', [plugin\nanoadmin\app\controller\FileController::class, 'download']);
-    Route::delete('/batch', [plugin\nanoadmin\app\controller\FileController::class, 'batchDestroy']);
-    Route::delete('/{id}', [plugin\nanoadmin\app\controller\FileController::class, 'destroy']);
-});
-
 // 操作日志相关路由
 Route::group('/sys/operation-log', function () {
     Route::get('', [plugin\nanoadmin\app\controller\LogOperationController::class, 'page']);

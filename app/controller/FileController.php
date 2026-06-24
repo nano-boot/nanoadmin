@@ -2,47 +2,49 @@
 
 namespace plugin\nanoadmin\app\controller;
 
-use plugin\nanoadmin\app\common\R;
-use support\Request;
-use support\Response;
+use OpenApi\Attributes as OA;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\common\R;
+use plugin\nanoadmin\app\library\swagger\OpenApiModifier;
+use plugin\nanoadmin\app\library\swagger\SchemaConstants;
+use plugin\nanoadmin\app\library\swagger\annotation\response\DataResponse;
+use plugin\nanoadmin\app\library\swagger\annotation\response\PageResponse;
+use plugin\nanoadmin\app\middleware\AuthMiddleware;
+use plugin\nanoadmin\app\middleware\PermissionMiddleware;
+use plugin\nanoadmin\app\schema\file\FileBatchDeleteRequest;
+use plugin\nanoadmin\app\schema\file\FileQuery;
+use plugin\nanoadmin\app\schema\file\FileRequest;
+use plugin\nanoadmin\app\schema\file\FileResponse;
+use plugin\nanoadmin\app\schema\file\FileStatsResponse;
+use plugin\nanoadmin\app\schema\file\FileUploadResponse;
 use plugin\nanoadmin\app\service\FileService;
 use plugin\nanoadmin\app\validator\file\FileValidator;
+use support\Request;
+use support\Response;
+use support\annotation\Middleware;
 
 /**
  * 文件控制器
  */
+#[OA\Tag(name: '文件管理', description: '文件上传、下载、管理')]
+#[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class FileController extends BaseController
 {
-    /**
-     * 文件服务实例
-     * @var FileService
-     */
     private FileService $fileService;
+    private FileValidator $validator;
 
-    /**
-     * 构造函数 - 使用依赖注入
-     * @param FileService $fileService 文件服务实例
-     */
-    public function __construct(FileService $fileService)
+    public function __construct(FileService $fileService, FileValidator $validator)
     {
         $this->fileService = $fileService;
+        $this->validator = $validator;
     }
 
-    /**
-     * 获取服务实例
-     * @return FileService
-     */
     protected function getService(): FileService
     {
         return $this->fileService;
     }
 
-    /**
-     * 获取模型名称
-     * @return string
-     */
     protected function getModelName(): string
     {
         return 'File';
@@ -50,220 +52,199 @@ class FileController extends BaseController
 
     /**
      * 获取文件列表
-     * GET /sys/files
-     * @param Request $request
-     * @return Response
      */
+    #[OA\Get(
+        path: '/sys/files',
+        summary: '文件列表',
+        description: '获取文件分页列表，支持按关键词、文件类型、存储类型筛选',
+        tags: ['文件管理'],
+        x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => FileQuery::class]
+    )]
+    #[PageResponse(schema: FileResponse::class)]
     public function page(Request $request): Response
     {
-        $params = $request->get();
-        $validator = new FileValidator();
-        $validatedParams = $validator->validateListParams($params);
-        return R::paginate($this->fileService->getPage($validatedParams));
+        $params = $this->validator->scene('list')->setGet()->check();
+        return R::paginate($this->fileService->getPage($params));
     }
 
     /**
      * 获取文件详情
-     * GET /sys/files/{id}
-     * @param int $id
-     * @return Response
      */
-    public function show(int $id = 0): Response
+    #[OA\Get(
+        path: '/sys/files/{id}',
+        summary: '文件详情',
+        description: '根据ID获取文件详细信息',
+        tags: ['文件管理'],
+        x: [OpenApiModifier::X_PATH_PARAMETERS => [
+            'id' => ['type' => 'integer', 'description' => '文件ID'],
+        ]]
+    )]
+    #[DataResponse(schema: FileResponse::class)]
+    public function show(int $id): Response
     {
-        try {
-            $file = $this->fileService->getById($id);
-            return R::success($file, '获取文件详情成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('获取文件详情失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        $params = $this->validator->scene('show')->setPath()->check();
+        return R::success($this->fileService->getById($params['id']), '获取文件详情成功');
     }
 
     /**
      * 上传单个文件
-     * POST /sys/files/upload
-     * @param Request $request
-     * @return Response
      */
+    #[OA\Post(
+        path: '/sys/files/upload',
+        summary: '上传文件',
+        description: '上传单个文件，支持本地存储和云存储',
+        tags: ['文件管理']
+    )]
+    #[DataResponse(schema: FileUploadResponse::class)]
     public function upload(Request $request): Response
     {
-        try {
-            // 获取上传的文件
-            $uploadedFile = $request->file('file');
-            if (!$uploadedFile) {
-                return R::error('请选择要上传的文件', Code::PARAMETER_ERROR->value);
-            }
-
-            // 验证文件
-            $validator = new FileValidator();
-            $validator->validateUploadData(['file' => $uploadedFile]);
-
-            // 获取其他参数
-            $params = [
-                'storage_type' => $request->post('storage_type', 'local'),
-                'bucket_name' => $request->post('bucket_name', ''),
-                'created_by' => $request->post('created_by', 0),
-                'file_type' => $request->post('file_type', null), // 可选的文件类型参数
-            ];
-
-            $file = $this->fileService->uploadFile($uploadedFile, $params);
-            return R::data($file, '文件上传成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('文件上传失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        $uploadedFile = $request->file('file');
+        if (!$uploadedFile) {
+            throw new ApiException('请选择要上传的文件', Code::PARAMETER_ERROR->value);
         }
+
+        $params = [
+            'storage_type' => $request->post('storage_type', 'local'),
+            'bucket_name' => $request->post('bucket_name', ''),
+            'created_by' => $request->post('created_by', 0),
+            'file_type' => $request->post('file_type', null),
+        ];
+
+        $file = $this->fileService->uploadFile($uploadedFile, $params);
+        return R::data($file, '文件上传成功');
     }
 
     /**
      * 批量上传文件
-     * POST /sys/files/batch
-     * @param Request $request
-     * @return Response
      */
+    #[OA\Post(
+        path: '/sys/files/batch',
+        summary: '批量上传文件',
+        description: '批量上传多个文件',
+        tags: ['文件管理']
+    )]
+    #[DataResponse(schema: FileUploadResponse::class)]
     public function batchUpload(Request $request): Response
     {
-        try {
-            // 获取上传的文件数组
-            $uploadedFiles = $request->file('files');
-            if (!$uploadedFiles || !is_array($uploadedFiles)) {
-                return R::error('请选择要上传的文件', Code::PARAMETER_ERROR->value);
-            }
-
-            // 验证文件
-            $validator = new FileValidator();
-            $validator->validateBatchUploadData(['files' => $uploadedFiles]);
-
-            // 获取其他参数
-            $params = [
-                'storage_type' => $request->post('storage_type', 'local'),
-                'bucket_name' => $request->post('bucket_name', ''),
-                'created_by' => $request->post('created_by', 0),
-            ];
-
-            $results = $this->fileService->batchUploadFiles($uploadedFiles, $params);
-            return R::data($results, '批量上传完成');
-
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('批量上传失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        $uploadedFiles = $request->file('files');
+        if (!$uploadedFiles || !is_array($uploadedFiles)) {
+            throw new ApiException('请选择要上传的文件', Code::PARAMETER_ERROR->value);
         }
+
+        $params = [
+            'storage_type' => $request->post('storage_type', 'local'),
+            'bucket_name' => $request->post('bucket_name', ''),
+            'created_by' => $request->post('created_by', 0),
+        ];
+
+        $results = $this->fileService->batchUploadFiles($uploadedFiles, $params);
+        return R::data($results, '批量上传完成');
     }
 
     /**
      * 更新文件信息
-     * PUT /sys/files/{id}
-     * @param Request $request
-     * @param int $id
-     * @param array $fields
-     * @return Response
      */
-    public function update(Request $request, int $id, array $fields = []): Response
+    #[OA\Put(
+        path: '/sys/files/{id}',
+        summary: '更新文件信息',
+        description: '更新文件的名称、路径、状态等信息',
+        tags: ['文件管理'],
+        x: [
+            OpenApiModifier::X_PATH_PARAMETERS => [
+                'id' => ['type' => 'integer', 'description' => '文件ID'],
+            ],
+            OpenApiModifier::X_REQUEST_BODY => FileRequest::class
+        ]
+    )]
+    #[DataResponse(schema: FileResponse::class)]
+    public function update(Request $request, int $id): Response
     {
-        try {
-            // 添加更新者信息
-            $validatedData['updated_by'] = $request->post('updated_by', 0);
-
-            $file = $this->fileService->update($id, $validatedData);
-            return R::data($file, '更新文件信息成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('更新文件信息失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        $data = $this->validator->scene('update')->setAll()->check();
+        $data['updated_by'] = $request->post('updated_by', 0);
+        $file = $this->fileService->update($id, $data);
+        return R::data($file, '更新文件信息成功');
     }
 
     /**
      * 删除文件
-     * DELETE /sys/files/{id}
-     * @param int $id
-     * @return Response
      */
+    #[OA\Delete(
+        path: '/sys/files/{id}',
+        summary: '删除文件',
+        description: '删除指定ID的文件，包括物理文件和数据库记录',
+        tags: ['文件管理'],
+        x: [OpenApiModifier::X_PATH_PARAMETERS => [
+            'id' => ['type' => 'integer', 'description' => '文件ID'],
+        ]]
+    )]
+    #[DataResponse()]
     public function destroy(int $id): Response
     {
-        try {
-            $result = $this->fileService->deleteFile($id);
-            return R::success($result, '删除文件成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('删除文件失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        $params = $this->validator->scene('destroy')->setPath()->check();
+        $this->fileService->deleteFile($params['id']);
+        return R::ok('删除文件成功');
     }
 
     /**
      * 批量删除文件
-     * DELETE /sys/files/batch
-     * @param Request $request
-     * @return Response
      */
+    #[OA\Delete(
+        path: '/sys/files/batch',
+        summary: '批量删除文件',
+        description: '批量删除多个文件，包括物理文件和数据库记录',
+        tags: ['文件管理'],
+        x: [OpenApiModifier::X_REQUEST_BODY => FileBatchDeleteRequest::class]
+    )]
+    #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        try {
-            $ids = $request->post('ids', []);
-            $result = $this->fileService->batchDeleteFiles($ids);
-            return R::success($result, '批量删除文件成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('批量删除文件失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        $data = $this->validator->scene('batchDestroy')->setPost()->check();
+        $result = $this->fileService->batchDeleteFiles($data['ids']);
+        return R::success($result, '批量删除文件成功');
     }
 
     /**
      * 下载文件
-     * GET /sys/files/{id}/download
-     * @param Request $request
-     * @param int $id
-     * @return Response
      */
+    #[OA\Get(
+        path: '/sys/files/{id}/download',
+        summary: '下载文件',
+        description: '获取文件下载链接或直接下载文件',
+        tags: ['文件管理'],
+        x: [OpenApiModifier::X_PATH_PARAMETERS => [
+            'id' => ['type' => 'integer', 'description' => '文件ID'],
+        ]]
+    )]
+    #[DataResponse()]
     public function download(Request $request, int $id): Response
     {
-        try {
+        $params = $this->validator->scene('download')->setPath()->check();
+        $downloadInfo = $this->fileService->downloadFile($params['id']);
 
-            $downloadInfo = $this->fileService->downloadFile($id);
-
-            // 对于本地文件，返回文件响应
-            if ($downloadInfo['storage_type'] === 'local') {
-                $filePath = public_path('uploads/' . $downloadInfo['file_path']);
-                if (!file_exists($filePath)) {
-                    return R::error('文件不存在', Code::PARAMETER_ERROR->value);
-                }
-
-                return response()->download($filePath, $downloadInfo['file_name']);
+        if ($downloadInfo['storage_type'] === 'local') {
+            $filePath = public_path('uploads/' . $downloadInfo['file_path']);
+            if (!file_exists($filePath)) {
+                throw new ApiException('文件不存在', Code::PARAMETER_ERROR->value);
             }
-
-            // 对于云存储，返回重定向或预签名URL
-            return R::data(['url' => $downloadInfo['file_url']], '获取下载链接成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getMessage(), $e->getCode());
-        } catch (\Exception $e) {
-            return R::error('下载文件失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+            return response()->download($filePath, $downloadInfo['file_name']);
         }
+
+        return R::data(['url' => $downloadInfo['file_url']], '获取下载链接成功');
     }
 
     /**
      * 获取文件统计信息
-     * GET /sys/files/stats
-     * @param Request $request
-     * @return Response
      */
+    #[OA\Get(
+        path: '/sys/files/stats',
+        summary: '文件统计',
+        description: '获取文件数量、存储大小等统计信息',
+        tags: ['文件管理']
+    )]
+    #[DataResponse(schema: FileStatsResponse::class)]
     public function stats(Request $request): Response
     {
-        try {
-            $stats = $this->fileService->getFileStats();
-            return R::success($stats, '获取文件统计信息成功');
-
-        } catch (\Exception $e) {
-            return R::error('获取文件统计信息失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
-        }
+        $stats = $this->fileService->getFileStats();
+        return R::success($stats, '获取文件统计信息成功');
     }
 }
