@@ -8,6 +8,8 @@ use plugin\nanoadmin\app\middleware\PermissionMiddleware;
 use plugin\nanoadmin\app\schema\log\LogLoginQuery;
 use plugin\nanoadmin\app\schema\log\LogLoginResponse;
 use plugin\nanoadmin\app\service\LogLoginService;
+use plugin\nanoadmin\app\library\swagger\OpenApiModifier;
+use plugin\nanoadmin\app\library\swagger\SchemaConstants;
 use plugin\nanoadmin\app\library\swagger\annotation\response\PageResponse;
 use plugin\nanoadmin\app\library\swagger\annotation\response\DataResponse;
 use plugin\nanoadmin\app\validator\log\LogLoginValidator;
@@ -15,32 +17,22 @@ use plugin\nanoadmin\app\common\R;
 use support\annotation\Middleware;
 use support\Request;
 use support\Response;
-use plugin\nanoadmin\app\library\swagger\SchemaConstants;
 
 /**
  * 登录日志控制器
+ *
  */
 #[OA\Tag(name: '登录日志', description: '登录日志管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class LogLoginController extends BaseController
 {
-    private LogLoginService $logLoginService;
+    private LogLoginService $service;
     private LogLoginValidator $validator;
 
-    public function __construct(LogLoginService $logLoginService)
+    public function __construct(LogLoginService $service, LogLoginValidator $validator)
     {
-        $this->logLoginService = $logLoginService;
-        $this->validator = new LogLoginValidator();
-    }
-
-    protected function getService(): LogLoginService
-    {
-        return $this->logLoginService;
-    }
-
-    protected function getModelName(): string
-    {
-        return 'LogLogin';
+        $this->service = $service;
+        $this->validator = $validator;
     }
 
     #[OA\Get(
@@ -52,27 +44,22 @@ class LogLoginController extends BaseController
     #[PageResponse(schema: LogLoginResponse::class)]
     public function page(Request $request): Response
     {
-        try {
-            // ✅ 使用 validateData() 获取验证后的数据
-            $params = $this->validator->validateData($request->get(), 'page');
-            return R::paginate($this->getService()->getPage($params));
-        } catch (\Exception $e) {
-            return R::error($e->getMessage());
-        }
+        $params = $this->validator->scene('page')->setGet()->check();
+        return R::paginate($this->service->getPage($params));
     }
 
     #[OA\Get(
         path: '/sys/login-log/{id}',
         summary: '登录日志详情',
-        tags: ['登录日志']
+        tags: ['登录日志'],
+        x: [OpenApiModifier::X_PATH_PARAMETERS => [
+            'id' => ['type' => 'integer', 'description' => '日志ID'],
+        ]]
     )]
     #[DataResponse(schema: LogLoginResponse::class)]
     public function show(int $id): Response
     {
-        try {
-            return parent::show($id);
-        } catch (\Exception $e) {
-            return R::error($e->getMessage());
-        }
+        $params = $this->validator->scene('show')->setPath()->check();
+        return R::success($this->service->getById($params['id']), '获取详情成功');
     }
 }

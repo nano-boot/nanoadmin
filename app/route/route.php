@@ -25,10 +25,3 @@ Route::group('/sys/menu', function () {
     Route::post('/sort', [plugin\nanoadmin\app\controller\MenuController::class, 'sort']);
 
 });
-
-// 操作日志相关路由
-Route::group('/sys/operation-log', function () {
-    Route::get('', [plugin\nanoadmin\app\controller\LogOperationController::class, 'page']);
-    Route::get('/{id}', [plugin\nanoadmin\app\controller\LogOperationController::class, 'show']);
-});
-
