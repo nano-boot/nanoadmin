@@ -13,7 +13,6 @@ use plugin\nanoadmin\app\common\Code;
  * 特性：
  * - 自动生成 sceneXxx() 方法（通过 __call 拦截）
  * - 统一 unique 规则处理（基于路由参数或上下文）
- * - 通用辅助方法（validateId, validateBatchIds 等）
  *
  * 继承 support\validation\Validator，提供：
  * - make() 静态工厂方法
@@ -262,7 +261,7 @@ abstract class ValidatorBaseWebman
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // 通用验证方法
+    // 链式调用方法
     // ═══════════════════════════════════════════════════════════════
 
     /**
@@ -270,14 +269,15 @@ abstract class ValidatorBaseWebman
      *
      * @param array $data 要验证的数据
      * @param string|null $scene 验证场景
-     * @param array $context 额外的上下文数据
      * @return array
      * @throws ApiException
      */
-    public function validateData(array $data, ?string $scene = null, array $context = []): array
+    public function validateData(array $data, ?string $scene = null): array
     {
-        $rules = $this->getSceneRules($scene);
-        $rules = $this->resolveContextPlaceholders($rules, $context);
+        $rules = $this->rules();
+        if ($scene !== null) {
+            $rules = $this->getRulesByScene($scene, $rules);
+        }
 
         $factory = \Webman\Validation\Factory\ValidationFactory::getFactory();
         $validator = $factory->make($data, $rules, $this->messages(), $this->attributes());
@@ -350,17 +350,38 @@ abstract class ValidatorBaseWebman
     /**
      * 设置验证场景
      *
-     * @param string $name 场景名称
+     * 不传参数时，自动从 `request()->action` 推断场景名（直接使用 action 名）。
+     *
+     * @param string|null $name 场景名称，不传则自动推断
      * @return $this
      * @throws \InvalidArgumentException
      *
      * @example
-     * $data = $validator->scene('update')->setPost()->check();
-     * // 或使用魔术方法：$validator->sceneUpdate()->setPost()->check();
+     * $data = $validator->scene('create')->setPost()->check();
+     * $data = $validator->scene('update')->setPost()->check($id);
+     * $data = $validator->scene()->setGet()->check();  // 自动推断
      */
-    public function scene(string $name): static
+    public function scene(?string $name = null): static
     {
+        if ($name === null) {
+            $name = $this->inferSceneFromRequest();
+        }
+
         return $this->bindScene($name);
+    }
+
+    /**
+     * 从 request() 获取当前控制器方法名，自动推断场景名
+     */
+    private function inferSceneFromRequest(): string
+    {
+        $method = request()->action ?? '';
+
+        if ($method === '') {
+            throw new \InvalidArgumentException('无法从 request() 获取 action，请显式传入场景名');
+        }
+
+        return $method;
     }
 
     /**
@@ -405,43 +426,6 @@ abstract class ValidatorBaseWebman
 
         $data = $data ?? $this->_data ?? request()->all();
 
-        return $this->validateData($data, $this->_scene, $this->_context);
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 内部辅助方法
-    // ═══════════════════════════════════════════════════════════════
-
-    /**
-     * 获取场景规则
-     */
-    protected function getSceneRules(?string $scene): array
-    {
-        $allRules = $this->rules();
-        if ($scene === null) {
-            return $allRules;
-        }
-
-        return $this->getRulesByScene($scene, $allRules);
-    }
-
-    /**
-     * 解析上下文占位符
-     */
-    protected function resolveContextPlaceholders(array $rules, array $context): array
-    {
-        foreach ($rules as $field => &$fieldRules) {
-            if (is_array($fieldRules)) {
-                foreach ($fieldRules as $i => &$rule) {
-                    if (is_string($rule) && isset($context[$rule])) {
-                        $rule = $context[$rule];
-                    }
-                }
-                unset($rule);
-            }
-        }
-        unset($fieldRules);
-
-        return $rules;
+        return $this->validateData($data, $this->_scene);
     }
 }

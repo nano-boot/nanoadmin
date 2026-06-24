@@ -246,11 +246,11 @@ class AdminValidator extends ValidatorBaseWebman
 
             'assignRoles' => ['role_ids'],
 
-            'batchDelete' => ['ids'],
+            'batchDestroy' => ['ids'],
 
             'show' => ['id'],
 
-            'delete' => ['id'],
+            'destroy' => ['id'],
 
             'page' => ['page', 'limit', 'keyword'],
 

@@ -183,7 +183,7 @@ class DictTypeValidator extends ValidatorBaseWebman
             ],
             'show' => ['id'],
             'destroy' => ['id'],
-            'batchDelete' => ['ids'],
+            'batchDestroy' => ['ids'],
         ];
     }
 }

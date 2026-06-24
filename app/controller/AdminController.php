@@ -101,7 +101,7 @@ class AdminController extends BaseController
     public function update(Request $request, int $id): Response
     {
         $data = $request->post();
-        $data = $this->validator->scene('update')->check($data);
+        $data = $this->validator->scene()->check($data);
         return R::data($this->service->update($id, $data), '更新成功');
     }
 
@@ -129,7 +129,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        $data = $this->validator->sceneBatchDelete()->setPost()->check();
+        $data = $this->validator->scene()->setPost()->check();
         $result = $this->service->batchDeleteAdmins($data['ids']);
         return R::success($result, '批量删除管理员成功');
     }

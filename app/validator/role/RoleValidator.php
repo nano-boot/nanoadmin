@@ -202,8 +202,8 @@ class RoleValidator extends ValidatorBaseWebman
 
             'assignRoles' => ['id', 'role_ids'],
 
-            'delete' => ['id'],
-            'batchDelete' => ['ids'],
+            'destroy' => ['id'],
+            'batchDestroy' => ['ids'],
             'show' => ['id'],
             'index' => ['page', 'limit', 'keyword', 'status_filter'],
         ];

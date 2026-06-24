@@ -316,7 +316,7 @@ class MenuValidator extends ValidatorBaseWebman
 
             'show' => ['id'],
             'destroy' => ['id'],
-            'batchDelete' => ['ids'],
+            'batchDestroy' => ['ids'],
             'index' => ['page', 'limit', 'keyword', 'status', 'type_filter', 'parent_id_filter'],
         ];
     }
