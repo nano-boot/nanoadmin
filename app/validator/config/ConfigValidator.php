@@ -13,7 +13,7 @@ use support\validation\Rule as IlluminateRule;
  * 使用示例：
  * ```php
  * // 创建配置
- * $data = $validator->setScene('store')->setPost()->check();
+ * $data = $validator->scene('store')->setPost()->check();
  * ```
  *
  * @author NanoAdmin Team

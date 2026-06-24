@@ -12,7 +12,7 @@ use support\validation\Rule as IlluminateRule;
  * 使用示例：
  * ```php
  * // 上传验证
- * $data = $validator->setScene('upload')->setPost()->check();
+ * $data = $validator->scene('upload')->setPost()->check();
  * ```
  *
  * @author NanoAdmin Team

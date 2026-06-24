@@ -13,13 +13,13 @@ use support\validation\Rule;
  * 使用示例：
  * ```php
  * // 方式1：控制器中（使用请求数据）
- * $data = $validator->setScene('create')->setPost()->check();
+ * $data = $validator->scene('create')->setPost()->check();
  *
  * // 方式2：传入自定义数据（check 支持接收数据参数）
- * $data = $validator->setScene('create')->check($customData);
+ * $data = $validator->scene('create')->check($customData);
  *
  * // 方式3：带上下文（排除自身）
- * $data = $validator->withContext(['excludeId' => $id])->setScene('update')->setPost()->check();
+ * $data = $validator->withContext(['excludeId' => $id])->scene('update')->setPost()->check();
  * ```
  *
  * @author NanoAdmin Team

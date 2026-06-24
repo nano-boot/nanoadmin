@@ -92,7 +92,7 @@ class AuthController
     #[DataResponse(schema: LoginResponse::class)]
     public function login(Request $request): Response
     {
-        $data = $this->validator->setScene('login')->setPost()->check();
+        $data = $this->validator->scene('login')->setPost()->check();
         $ip = $request->getRealIp() ?? '';
         $userAgent = $request->header('User-Agent', '');
 

@@ -13,10 +13,10 @@ use support\validation\Rule as IlluminateRule;
  * 使用示例：
  * ```php
  * // 控制器中
- * $data = $validator->setScene('store')->setPost()->check();
+ * $data = $validator->scene('store')->setPost()->check();
  *
  * // 带上下文（排除自身）
- * $data = $validator->withContext(['excludeId' => $id])->setScene('update')->setPost()->check();
+ * $data = $validator->withContext(['excludeId' => $id])->scene('update')->setPost()->check();
  * ```
  *
  * @author NanoAdmin Team

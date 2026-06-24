@@ -13,7 +13,7 @@ use plugin\nanoadmin\app\validator\ValidatorBaseWebman;
  * 使用示例：
  * ```php
  * // 登录验证
- * $data = $validator->setScene('login')->setPost()->check();
+ * $data = $validator->scene('login')->setPost()->check();
  * ```
  *
  * @author NanoAdmin Team
