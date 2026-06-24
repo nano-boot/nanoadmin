@@ -54,7 +54,7 @@ class AdminController extends BaseController
     #[PageResponse(schema: AdminResponse::class)]
     public function page(Request $request): Response
     {
-        $params = $this->validator->scenePage()->setGet()->check();
+        $params = $this->validator->scene('page')->setGet()->check();
         return R::paginate($this->service->getPage($params));
     }
 
@@ -67,10 +67,10 @@ class AdminController extends BaseController
         ]]
     )]
     #[DataResponse(schema: AdminResponse::class)]
-    public function show(int $id = 0): Response
+    public function show(int $id): Response
     {
-        $this->validator->setData(['id' => $id])->sceneShow()->check();
-        return R::success($this->service->getById($id), '获取详情成功');
+        $params = $this->validator->scene('show')->setPath()->check();
+        return R::success($this->service->getById($params['id']), '获取详情成功');
     }
 
     #[OA\Post(
@@ -82,7 +82,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function create(Request $request): Response
     {
-        $data = $this->validator->sceneCreate()->setPost()->check();
+        $data = $this->validator->scene('create')->setPost()->check();
         return R::created($this->service->create($data));
     }
 
@@ -100,8 +100,7 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
-        $data = $request->post();
-        $data = $this->validator->scene()->check($data);
+        $data = $this->validator->scene('update')->setAll()->check();
         return R::data($this->service->update($id, $data), '更新成功');
     }
 
@@ -116,8 +115,8 @@ class AdminController extends BaseController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        $this->validator->setData(['id' => $id])->sceneShow()->check();
-        $this->service->delete($id);
+        $params = $this->validator->scene('destroy')->setPath()->check();
+        $this->service->delete($params['id']);
         return R::success(null, '删除成功');
     }
 

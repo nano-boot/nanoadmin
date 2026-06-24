@@ -46,7 +46,7 @@ class ConfigController extends BaseController
     #[PageResponse(schema: ConfigResponse::class)]
     public function page(Request $request): Response
     {
-        $params = $this->validator->validateData($request->get(), 'page');
+        $params = $this->validator->scene('page')->setGet()->check();
         return R::paginate($this->service->getPage($params));
     }
 
@@ -69,7 +69,8 @@ class ConfigController extends BaseController
     #[DataResponse(schema: ConfigItemResponse::class)]
     public function getByGroup(Request $request): Response
     {
-        $group = $this->validator->validateData($request->get(), 'get_by_group')['group'] ?? 'basic';
+        $data = $this->validator->scene('getByGroup')->setGet()->check();
+        $group = $data['group'] ?? 'basic';
         return R::data($this->service->getByGroup($group), '获取配置成功');
     }
 
@@ -84,7 +85,8 @@ class ConfigController extends BaseController
     #[DataResponse(schema: ConfigResponse::class)]
     public function show(int $id): Response
     {
-        return R::success($this->service->getById($id), '获取详情成功');
+        $params = $this->validator->scene('show')->setPath()->check();
+        return R::success($this->service->getById($params['id']), '获取详情成功');
     }
 
     #[OA\Post(
@@ -96,7 +98,7 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function create(Request $request): Response
     {
-        $data = $this->validator->validateData($request->post(), 'store');
+        $data = $this->validator->scene('store')->setPost()->check();
         return R::created($this->service->create($data));
     }
 
@@ -114,7 +116,7 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
-        $data = $this->validator->validateUpdateData($request->post(), $id);
+        $data = $this->validator->scene('update')->setAll()->check();
         return R::data($this->service->update($id, $data), '更新成功');
     }
 
@@ -131,7 +133,7 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function batchUpdate(Request $request): Response
     {
-        $data = $this->validator->validateData($request->post(), 'batch_update');
+        $data = $this->validator->scene('batchUpdate')->setPost()->check();
         $count = $this->service->batchUpdateValues($data['items'] ?? []);
         return R::success(['updated' => $count], '保存成功');
     }
@@ -144,7 +146,7 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        $data = $this->validator->validateData($request->post(), 'batch_destroy');
+        $data = $this->validator->scene('batchDestroy')->setPost()->check();
         return R::success(['count' => $this->service->batchDelete($data['ids'])], '批量删除成功');
     }
 
@@ -159,7 +161,8 @@ class ConfigController extends BaseController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        $this->service->delete($id);
+        $params = $this->validator->scene('destroy')->setPath()->check();
+        $this->service->delete($params['id']);
         return R::success(null, '删除成功');
     }
 }

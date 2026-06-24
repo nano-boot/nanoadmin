@@ -12,12 +12,12 @@ use support\validation\Rule;
  *
  * 使用示例：
  * ```php
- * // 创建字典数据
+ * // 控制器中
  * $data = $validator->scene('store')->setPost()->check();
- * ```
  *
- * @author NanoAdmin Team
- * @since 1.0.0
+ * // 带上下文（排除自身）
+ * $data = $validator->withContext(['excludeId' => $id])->scene('update')->setPost()->check();
+ * ```
  */
 class DictDataValidator extends ValidatorBase
 {
@@ -54,11 +54,11 @@ class DictDataValidator extends ValidatorBase
                 'string',
                 'min:1',
                 'max:100',
+                $this->unique('label'),
             ],
             'value' => [
                 'required',
                 'string',
-                'min:1',
                 'max:255',
             ],
             'sort' => [
@@ -118,10 +118,10 @@ class DictDataValidator extends ValidatorBase
             'label.string' => '字典标签必须是字符串',
             'label.min' => '字典标签长度至少1个字符',
             'label.max' => '字典标签长度不能超过100个字符',
+            'label.unique' => '字典标签已存在',
 
             'value.required' => '字典值不能为空',
             'value.string' => '字典值必须是字符串',
-            'value.min' => '字典值长度至少1个字符',
             'value.max' => '字典值长度不能超过255个字符',
 
             'sort.integer' => '排序必须是整数',
@@ -155,29 +155,10 @@ class DictDataValidator extends ValidatorBase
     public function scenes(): array
     {
         return [
-            'page' => [
-                'current',
-                'size',
-                'dict_type_id',
-                'keyword',
-                'status',
-            ],
-            'store' => [
-                'dict_type_id',
-                'label',
-                'value',
-                'sort',
-                'status',
-            ],
-            'update' => [
-                'id',
-                'dict_type_id',
-                'label',
-                'value',
-                'sort',
-                'status',
-            ],
+            'page' => ['current', 'size', 'dict_type_id', 'keyword', 'status'],
             'show' => ['id'],
+            'store' => ['dict_type_id', 'label', 'value', 'sort', 'status'],
+            'update' => ['id', 'label', 'value', 'sort', 'status'],
             'destroy' => ['id'],
             'batchDestroy' => ['ids'],
         ];

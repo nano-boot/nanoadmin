@@ -26,6 +26,8 @@ use support\Response;
  * - Controller 只负责接收请求、调用验证器、调用 Service、返回响应
  * - 异常由全局异常处理器统一处理
  * - 业务逻辑全部在 Service 层
+ *
+ * 验证方式：使用链式调用 $validator->scene()->setXxx()->check()
  */
 #[OA\Tag(name: '字典数据', description: '字典数据管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
@@ -49,7 +51,7 @@ class DictDataController extends BaseController
     #[PageResponse(schema: DictDataResponse::class)]
     public function page(Request $request): Response
     {
-        $params = $this->validator->validateData($request->get(), 'page');
+        $params = $this->validator->scene('page')->setGet()->check();
         return R::paginate($this->dictDataService->getPage($params));
     }
 
@@ -64,7 +66,8 @@ class DictDataController extends BaseController
     #[DataResponse(schema: DictDataResponse::class)]
     public function show(int $id): Response
     {
-        return R::success($this->dictDataService->getById($id), '获取详情成功');
+        $params = $this->validator->scene('show')->setPath()->check();
+        return R::success($this->dictDataService->getById($params['id']), '获取详情成功');
     }
 
     #[OA\Post(
@@ -76,7 +79,7 @@ class DictDataController extends BaseController
     #[DataResponse()]
     public function create(Request $request): Response
     {
-        $data = $this->validator->validateData($request->post(), 'store');
+        $data = $this->validator->scene('store')->setPost()->check();
         $result = $this->dictDataService->create($data);
         return R::created($result);
     }
@@ -95,7 +98,7 @@ class DictDataController extends BaseController
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
-        $data = $this->validator->validateUpdateData($request->post(), $id);
+        $data = $this->validator->scene('update')->setAll()->check();
         $result = $this->dictDataService->update($id, $data);
         return R::data($result, '更新成功');
     }
@@ -111,7 +114,8 @@ class DictDataController extends BaseController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        $this->dictDataService->delete($id);
+        $params = $this->validator->scene('destroy')->setPath()->check();
+        $this->dictDataService->delete($params['id']);
         return R::success(null, '删除成功');
     }
 
@@ -123,8 +127,8 @@ class DictDataController extends BaseController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        $data = $request->post();
-        $result = $this->dictDataService->batchDelete($data['ids']);
+        $this->validator->scene('batchDestroy')->setPost()->check();
+        $result = $this->dictDataService->batchDelete(request()->input('ids', []));
         return R::success($result, '批量删除成功');
     }
 }

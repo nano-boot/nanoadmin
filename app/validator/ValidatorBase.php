@@ -323,6 +323,33 @@ abstract class ValidatorBase
     }
 
     /**
+     * 捕获所有参数（请求参数 + 路由参数）
+     *
+     * 请求参数优先（同名字段以请求参数为准），路由参数作为补充。
+     * 适用场景：RESTful 路由中需要同时校验 URL 中的 id 和 body/query 中的其他字段。
+     */
+    public function setAll(): static
+    {
+        $this->_data = array_merge(
+            (array) request()->route?->param() ?? [],
+            request()->all()
+        );
+        return $this;
+    }
+
+    /**
+     * 捕获路由参数
+     *
+     * 仅校验 URL 路径中的占位符参数（如 /api/sys/admin/{id} 中的 id）。
+     * 适用场景：纯路由参数驱动的接口（如按 ID 查询、删除等）。
+     */
+    public function setPath(): static
+    {
+        $this->_data = (array) (request()->route?->param() ?? []);
+        return $this;
+    }
+
+    /**
      * 自定义数据源
      */
     public function setData(array $data): static
@@ -424,8 +451,21 @@ abstract class ValidatorBase
             throw new ApiException(Code::VALIDATION_ERROR->value, '未指定场景，请先调用 scene() 或 sceneXxx()');
         }
 
-        $data = $data ?? $this->_data ?? request()->all();
+        $data ??= $this->_data ?: $this->captureRequestData();
 
         return $this->validateData($data, $this->_scene);
+    }
+
+    /**
+     * 兜底捕获请求数据
+     *
+     * 仅在用户未显式 setData/setPost/setGet/setAll 时触发。
+     */
+    private function captureRequestData(): array
+    {
+        return array_merge(
+            (array) (request()->route?->param() ?? []),
+            request()->all()
+        );
     }
 }

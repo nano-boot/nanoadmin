@@ -71,10 +71,10 @@ class AuthController
         ];
     }
 
-    public function __construct(AuthService $authService)
+    public function __construct(AuthService $authService, AuthValidator $validator)
     {
         $this->authService = $authService;
-        $this->validator = new AuthValidator();
+        $this->validator = $validator;
     }
 
     /**
@@ -157,7 +157,7 @@ class AuthController
     #[DataResponse(schema: TokenResponse::class)]
     public function refresh(Request $request): Response
     {
-        $data = $this->validator->validateRefreshData($request->post());
+        $data = $this->validator->scene('refresh')->setPost()->check();
         $result = $this->authService->refreshToken($data['refresh_token'] ?? '');
         return R::success($result, 'Token刷新成功');
     }
@@ -214,7 +214,7 @@ class AuthController
     #[DataResponse(schema: CheckResponse::class)]
     public function check(Request $request): Response
     {
-        $data = $this->validator->validateCheckData($request->post());
+        $data = $this->validator->scene('check')->setPost()->check();
         $token = $data['token'] ?? '';
 
         try {
