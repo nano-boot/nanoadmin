@@ -47,9 +47,29 @@ class RoleService extends BaseService
      */
     public function getPage(array $params = []): LengthAwarePaginator
     {
-        $paginator = parent::getPage($params);
+        $page = max(1, (int)($params['page'] ?? 1));
+        $limit = min(1000, max(1, (int)($params['limit'] ?? 15)));
 
-        // 格式化数据
+        $query = $this->model->handleSearch($this->model->query(), $params);
+        $query->select(static::$selectFields);
+        $query->withCount(['admins as userCount']);
+
+        $defaultOrders = $this->model::getDefaultOrder();
+        if (!empty($defaultOrders)) {
+            foreach ($defaultOrders as $order) {
+                $field = $order[0] ?? null;
+                if (!$field) {
+                    continue;
+                }
+                $direction = strtolower((string)($order[1] ?? 'asc'));
+                $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : 'asc';
+                $query->orderBy((string) $field, $direction);
+            }
+        } else {
+            $query->orderByDesc('id');
+        }
+
+        $paginator = $query->paginate($limit, ['*'], 'page', $page);
         $paginator->getCollection()->transform(function ($role) {
             return $this->formatRoleRow($role);
         });
@@ -71,6 +91,7 @@ class RoleService extends BaseService
             'description' => $role->description,
             'status' => $role->status,
             'sort' => $role->sort,
+            'userCount' => $role->userCount ?? 0,
             'created_at' => $role->created_at,
             'updated_at' => $role->updated_at
         ];
@@ -128,11 +149,28 @@ class RoleService extends BaseService
         if ($role) {
             $adminCount = $role->admins()->count();
             if ($adminCount > 0) {
-                throw new ApiException(Code::DATA_IN_USE, '角色正在使用中，无法删除');
+                throw new ApiException(
+                    Code::DATA_IN_USE,
+                    "角色「{$role->name}」下还有 {$adminCount} 个用户，无法删除，请先将用户转移至其他角色后再试"
+                );
             }
         }
 
-        return parent::delete($id);
+        try {
+            \support\Db::beginTransaction();
+
+            // 清理角色与菜单的关联
+            $role->menus()->detach();
+            // 清理角色与权限的关联
+            $role->permissions()->detach();
+
+            \support\Db::commit();
+
+            return parent::delete($id);
+        } catch (\Exception $e) {
+            \support\Db::rollBack();
+            throw new ApiException(Code::SYSTEM_ERROR, '删除角色失败：' . $e->getMessage());
+        }
     }
 
     /**
@@ -496,17 +534,40 @@ class RoleService extends BaseService
      */
     public function batchDeleteRoles(array $ids): int
     {
-        // 检查是否有角色正在使用
         $existingRoles = $this->model->whereIn('id', $ids)->get();
+        $failedRoles = [];
         /** @var Role $role */
         foreach ($existingRoles as $role) {
             $adminCount = $role->admins()->count();
             if ($adminCount > 0) {
-                throw new ApiException(Code::DATA_IN_USE, "角色 '{$role->name}' 正在使用中，无法删除");
+                $failedRoles[] = "「{$role->name}」（{$adminCount} 个用户）";
             }
         }
+        if (!empty($failedRoles)) {
+            throw new ApiException(
+                Code::DATA_IN_USE,
+                '以下角色下存在用户，无法删除：' . implode('、', $failedRoles) . '，请先将用户转移至其他角色后再试'
+            );
+        }
 
-        return parent::batchDelete($ids);
+        try {
+            \support\Db::beginTransaction();
+
+            // 批量清理角色与菜单、权限的关联（必须使用 Role 模型以访问关系方法）
+            $rolesToDelete = ModelFactory::role()->whereIn('id', $ids)->get();
+            /** @var Role $role */
+            foreach ($rolesToDelete as $role) {
+                $role->menus()->detach();
+                $role->permissions()->detach();
+            }
+
+            \support\Db::commit();
+
+            return parent::batchDelete($ids);
+        } catch (\Exception $e) {
+            \support\Db::rollBack();
+            throw new ApiException(Code::SYSTEM_ERROR, '批量删除角色失败：' . $e->getMessage());
+        }
     }
 
     /**

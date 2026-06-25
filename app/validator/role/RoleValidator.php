@@ -227,7 +227,7 @@ class RoleValidator extends ValidatorBase
             'destroy' => ['id'],
             'batchDestroy' => ['ids'],
             'show' => ['id'],
-            'index' => ['page', 'limit', 'keyword', 'status_filter'],
+            'page' => ['page', 'limit', 'keyword', 'status_filter'],
             'assignPermissions' => ['id', 'menuIds', 'authCodes'],
             'assignMenus' => ['id', 'menuIds'],
         ];

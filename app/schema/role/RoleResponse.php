@@ -26,6 +26,9 @@ class RoleResponse extends ResponseSchema
     #[OA\Property(description: '排序值', type: 'integer', example: 100)]
     public int $sort = 0;
 
+    #[OA\Property(description: '关联用户数', type: 'integer', example: 5)]
+    public int $userCount = 0;
+
     #[OA\Property(description: '状态（0禁用 1启用）', type: 'integer', example: 1)]
     public int $status = 1;
 

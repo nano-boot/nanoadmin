@@ -56,7 +56,8 @@ class RoleController extends BaseController
     #[PageResponse(schema: RoleResponse::class)]
     public function page(Request $request): Response
     {
-        return parent::page($request);
+        $params = $this->validator->scene('page')->setGet()->check();
+        return R::paginate($this->roleService->getPage($params));
     }
 
     #[OA\Get(
@@ -76,9 +77,11 @@ class RoleController extends BaseController
         tags: ['角色']
     )]
     #[DataResponse(schema: RoleResponse::class)]
-    public function show(int $id = 0): Response
+    public function show(int $id): Response
     {
-        return parent::show($id);
+        $this->validator->scene('show')->setPath()->check();
+        $data = $this->roleService->getById($id);
+        return R::success($data, '获取详情成功');
     }
 
     #[OA\Post(
@@ -90,7 +93,9 @@ class RoleController extends BaseController
     #[DataResponse()]
     public function create(Request $request): Response
     {
-        return parent::create($request);
+        $data = $this->validator->scene('store')->setPost()->check();
+        $result = $this->roleService->createRole($data);
+        return R::created($result);
     }
 
     #[OA\Put(
@@ -118,7 +123,9 @@ class RoleController extends BaseController
     #[DataResponse()]
     public function destroy(int $id): Response
     {
-        return parent::destroy($id);
+        $this->validator->scene('destroy')->setPath()->check();
+        $this->roleService->deleteRole($id);
+        return R::ok('删除成功');
     }
 
     #[OA\Delete(
@@ -129,7 +136,10 @@ class RoleController extends BaseController
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
-        return parent::batchDestroy($request);
+        $this->validator->scene('batchDestroy')->setPost()->check();
+        $ids = $request->post('ids', []);
+        $result = $this->roleService->batchDeleteRoles($ids);
+        return R::success($result, '批量删除成功');
     }
 
     #[OA\Post(
@@ -145,8 +155,6 @@ class RoleController extends BaseController
         $data = $this->validator
             ->scene('assignPermissions')
             ->check();
-
-        var_dump($data);
 
         $result = $this->roleService->assignPermissions($id, [
             'menuIds' => array_values(array_filter($data['menuIds'] ?? [], fn($v) => $v > 0)),
