@@ -4,7 +4,6 @@ namespace plugin\nanoadmin\app\controller;
 
 use OpenApi\Attributes as OA;
 use plugin\nanoadmin\app\common\R;
-use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\middleware\AuthMiddleware;
 use plugin\nanoadmin\app\middleware\PermissionMiddleware;
 use plugin\nanoadmin\app\schema\role\RoleQuery;
@@ -30,11 +29,12 @@ use support\Response;
 class RoleController extends BaseController
 {
     private RoleService $roleService;
+    private RoleValidator $validator;
 
-    public function __construct(RoleService $roleService)
+    public function __construct(RoleService $roleService, RoleValidator $validator)
     {
-        new RoleValidator(true);
         $this->roleService = $roleService;
+        $this->validator = $validator;
     }
 
     protected function getService(): RoleService
@@ -102,7 +102,11 @@ class RoleController extends BaseController
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
-        $this->roleService->updateRole($id, $request->post());
+        $data = $this->validator
+            ->scene('update')
+            ->setAll()
+            ->check();
+        $this->roleService->updateRole($id, $data);
         return R::ok();
     }
 
@@ -138,30 +142,15 @@ class RoleController extends BaseController
     #[DataResponse()]
     public function assignPermissions(int $id, Request $request): Response
     {
-        $id = (int)$id;
-        if ($id <= 0) {
-            return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
-        }
+        $data = $this->validator
+            ->scene('assignPermissions')
+            ->check();
 
-        $menuIds = $request->post('menuIds', []);
-        $authCodes = $request->post('authCodes', []);
-
-        if (!is_array($menuIds)) {
-            return R::error('菜单ID列表格式错误', Code::PARAMETER_ERROR->value);
-        }
-
-        if (!is_array($authCodes)) {
-            return R::error('权限编码列表格式错误', Code::PARAMETER_ERROR->value);
-        }
-
-        $menuIds = array_map('intval', $menuIds);
-        $menuIds = array_filter($menuIds, fn($id) => $id > 0);
-
-        $authCodes = array_filter($authCodes, fn($code) => is_string($code) && !empty($code));
+        var_dump($data);
 
         $result = $this->roleService->assignPermissions($id, [
-            'menuIds' => array_values($menuIds),
-            'authCodes' => array_values($authCodes)
+            'menuIds' => array_values(array_filter($data['menuIds'] ?? [], fn($v) => $v > 0)),
+            'authCodes' => array_values(array_filter($data['authCodes'] ?? [], fn($v) => is_string($v) && $v !== '')),
         ]);
 
         return R::data($result, '分配权限成功');
@@ -175,10 +164,7 @@ class RoleController extends BaseController
     #[DataResponse(schema: RolePermissionResponse::class)]
     public function getPermissions(int $id): Response
     {
-        $id = (int)$id;
-        if ($id <= 0) {
-            return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
-        }
+        $this->validator->scene('show')->setPath()->check();
         $permissions = $this->roleService->getRolePermissions($id);
         return R::data($permissions, '获取角色权限成功');
     }
@@ -192,19 +178,11 @@ class RoleController extends BaseController
     #[DataResponse()]
     public function assignMenus(int $id, Request $request): Response
     {
-        $id = (int)$id;
-        if ($id <= 0) {
-            return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
-        }
+        $data = $this->validator
+            ->scene('assignMenus')
+            ->check();
 
-        $menuIds = $request->post('menuIds', []);
-        if (!is_array($menuIds)) {
-            return R::error('菜单ID列表格式错误', Code::PARAMETER_ERROR->value);
-        }
-
-        $menuIds = array_map('intval', $menuIds);
-        $menuIds = array_filter($menuIds, fn($id) => $id > 0);
-
+        $menuIds = array_values(array_filter($data['menuIds'] ?? [], fn($v) => $v > 0));
         $result = $this->roleService->assignMenus($id, $menuIds);
         return R::data($result, '分配菜单成功');
     }
@@ -217,11 +195,7 @@ class RoleController extends BaseController
     #[DataResponse(schema: RoleMenuResponse::class)]
     public function getMenus(int $id): Response
     {
-        $id = (int)$id;
-        if ($id <= 0) {
-            return R::error('角色ID无效', Code::PARAMETER_ERROR->value);
-        }
-
+        $this->validator->scene('show')->setPath()->check();
         $menus = $this->roleService->getRoleMenus($id);
         return R::list($menus, '获取角色菜单成功');
     }

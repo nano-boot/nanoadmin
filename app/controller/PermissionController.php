@@ -2,277 +2,143 @@
 
 namespace plugin\nanoadmin\app\controller;
 
+use OpenApi\Attributes as OA;
+use plugin\nanoadmin\app\common\R;
+use plugin\nanoadmin\app\middleware\AuthMiddleware;
+use plugin\nanoadmin\app\middleware\PermissionMiddleware;
+use plugin\nanoadmin\app\schema\permission\PermissionQuery;
+use plugin\nanoadmin\app\schema\permission\PermissionRequest;
+use plugin\nanoadmin\app\schema\permission\PermissionResponse;
+use plugin\nanoadmin\app\service\PermissionService;
+use plugin\nanoadmin\app\library\swagger\OpenApiModifier;
+use plugin\nanoadmin\app\library\swagger\SchemaConstants;
+use plugin\nanoadmin\app\library\swagger\annotation\response\PageResponse;
+use plugin\nanoadmin\app\library\swagger\annotation\response\DataResponse;
+use plugin\nanoadmin\app\validator\PermissionValidator;
+use support\annotation\Middleware;
 use support\Request;
 use support\Response;
-use plugin\nanoadmin\app\common\R;
-use plugin\nanoadmin\app\common\ApiException;
-use plugin\nanoadmin\app\common\Code;
-use plugin\nanoadmin\app\service\PermissionService;
 
 /**
  * 权限控制器
+ *
  */
-class PermissionController
+#[OA\Tag(name: '权限', description: '权限管理')]
+#[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
+class PermissionController extends BaseController
 {
-    private PermissionService $permissionService;
+    private PermissionService $service;
+    private PermissionValidator $validator;
 
-    public function __construct()
+    public function __construct(PermissionService $service, PermissionValidator $validator)
     {
-        $this->permissionService = new PermissionService();
+        $this->service = $service;
+        $this->validator = $validator;
     }
 
     /**
      * 获取权限列表
-     * GET /sys/permissions
-     * @param Request $request
-     * @return Response
      */
-    public function page(Request $request)
+    #[OA\Get(
+        path: '/sys/permissions',
+        summary: '权限列表',
+        tags: ['权限'],
+        x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => PermissionQuery::class]
+    )]
+    #[PageResponse(schema: PermissionResponse::class)]
+    public function page(Request $request): Response
     {
-        try {
-            $params = [
-                'page' => (int)$request->get('page', 1),
-                'limit' => (int)$request->get('limit', 20),
-                'keyword' => $request->get('keyword', ''),
-                'resource_type' => $request->get('resource_type', ''),
-                'action_type' => $request->get('action_type', ''),
-            ];
-
-            $result = $this->permissionService->getPermissionList($params);
-
-            return R::paginate($result, '获取权限列表成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getCode(), $e->getMessage());
-        } catch (\Exception $e) {
-            return R::error(Code::SYSTEM_ERROR, '获取权限列表失败：' . $e->getMessage());
-        }
+        $params = $this->validator->scene('page')->setGet()->check();
+        return R::paginate($this->service->getPermissionList($params));
     }
 
     /**
      * 获取权限详情
-     * GET /sys/permissions/{id}
-     * @param int $id
-     * @return Response
      */
-    public function show(int $id = 0)
+    #[OA\Get(
+        path: '/sys/permissions/{id}',
+        summary: '权限详情',
+        tags: ['权限'],
+        x: [OpenApiModifier::X_PATH_PARAMETERS => [
+            'id' => ['type' => 'integer', 'description' => '权限ID'],
+        ]]
+    )]
+    #[DataResponse(schema: PermissionResponse::class)]
+    public function show(int $id): Response
     {
-        try {
-            
-            if ($id <= 0) {
-                return R::error(Code::PARAMETER_ERROR, '权限ID无效');
-            }
-
-            $permission = $this->permissionService->getPermissionById($id);
-
-            return R::success($permission, '获取权限详情成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getCode(), $e->getMessage());
-        } catch (\Exception $e) {
-            return R::error(Code::SYSTEM_ERROR, '获取权限详情失败：' . $e->getMessage());
-        }
+        $params = $this->validator->scene('show')->setPath()->check();
+        return R::success($this->service->getPermissionById($params['id']), '获取详情成功');
     }
 
     /**
      * 创建权限
-     * POST /sys/permissions
-     * @param Request $request
-     * @return Response
      */
-    public function store(Request $request)
+    #[OA\Post(
+        path: '/sys/permissions',
+        summary: '创建权限',
+        tags: ['权限'],
+        x: [OpenApiModifier::X_REQUEST_BODY => PermissionRequest::class]
+    )]
+    #[DataResponse()]
+    public function store(Request $request): Response
     {
-        try {
-            $data = [
-                'code' => $request->post('code', ''),
-                'name' => $request->post('name', ''),
-                'resource_type' => $request->post('resource_type', ''),
-                'action_type' => $request->post('action_type', ''),
-                'description' => $request->post('description', ''),
-            ];
-
-            // 参数验证
-            $validation = $this->validatePermissionData($data, true);
-            if ($validation !== true) {
-                return R::error(Code::PARAMETER_ERROR, $validation);
-            }
-
-            $permission = $this->permissionService->createPermission($data);
-
-            return R::created($permission, '创建权限成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getCode(), $e->getMessage());
-        } catch (\Exception $e) {
-            return R::error(Code::SYSTEM_ERROR, '创建权限失败：' . $e->getMessage());
-        }
+        $data = $this->validator->scene('store')->setPost()->check();
+        return R::created($this->service->createPermission($data), '创建成功');
     }
 
     /**
      * 更新权限
-     * PUT /sys/permissions/{id}
-     * @param Request $request
-     * @return Response
      */
-    public function update(Request $request)
+    #[OA\Put(
+        path: '/sys/permissions/{id}',
+        summary: '更新权限',
+        tags: ['权限'],
+        x: [
+            OpenApiModifier::X_PATH_PARAMETERS => [
+                'id' => ['type' => 'integer', 'description' => '权限ID'],
+            ],
+            OpenApiModifier::X_REQUEST_BODY => PermissionRequest::class
+        ]
+    )]
+    #[DataResponse()]
+    public function update(Request $request, int $id): Response
     {
-        try {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                return R::error(Code::PARAMETER_ERROR, '权限ID无效');
-            }
-
-            $data = [
-                'code' => $request->post('code', ''),
-                'name' => $request->post('name', ''),
-                'resource_type' => $request->post('resource_type', ''),
-                'action_type' => $request->post('action_type', ''),
-                'description' => $request->post('description', ''),
-            ];
-
-            // 参数验证
-            $validation = $this->validatePermissionData($data, false);
-            if ($validation !== true) {
-                return R::error(Code::PARAMETER_ERROR, $validation);
-            }
-
-            $permission = $this->permissionService->updatePermission($id, $data);
-                return R::updated($permission, '更新权限成功');
-
-        } catch (ApiException $e) {
-            return R::error($e->getCode(), $e->getMessage());
-        } catch (\Exception $e) {
-            return R::error(Code::SYSTEM_ERROR, '更新权限失败：' . $e->getMessage());
-        }
+        $data = $this->validator->scene('update')->setAll()->check();
+        return R::data($this->service->updatePermission($id, $data), '更新成功');
     }
 
     /**
      * 删除权限
-     * DELETE /sys/permissions/{id}
-     * @param Request $request
-     * @return Response
      */
-    public function destroy(Request $request)
+    #[OA\Delete(
+        path: '/sys/permissions/{id}',
+        summary: '删除权限',
+        tags: ['权限'],
+        x: [OpenApiModifier::X_PATH_PARAMETERS => [
+            'id' => ['type' => 'integer', 'description' => '权限ID'],
+        ]]
+    )]
+    #[DataResponse()]
+    public function destroy(int $id): Response
     {
-        try {
-            $id = (int)$request->get('id', 0);
-            
-            if ($id <= 0) {
-                $response = R::error(Code::PARAMETER_ERROR, '权限ID无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-            }
-
-            $this->permissionService->deletePermission($id);
-
-            $response = R::deleted('删除权限成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = R::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = R::error(Code::SYSTEM_ERROR, '删除权限失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
+        $params = $this->validator->scene('destroy')->setPath()->check();
+        $this->service->deletePermission($params['id']);
+        return R::success(null, '删除成功');
     }
 
     /**
      * 批量删除权限
-     * DELETE /sys/permissions/batch
-     * @param Request $request
-     * @return Response
      */
-    public function batchDestroy(Request $request)
+    #[OA\Delete(
+        path: '/sys/permissions/batch',
+        summary: '批量删除权限',
+        tags: ['权限']
+    )]
+    #[DataResponse()]
+    public function batchDestroy(Request $request): Response
     {
-        try {
-            $ids = $request->post('ids', []);
-            
-            if (!is_array($ids) || empty($ids)) {
-                $response = R::error(Code::PARAMETER_ERROR, '请选择要删除的权限');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-            }
-
-            // 转换为整数数组
-            $ids = array_map('intval', $ids);
-            $ids = array_filter($ids, function($id) {
-                return $id > 0;
-            });
-
-            if (empty($ids)) {
-                $response = R::error(Code::PARAMETER_ERROR, '权限ID列表无效');
-                return new Response(400, ['Content-Type' => 'application/json'], json_encode($response));
-            }
-
-            $result = $this->permissionService->batchDeletePermissions($ids);
-
-            $response = R::success($result, '批量删除权限成功');
-            return new Response(200, ['Content-Type' => 'application/json'], json_encode($response));
-
-        } catch (ApiException $e) {
-            $response = R::error($e->getCode(), $e->getMessage());
-            $httpCode = Code::getHttpCodeByCode($e->getCode());
-            return new Response($httpCode, ['Content-Type' => 'application/json'], json_encode($response));
-        } catch (\Exception $e) {
-            $response = R::error(Code::SYSTEM_ERROR, '批量删除权限失败：' . $e->getMessage());
-            return new Response(500, ['Content-Type' => 'application/json'], json_encode($response));
-        }
-    }
-
-    /**
-     * 验证权限数据
-     * @param array $data
-     * @param bool $isCreate
-     * @return string|true
-     */
-    private function validatePermissionData(array $data, bool $isCreate = false)
-    {
-        // 权限代码验证
-        if (empty($data['code'])) {
-            return '权限代码不能为空';
-        }
-
-        if (strlen($data['code']) < 2 || strlen($data['code']) > 100) {
-            return '权限代码长度必须在2-100个字符之间';
-        }
-
-        if (!preg_match('/^[a-zA-Z0-9_.-]+$/', $data['code'])) {
-            return '权限代码只能包含字母、数字、下划线、点和连字符';
-        }
-
-        // 权限名称验证
-        if (empty($data['name'])) {
-            return '权限名称不能为空';
-        }
-
-        if (strlen($data['name']) > 100) {
-            return '权限名称长度不能超过100个字符';
-        }
-
-        // 资源类型验证
-        if (empty($data['resource_type'])) {
-            return '资源类型不能为空';
-        }
-
-        if (strlen($data['resource_type']) > 50) {
-            return '资源类型长度不能超过50个字符';
-        }
-
-        // 操作类型验证
-        if (empty($data['action_type'])) {
-            return '操作类型不能为空';
-        }
-
-        if (strlen($data['action_type']) > 50) {
-            return '操作类型长度不能超过50个字符';
-        }
-
-        // 描述验证
-        if (!empty($data['description']) && strlen($data['description']) > 500) {
-            return '权限描述长度不能超过500个字符';
-        }
-
-        return true;
+        $params = $this->validator->scene('batchDestroy')->setPost()->check();
+        $this->service->batchDeletePermissions($params['ids']);
+        return R::success(null, '批量删除成功');
     }
 }

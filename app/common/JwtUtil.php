@@ -80,7 +80,7 @@ class JwtUtil
             return (array) $decoded;
         } catch (ExpiredException $e) {
             // Token已过期
-            throw new ApiException(Code::TOKEN_EXPIRED, 'Token已过期');
+            throw new ApiException(Code::TOKEN_EXPIRED, '登录已过期');
         } catch (SignatureInvalidException $e) {
             // 签名无效
             throw new ApiException(Code::TOKEN_INVALID, 'Token签名无效');

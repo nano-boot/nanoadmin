@@ -176,6 +176,34 @@ class MenuValidator extends ValidatorBase
                 'integer',
                 'min:0',
             ],
+            'only_enabled' => [
+                'nullable',
+                'boolean',
+            ],
+            'sort_data' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+            'sort_data.*' => [
+                'array',
+            ],
+            'sort_data.*.id' => [
+                'required',
+                'integer',
+                'gt:0',
+            ],
+            'sort_data.*.sort' => [
+                'nullable',
+                'integer',
+                'min:0',
+                'max:9999',
+            ],
+            'sort_data.*.parent_id' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
         ];
     }
 
@@ -314,9 +342,22 @@ class MenuValidator extends ValidatorBase
                 'sort',
             ],
 
+            'tree' => [
+                'parent_id',
+                'keyword',
+                'status',
+                'hidden',
+                'only_enabled',
+            ],
+
+            'route' => [],
+
             'show' => ['id'],
             'destroy' => ['id'],
             'batchDestroy' => ['ids'],
+
+            'sort' => ['sort_data'],
+
             'index' => ['page', 'limit', 'keyword', 'status', 'type_filter', 'parent_id_filter'],
         ];
     }

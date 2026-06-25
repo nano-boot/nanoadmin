@@ -82,6 +82,77 @@ class MenuService
     }
 
     /**
+     * 获取菜单树（支持高级搜索条件）
+     *
+     * 薄 Controller 入口：当 query 参数含搜索条件时走 MenuSearchService，
+     * 无搜索条件时走 model.getTree 单次高效查询。
+     *
+     * @param array $params 搜索参数（parent_id / keyword / status / type / hidden / name / only_enabled）
+     * @return array
+     */
+    public function getMenuTreeWithSearch(array $params = []): array
+    {
+        $parentId    = (int)($params['parent_id'] ?? 0);
+        $onlyEnabled = (bool)($params['only_enabled'] ?? true);
+
+        $keyword = trim((string)($params['keyword'] ?? ''));
+        $status  = $params['status'] ?? null;
+        $type    = $params['type'] ?? '';
+        $hidden  = $params['hidden'] ?? null;
+        $name    = trim((string)($params['name'] ?? ''));
+
+        // 判断是否存在真实搜索条件
+        $hasSearch = $keyword !== ''
+            || $status !== null && $status !== ''
+            || $type !== ''
+            || $hidden !== null && $hidden !== ''
+            || $name !== '';
+
+        if ($hasSearch) {
+            $searchParams = [];
+            if ($parentId > 0) {
+                $searchParams['parent_id'] = $parentId;
+            }
+            if ($keyword !== '') {
+                $searchParams['keyword'] = $keyword;
+            }
+            if ($status !== null && $status !== '') {
+                $searchParams['status'] = (bool)$status;
+            } elseif ($onlyEnabled) {
+                $searchParams['status'] = true;
+            }
+            if ($type !== '') {
+                $searchParams['type'] = $type;
+            }
+            if ($hidden !== null && $hidden !== '') {
+                $searchParams['hidden'] = (bool)$hidden;
+            }
+            if ($name !== '') {
+                $searchParams['name'] = $name;
+            }
+
+            $searchService = new MenuSearchService();
+            return $searchService->advancedSearch($searchParams);
+        }
+
+        return $this->model->getTree($parentId, $onlyEnabled);
+    }
+
+    /**
+     * 获取菜单表单详情（薄 Controller 入口）
+     *
+     * @param int $id 菜单ID
+     * @return array 表单格式数据
+     * @throws ApiException
+     */
+    public function getMenuFormData(int $id): array
+    {
+        $menu = $this->getMenuById($id);
+        $transformService = new MenuTransformService();
+        return $transformService->toFormData($menu->toArray());
+    }
+
+    /**
      * 根据ID获取菜单详情
      * @param int $id 菜单ID
      * @return Menu

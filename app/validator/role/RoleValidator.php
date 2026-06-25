@@ -116,6 +116,22 @@ class RoleValidator extends ValidatorBase
                 'integer',
                 'gt:0',
             ],
+            // 分配权限参数
+            'menuIds' => [
+                'nullable',
+                'array',
+            ],
+            'menuIds.*' => [
+                'integer',
+                'gt:0',
+            ],
+            'authCodes' => [
+                'nullable',
+                'array',
+            ],
+            'authCodes.*' => [
+                'string',
+            ],
         ];
     }
 
@@ -174,6 +190,13 @@ class RoleValidator extends ValidatorBase
             'ids.min' => '至少选择一个项目',
             'ids.*.integer' => 'ID必须是整数',
             'ids.*.gt' => 'ID必须大于0',
+
+            'menuIds.array' => '菜单ID列表必须是数组',
+            'menuIds.*.integer' => '菜单ID必须是整数',
+            'menuIds.*.gt' => '菜单ID必须大于0',
+
+            'authCodes.array' => '权限编码列表必须是数组',
+            'authCodes.*.string' => '权限编码必须是字符串',
         ];
     }
 
@@ -194,7 +217,6 @@ class RoleValidator extends ValidatorBase
             'update' => [
                 'id',
                 'name',
-                'code',
                 'description',
                 'sort',
                 'status',
@@ -206,6 +228,8 @@ class RoleValidator extends ValidatorBase
             'batchDestroy' => ['ids'],
             'show' => ['id'],
             'index' => ['page', 'limit', 'keyword', 'status_filter'],
+            'assignPermissions' => ['id', 'menuIds', 'authCodes'],
+            'assignMenus' => ['id', 'menuIds'],
         ];
     }
 }

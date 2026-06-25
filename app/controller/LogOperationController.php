@@ -21,10 +21,6 @@ use support\Response;
 /**
  * 操作日志控制器
  *
- * 采用「薄 Controller」模式：
- * - Controller 只负责接收请求、调用验证器、调用 Service、返回响应
- * - 异常由全局异常处理器统一处理
- * - 业务逻辑全部在 Service 层
  */
 #[OA\Tag(name: '操作日志', description: '系统操作日志管理')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
