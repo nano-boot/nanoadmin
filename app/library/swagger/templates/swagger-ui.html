@@ -8,16 +8,18 @@
   <script src="{{JS_URL}}" crossorigin></script>
   <style>
     .auth-btn {
-      background: #409eff;
-      color: white;
-      border: none;
-      padding: 8px 16px;
+      background: #fff;
+      color: #49cc90;
+      border: 2px solid #49cc90;
+      padding: 4px 16px;
       border-radius: 4px;
       cursor: pointer;
       margin-left: 10px;
+      font-weight: bold;
+      transition: all 0.3s ease;
     }
     .auth-btn:hover {
-      background: #66b1ff;
+      box-shadow: 0 0 10px 0 rgba(0,0,0,0.1);
     }
     .auth-modal {
       display: none;
@@ -72,9 +74,7 @@
       border: none;
     }
     .top-bar {
-      background: #f5f7fa;
       padding: 10px 20px;
-      border-bottom: 1px solid #e4e7ed;
       display: flex;
       justify-content: flex-end;
       align-items: center;
@@ -83,21 +83,11 @@
 </head>
 <body>
   <div class="top-bar">
-    <button class="auth-btn" onclick="showAuthModal()">设置 Token</button>
+    <button class="auth-btn" onclick="showAuthModal()">
+      <span>设置 Token</span>
+    </button>
   </div>
   <div id="swagger-ui"></div>
-
-  <div id="authModal" class="auth-modal">
-    <div class="auth-modal-content">
-      <h3>设置 Authorization Token</h3>
-      <p style="color: #666; font-size: 14px;">输入 Bearer Token 用于接口测试</p>
-      <input type="text" id="tokenInput" />
-      <div class="btn-group">
-        <button class="cancel-btn" onclick="hideAuthModal()">取消</button>
-        <button class="confirm-btn" onclick="applyToken()">确定</button>
-      </div>
-    </div>
-  </div>
 
   <script>
 

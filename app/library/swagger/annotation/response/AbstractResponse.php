@@ -166,22 +166,62 @@ abstract class AbstractResponse extends BaseResponse
 
     /**
      * 从示例数据提取属性定义
+     *
+     * 仅当 $data 为关联数组（object 形态）时返回字段列表。
+     * 若 $data 是列表数组（array 形态），返回空数组 —— 调用方应使用 buildArrayProperty() 描述 array+items。
      */
     protected function extractPropertiesFromExample(array $data): array
     {
+        if (!$this->isAssociativeArray($data)) {
+            return [];
+        }
+
         $properties = [];
 
         foreach ($data as $key => $value) {
             $type = $this->inferTypeFromValue($value);
 
             $properties[] = new Property(
-                property: $key,
+                property: (string) $key,
                 type: $type,
                 example: $value
             );
         }
 
         return $properties;
+    }
+
+    /**
+     * 从列表型示例数据推断 items 定义
+     */
+    protected function buildItemsFromListExample(array $list): ?\OpenApi\Attributes\Items
+    {
+        if (empty($list)) {
+            return null;
+        }
+
+        $first = $list[array_key_first($list)];
+
+        if (is_array($first) && $this->isAssociativeArray($first)) {
+            return new \OpenApi\Attributes\Items(
+                properties: $this->extractPropertiesFromExample($first),
+                type: 'object'
+            );
+        }
+
+        return new \OpenApi\Attributes\Items(type: $this->inferTypeFromValue($first));
+    }
+
+    /**
+     * 判断是否为关联数组（object 形态），而非列表数组（array 形态）
+     */
+    protected function isAssociativeArray(array $data): bool
+    {
+        if ($data === []) {
+            return false;
+        }
+
+        return array_keys($data) !== range(0, count($data) - 1);
     }
 
     /**

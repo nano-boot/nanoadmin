@@ -106,13 +106,21 @@ class PageResponse extends AbstractResponse
         // 如果有 example 数据，从 example 推断属性
         elseif ($this->recordsExample !== null && is_array($this->recordsExample) && !empty($this->recordsExample)) {
             $firstItem = $this->recordsExample[0] ?? [];
-            if (is_array($firstItem) && !empty($firstItem)) {
+
+            if (is_array($firstItem) && $this->isAssociativeArray($firstItem)) {
                 $itemProperties = $this->extractPropertiesFromExample($firstItem);
 
                 $properties[] = new Property(
                     property: 'records',
                     type: 'array',
                     items: new Items(properties: $itemProperties, type: 'object')
+                );
+            } elseif (is_array($firstItem)) {
+                // 嵌套列表型示例（records 是 list of list），递归推断 items
+                $properties[] = new Property(
+                    property: 'records',
+                    type: 'array',
+                    items: $this->buildItemsFromListExample($firstItem) ?? new Items()
                 );
             } else {
                 $properties[] = new Property(property: 'records', example: $this->recordsExample);

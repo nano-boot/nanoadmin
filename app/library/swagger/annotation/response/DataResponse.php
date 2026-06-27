@@ -71,8 +71,13 @@ class DataResponse extends AbstractResponse
             return $this->extractPropertiesFromSchema($this->schema);
         }
 
-        // 如果有 example 数据，从 example 推断属性
+        // 如果有 example 数据
         if ($this->example !== null && is_array($this->example) && !empty($this->example)) {
+            // 列表型示例 → data 就是一个数组，每个 item 由 schema 描述
+            if (!$this->isAssociativeArray($this->example)) {
+                return null;
+            }
+            // 关联型示例 → data 是一个对象，字段从示例推断
             return $this->extractPropertiesFromExample($this->example);
         }
 

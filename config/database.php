@@ -12,19 +12,19 @@ return [
             // 数据库类型
             'driver' => 'mysql',
             // 服务器地址
-            'host' => 'rm-bp1ro8silf8n2nflm9o.mysql.rds.aliyuncs.com',
+            'host' => env('DB_HOST', ''),
             // 数据库名
-            'database' => 'nanoadmin',
+            'database' => env('DB_DATABASE', ''),
             // 数据库用户名
-            'username' => 'nanoadmin',
+            'username' => env('DB_USERNAME', ''),
             // 数据库密码
-            'password' => 'Theadmin123',
+            'password' => env('DB_PASSWORD', ''),
             // 数据库连接参数
             'unix_socket' => '',
             // 数据库编码默认采用utf8
             'collation'   => 'utf8_unicode_ci',
             // 数据库连接端口
-            'port' => '3306',
+            'port' => env('DB_PORT', '3306'),
             // 数据库连接参数
             'params' => [
                 // 连接超时3秒
@@ -33,7 +33,7 @@ return [
             // 数据库编码默认采用utf8
             'charset' => 'utf8',
             // 数据库表前缀
-            'prefix' => 'th_',
+            'prefix' => env('DB_PREFIX', ''),
             // 断线重连
             'break_reconnect' => true,
             // 自定义分页类

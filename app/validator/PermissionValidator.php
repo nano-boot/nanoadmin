@@ -44,7 +44,7 @@ class PermissionValidator extends ValidatorBase
         ];
     }
 
-    protected $messages = [
+    protected array $messages = [
         'code.require' => '权限代码不能为空',
         'code.regex' => '权限代码只能包含字母、数字、下划线、点和连字符',
         'name.require' => '权限名称不能为空',
