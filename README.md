@@ -45,3 +45,38 @@ composer test
 - ext-json
 - illuminate/database ^10.0|^11.0
 - firebase/php-jwt ^6.11
+
+## 作为 webman 插件安装
+
+本仓库**同时**也是一个 webman 插件包（`type: webman-plugin`）。当其他 webman 主项目执行 `composer require nano-boot/nanoadmin` 时：
+
+1. **主项目 composer.json** 的 `post-package-install/update` 触发 `support\\Plugin::install`
+2. **webman 框架**通过 psr-4 autoload 找到 `Webman\nanoadmin\Install`（识别条件：`WEBMAN_PLUGIN = true`）
+3. **Install::install()** 把仓库根下的 `app/`、`config/`、`database/`、`sql/`、`api/` 复制到主项目 `plugin/nanoadmin/`
+4. 复制使用 webman 的 `copy_dir()`，默认**不覆盖已有文件**，用户本地修改的配置会保留
+5. `composer remove nano-boot/nanoadmin` 时 `Install::uninstall()` 会删除主项目 `plugin/nanoadmin/`
+
+主项目最低配置要求（参考 saiadmin）：
+
+```json
+{
+    "scripts": {
+        "post-package-install":  ["support\\Plugin::install"],
+        "post-package-update":   ["support\\Plugin::install"],
+        "pre-package-uninstall": ["support\\Plugin::uninstall"]
+    },
+    "autoload": {
+        "psr-4": {
+            "plugin\\": "./plugin"
+        }
+    }
+}
+```
+
+### 命名空间约定
+
+| 命名空间 | 路径 | 用途 |
+|---------|------|------|
+| `Webman\nanoadmin\` | 仓库根 | 仅 `Install.php`（webman 插件入口） |
+| `plugin\nanoadmin\app\` | `app/` | 业务代码（主项目通过 `plugin\` 命名空间加载） |
+| `plugin\nanoadmin\api\` | `api/` | 业务 API 辅助类 |

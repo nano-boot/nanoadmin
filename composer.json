@@ -33,6 +33,7 @@
     },
     "autoload": {
         "psr-4": {
+            "Webman\\nanoadmin\\": "./",
             "plugin\\nanoadmin\\": "app/"
         },
         "files": [
