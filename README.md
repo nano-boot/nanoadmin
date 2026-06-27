@@ -5,7 +5,7 @@
 ## 安装
 
 ```bash
-composer require nanoadmin/nanoadmin-plugin
+composer require nano-boot/nanoadmin
 ```
 
 ## 目录结构

@@ -1,7 +1,7 @@
 {
     "name": "nano-boot/nanoadmin",
     "description": "Nano Admin 后台管理系统核心插件，基于 Workerman/Webman",
-    "type": "library",
+    "type": "webman-plugin",
     "license": "MIT",
     "authors": [
         {
