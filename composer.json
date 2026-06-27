@@ -29,7 +29,6 @@
         "webman/redis": "^2.1",
         "w7corp/easywechat": "^6.19",
         "zircote/swagger-php": "^4.8"
-
     },
     "autoload": {
         "psr-4": {
@@ -48,13 +47,12 @@
             "php scripts/copy-config-if-not-exists.php"
         ]
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true,
     "extra": {
         "webman": {
             "name": "nanoadmin",
-            "title": "Nano Admin 核心插件",
-            "version": "1.0.0"
+            "title": "Nano Admin 核心插件"
         }
     }
 }
