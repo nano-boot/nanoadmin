@@ -4,6 +4,7 @@ namespace plugin\nanoadmin\app\middleware;
 
 use plugin\nanoadmin\app\service\LogOperationService;
 use plugin\nanoadmin\app\model\ModelFactory;
+use plugin\nanoadmin\app\library\swagger\SwaggerRoutes;
 use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
@@ -54,6 +55,8 @@ class LogOperationMiddleware implements MiddlewareInterface
         }
 
         $this->excludeRoutes  = self::$cachedConfig['exclude_routes'] ?? [];
+        // 自动注入 swagger / openapi 路由白名单（随 swagger.php ui_route / doc_route / enabled 同步）
+        $this->excludeRoutes  = array_values(array_unique(array_merge($this->excludeRoutes, SwaggerRoutes::excludeRoutes())));
         $this->excludeMethods = array_map('strtoupper', self::$cachedConfig['exclude_methods'] ?? []);
         $this->sensitiveKeys  = array_map('strtolower', self::$cachedConfig['sensitive_keys'] ?? []);
     }

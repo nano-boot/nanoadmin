@@ -2,7 +2,7 @@
 -- 重新设计 fe_menus 表结构
 -- 基于前端路由结构和菜单管理页面需求
 -- 创建时间: 2025-01-02
--- 菜单类型: M: 菜单, B: 按钮, I: 外链
+-- 菜单类型: D: 目录, M: 菜单, B: 按钮, L: 外链（新窗口打开完整 URL）, I: 内嵌（iframe 嵌入页面）
 -- =====================================================
 --
 -- P0-1 按钮节点强规则（必须遵循）：
@@ -31,6 +31,8 @@ REPLACE INTO `th_sys_menu` (
  0,  2, 'M', 1, 0, 0, 1, 0,  '', 0),
 (3, 'System', '系统管理', '/system', '/index/index', 'ri:settings-line', '', '',
  0,  3, 'M', 1, 0, 0, 1, 0, '', 0),
+(4, 'InterfaceManage', '接口管理', '/interface', '', 'ri:code-view', '', '',
+ 0,  4, 'M', 1, 0, 0, 1, 0,  '', 0),
 
 -- === 二级页面（M 类型，permission 为空）===
 (100, 'Console', '控制台', '/dashboard/console', '/dashboard/console', 'ri:dashboard-2-line', '', '',
@@ -52,7 +54,9 @@ REPLACE INTO `th_sys_menu` (
 (304, 'SystemLoginLog', '登录日志', '/system/login-log', '/system/login-log', 'ri:user-follow-line', '', '',
  303, 1, 'M', 1, 0, 0, 1, 0,  '', 0),
 (305, 'SystemOperationLog', '操作日志', '/system/operation-log', '/system/operation-log', 'ri:history-line', '', '',
- 303, 2, 'M', 1, 0, 0, 1, 0,  '', 0);
+ 303, 2, 'M', 1, 0, 0, 1, 0,  '', 0),
+(400, 'SwaggerDoc', 'swagger文档', '/interface/swagger', '', 'ri:file-code-line', '', '',
+ 4,  1, 'I', 1, 0, 0, 1, 0,  '/interface/swagger', 0);
 
 -- =====================================================
 -- 按钮权限节点（B 类型，permission 必填）
@@ -106,6 +110,14 @@ REPLACE INTO `th_sys_menu` (
 (3031, 'SystemLogCreate', '创建日志',   '/system/log/create', '', 'sys:log:create', 303,  2, 'B', 1, 1, 0),
 (3032, 'SystemLogEdit',   '编辑日志',   '/system/log/edit',   '', 'sys:log:update', 303,  3, 'B', 1, 1, 0),
 (3033, 'SystemLogDelete', '删除日志',   '/system/log/delete', '', 'sys:log:delete', 303,  4, 'B', 1, 1, 0);
+
+-- =====================================================
+-- swagger 文档菜单特殊配置（link 字段不在上方批量插入的列定义中，单独 UPDATE）
+-- =====================================================
+UPDATE `th_sys_menu`
+   SET `link`   = '/sys/openapi',
+       `iframe` = 1
+ WHERE `id` = 400;
 
 -- 重置自增ID
 ALTER TABLE `th_sys_menu` AUTO_INCREMENT = 8000;

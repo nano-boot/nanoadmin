@@ -62,6 +62,7 @@ final class OpenApiModifier
      */
     public static function process(OpenApi $openApi, array $info = []): void
     {
+        self::injectSecuritySchemes($openApi);
         self::injectPathParameters($openApi);
         self::injectRequestBodies($openApi);
         self::injectCommonResponses($openApi);
@@ -75,6 +76,7 @@ final class OpenApiModifier
         if (!empty($info['servers'])) {
             self::setServers($openApi, $info['servers']);
         }
+        self::injectGlobalSecurity($openApi);
     }
 
     /**
@@ -372,5 +374,76 @@ final class OpenApiModifier
             500 => '服务器错误',
             default => "HTTP $status",
         };
+    }
+
+    /**
+     * 注入安全认证方案 (securitySchemes)
+     *
+     * 这会让 Swagger UI 显示 Authorize 按钮并填充 Available authorizations 弹窗内容。
+     *
+     * 注意：Components::$securitySchemes 是 SecurityScheme[] 索引数组（不是关联数组），
+     * scheme 名称放在 SecurityScheme::$securityScheme 上。设错会导致 Swagger UI 拿到
+     * 空弹窗（Available authorizations 内容空白）。
+     */
+    public static function injectSecuritySchemes(OpenApi $openApi): void
+    {
+        // 已存在则不重复注入
+        if (!Generator::isDefault($openApi->components)
+            && !Generator::isDefault($openApi->components->securitySchemes)
+            && !empty($openApi->components->securitySchemes)) {
+            return;
+        }
+
+        if (Generator::isDefault($openApi->components)) {
+            $openApi->components = new OA\Components([
+                '_context' => $openApi->_context,
+            ]);
+        }
+
+        $bearer = new OA\SecurityScheme([
+            'securityScheme' => 'BearerAuth', // 关键：scheme 名放这里，对应 components.securitySchemes 下的 key
+            'type' => 'http',
+            'scheme' => 'bearer',
+            'bearerFormat' => 'JWT',
+            'description' => '请输入 JWT Token',
+        ]);
+
+        // SecurityScheme[] 是索引数组，scheme 名由 SecurityScheme::$securityScheme 决定
+        $openApi->components->securitySchemes = [$bearer];
+    }
+
+    /**
+     * 注入全局安全认证 (全局 requireSecurity)
+     *
+     * 让所有接口默认都需要认证。注意：必须给每个 operation 也注入 security，
+     * 否则 zircote/swagger-php 的 CleanUnusedComponents Processor 会把未被引用的
+     * securityScheme 当作"未使用组件"清掉，导致 Swagger UI 的 Authorize 弹窗内容为空。
+     */
+    public static function injectGlobalSecurity(OpenApi $openApi): void
+    {
+        $methodAttrs = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options'];
+
+        // 1. 给每个 operation 注入 security（确保 securityScheme 被识别为"被引用"）
+        if (!empty($openApi->paths)) {
+            foreach ($openApi->paths as $path) {
+                foreach ($methodAttrs as $attr) {
+                    $operation = $path->{$attr} ?? null;
+                    if (!$operation instanceof OA\Operation) {
+                        continue;
+                    }
+                    if (Generator::isDefault($operation->security) || empty($operation->security)) {
+                        $operation->security = [['BearerAuth' => []]];
+                    }
+                }
+            }
+        }
+
+        // 2. 设置全局 security 作为兜底（OpenAPI 规范：operation.security 未设置时继承自 root.security）
+        if (Generator::isDefault($openApi->security) || empty($openApi->security)) {
+            // security 是普通关联数组：scheme => scopes[]，zircote/swagger-php 没有 SecurityRequirement 类
+            $openApi->security = [
+                ['BearerAuth' => []],
+            ];
+        }
     }
 }

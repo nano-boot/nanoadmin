@@ -7,6 +7,10 @@
  * 与 Webman 框架自身的 config/middleware.php（中间件类列表）区分开：
  *   - config/middleware.php     → Webman 要求的中间件类列表
  *   - config/nanoadmin.php      → 本文件，业务中间件读取这里
+ *
+ * Swagger / OpenAPI 文档相关配置已抽到 plugin/nanoadmin/config/swagger.php，
+ * 三个中间件（auth / log_operation / permission）的 exclude_routes 会自动从那里
+ * 同步注入 ui_route / doc_route，无需再在此处重复维护。
  */
 
 return [
@@ -38,7 +42,7 @@ return [
             '/sys/auth/login',
             '/sys/auth/refresh',
             '/sys/install',
-            // Swagger UI 和 OpenAPI 文档不需要认证
+            // Swagger UI 和 OpenAPI 文档不需要认证（由中间件自动从 swagger.php 注入，此处保留仅为可读性）
             '/sys/openapi',
             '/sys/openapi/doc',
         ],

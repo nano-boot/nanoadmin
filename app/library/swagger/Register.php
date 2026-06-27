@@ -6,6 +6,10 @@
 // 业务路由在上方 Route::group(...) 段手动注册，OpenAPI 注解仅用于生成文档。
 // 注意：LogLoginController / 其他只写 #[OA\Get / OA\Post] 注解没在手写 Route::group 里的控制器，
 //       需要用 OpenApiBootstrap 扫描注册路由。
+//
+// 路径 / 是否启用 / info / servers / scan_path 等全部配置项在：
+//   plugin/nanoadmin/config/swagger.php
+// 如需在某个环境临时关闭文档，把该文件 enabled 改为 false 即可。
 \plugin\nanoadmin\app\library\swagger\OpenApiBootstrap::register([
     base_path() . '/plugin/nanoadmin/app/controller',
 ]);

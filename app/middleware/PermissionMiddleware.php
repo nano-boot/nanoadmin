@@ -8,6 +8,7 @@ use Webman\Http\Request;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\library\swagger\SwaggerRoutes;
 
 /**
  * 权限验证中间件
@@ -57,6 +58,8 @@ class PermissionMiddleware implements MiddlewareInterface
 
         $this->routePermissions = self::$cachedConfig['route_permissions'] ?? [];
         $this->excludeRoutes     = self::$cachedConfig['exclude_routes'] ?? [];
+        // 自动注入 swagger / openapi 路由白名单（随 swagger.php ui_route / doc_route / enabled 同步）
+        $this->excludeRoutes     = array_values(array_unique(array_merge($this->excludeRoutes, SwaggerRoutes::excludeRoutes())));
         $this->superAdminRoles   = self::$cachedConfig['super_admin_roles'] ?? [];
     }
 

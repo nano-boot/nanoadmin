@@ -1193,10 +1193,15 @@ class Menu extends BaseModel
                 }
             }
             
-            // 处理外链配置
-            if (!empty($menu['link'])) {
-                $route['meta']['link'] = $menu['link'];
-                $route['meta']['isIframe'] = $menu['iframe'];
+            // 处理外链 / 内嵌配置
+            // - type='I'（内嵌页面）：强制写 meta.link / meta.isIframe，前端 RouteTransformer 会走 iframe 分支
+            // - 其他类型且 link 非空：视为外链（前端可能根据 iframe 标志决定渲染方式）
+            if ($menu['type'] === self::TYPE_IFRAME) {
+                $route['meta']['link']     = $menu['link'] ?? '';
+                $route['meta']['isIframe'] = true;
+            } elseif (!empty($menu['link'])) {
+                $route['meta']['link']     = $menu['link'];
+                $route['meta']['isIframe'] = (bool) ($menu['iframe'] ?? false);
             }
             
             // 处理徽章文本
@@ -1398,10 +1403,18 @@ class Menu extends BaseModel
 
     /**
      * 检查菜单是否为内嵌菜单
+     *
+     * 判定规则（满足任一即为内嵌）：
+     *  1. type='I'（TYPE_IFRAME）—— 明确声明的"内嵌页面"类型
+     *  2. 是外链且 iframe 标志为真 —— "外链转内嵌"场景（兼容 type='L' + iframe=1）
+     *
      * @return bool
      */
     public function isIframe(): bool
     {
+        if ($this->type === self::TYPE_IFRAME) {
+            return true;
+        }
         return ($this->isExternalLink() && $this->iframe);
     }
 

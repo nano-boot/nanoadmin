@@ -10,6 +10,7 @@ use Webman\Http\Request;
 use plugin\nanoadmin\app\common\JwtUtil;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\library\swagger\SwaggerRoutes;
 use plugin\nanoadmin\app\model\ModelFactory;
 use plugin\nanoadmin\app\service\LogLoginService;
 
@@ -53,6 +54,8 @@ class AuthMiddleware implements MiddlewareInterface
         }
 
         $this->excludeRoutes     = self::$cachedConfig['exclude_routes'] ?? [];
+        // 自动注入 swagger / openapi 路由白名单（随 swagger.php ui_route / doc_route / enabled 同步）
+        $this->excludeRoutes     = array_values(array_unique(array_merge($this->excludeRoutes, SwaggerRoutes::excludeRoutes())));
         $this->recordFailedLogin = (bool) (self::$cachedConfig['record_failed_login'] ?? true);
     }
 
