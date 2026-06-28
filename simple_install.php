@@ -25,7 +25,7 @@ $config = [
             'hostport' => '3306',
             'params' => [\PDO::ATTR_TIMEOUT => 3],
             'charset' => 'utf8mb4',
-            'prefix' => 'th_',
+            'prefix' => 'na_',
             'break_reconnect' => true,
         ],
     ],

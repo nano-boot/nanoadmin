@@ -32,7 +32,7 @@ return [
             // 数据库编码
             'charset' => 'utf8mb4',
             // 数据库表前缀
-            'prefix' => 'th_',
+            'prefix' => 'na_',
             // 断线重连
             'break_reconnect' => true,
             // 自定义分页类

@@ -1,0 +1,823 @@
+<?php
+/**
+ * NanoAdmin 安装向导视图
+ *
+ * 变量（由 InstallController::index 传入）：
+ *   $app           string  应用名（nanoadmin）
+ *   $version       string  版本号
+ *   $frontend_url  string  前端地址（安装完成跳转目标）
+ *   $installed     bool    是否已安装
+ *   $env           array   环境检测结果（checkEnv()）
+ *
+ * 渲染规则（webman Raw 模板）：
+ *   - 直接 PHP 标签，变量已 extract 到当前作用域
+ *   - 静态资源本地引入（零构建）
+ */
+$e = $env ?? [];
+$php = $e['php'] ?? [];
+$extRequired    = $e['extensions']['required']    ?? [];
+$extRecommended = $e['extensions']['recommended'] ?? [];
+$dirs           = $e['directories'] ?? [];
+?>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NanoAdmin 安装向导 - <?= htmlspecialchars($version ?? '1.0.0') ?></title>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/jetbrains-mono.css" rel="stylesheet">
+    <style>
+        :root {
+            /* Pure grayscale palette — installer / blueprint aesthetic */
+            --ink: #0A0A0A;            /* primary text, solid buttons */
+            --ink-2: #1F1F1F;          /* heading hover, button hover */
+            --ash: #6B6B68;            /* muted body text */
+            --chalk: #B5B5B2;          /* hints, placeholders, log meta */
+            --line: #E5E5E5;           /* hairline rules */
+            --line-strong: #1A1A1A;    /* strong borders, form input edges */
+            --paper: #F5F5F5;          /* page surface */
+            --card: #FFFFFF;           /* card surface */
+            --tint: #FAFAFA;           /* inner panel bg */
+
+            /* Typography */
+            --font-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Consolas', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+
+            /* Geometry */
+            --radius: 3px;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-card: 0 1px 2px rgba(10, 10, 10, 0.04);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* Inline Lucide SVG icons (stroke follows currentColor, sized via font-size) */
+        .ic {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.125em;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex-shrink: 0;
+        }
+        .ic-spin { animation: ic-spin 1s linear infinite; }
+        @keyframes ic-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        body {
+            background: var(--paper);
+            min-height: 100vh;
+            font-family: var(--font-sans);
+            color: var(--ink);
+            padding: 40px 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .install-wrapper { width: 100%; max-width: 920px; margin: 0 auto; }
+        .install-container {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+            border: 1px solid var(--line);
+        }
+        .progress-container { padding: 32px 36px 0; }
+        .progress {
+            height: 2px;
+            border-radius: 0;
+            background-color: var(--line);
+            margin-bottom: 28px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            background: var(--ink);
+            border-radius: 0;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+        }
+        .steps-container {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 32px;
+        }
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            flex: 1;
+        }
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius);
+            background: var(--card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            border: 1px solid var(--line-strong);
+            color: var(--ash);
+            transition: var(--transition);
+            font-size: 18px;
+        }
+        .step-text {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--ash);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            transition: var(--transition);
+        }
+        .step-item.active .step-icon,
+        .step-item.completed .step-icon {
+            border-color: var(--ink);
+            color: var(--card);
+            background: var(--ink);
+        }
+        .step-item.active .step-text,
+        .step-item.completed .step-text { color: var(--ink); }
+
+        .content-section { padding: 32px 36px 36px; }
+        .step-content { display: none; animation: fadeIn 0.4s ease; }
+        .step-content.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .step-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--ink);
+            letter-spacing: -0.01em;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-label {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-size: 11px;
+            color: var(--ash);
+            margin-bottom: 8px;
+            display: block;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .form-label .required { color: var(--ink); margin-left: 4px; }
+        .form-control {
+            height: 42px;
+            border-radius: var(--radius);
+            border: 1px solid var(--line-strong);
+            padding: 10px 14px;
+            font-size: 14px;
+            background-color: var(--card);
+            color: var(--ink);
+            transition: var(--transition);
+            width: 100%;
+            font-family: var(--font-sans);
+        }
+        .form-control:focus {
+            border-color: var(--ink);
+            background-color: var(--card);
+            box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
+            outline: none;
+        }
+        .form-control::placeholder { color: var(--chalk); }
+        .form-help {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--ash);
+            margin-top: 6px;
+            letter-spacing: 0.02em;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .btn {
+            height: 44px;
+            border-radius: var(--radius);
+            padding: 0 22px;
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: 0.04em;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-family: var(--font-sans);
+        }
+        .btn-primary {
+            background: var(--ink);
+            color: var(--card);
+            border-color: var(--ink);
+        }
+        .btn-primary:hover {
+            background: var(--ink-2);
+            border-color: var(--ink-2);
+            transform: translateY(-1px);
+        }
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--ink);
+            border: 1px solid var(--ink);
+        }
+        .btn-outline:hover { background: var(--ink); color: var(--card); }
+        .btn-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 28px; }
+
+        /* Env check grid — divided by hairline */
+        .env-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1px;
+            margin-bottom: 24px;
+            background: var(--line);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .env-card {
+            background: var(--card);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+        .env-card .name {
+            font-family: var(--font-mono);
+            color: var(--ink);
+            letter-spacing: 0.02em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .env-card .name small {
+            color: var(--ash);
+            font-size: 11px;
+        }
+        .env-card .badge {
+            padding: 3px 9px;
+            border-radius: var(--radius);
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border: 1px solid transparent;
+        }
+        .badge-ok { background: var(--ink); color: var(--card); }
+        .badge-fail { background: var(--card); color: var(--ink); border-color: var(--ink); }
+        .badge-warning { background: var(--card); color: var(--ash); border: 1px dashed var(--ash); }
+
+        /* Log container — terminal aesthetic */
+        .log-container {
+            background: var(--ink);
+            color: var(--card);
+            border-radius: var(--radius);
+            border: 1px solid var(--ink);
+            height: 300px;
+            overflow-y: auto;
+            padding: 16px 18px;
+            margin-top: 16px;
+            font-family: var(--font-mono);
+        }
+        .log-item {
+            padding: 8px 12px;
+            border-radius: 0;
+            background: transparent;
+            margin-bottom: 2px;
+            border-left: 2px solid var(--ash);
+            font-size: 12px;
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.25s ease;
+            color: var(--card);
+        }
+        .log-item.success { border-left-color: var(--card); color: var(--card); }
+        .log-item.error { border-left-style: dashed; border-left-color: var(--chalk); color: var(--chalk); }
+        .log-item .icon { color: var(--chalk); font-size: 11px; }
+        .log-item.success .icon { color: var(--card); }
+        .log-item.error .icon { color: var(--chalk); }
+        .log-time {
+            color: var(--chalk);
+            font-size: 11px;
+            margin-left: auto;
+            font-family: var(--font-mono);
+            letter-spacing: 0.04em;
+        }
+
+        /* Complete */
+        .completed-message { text-align: center; padding: 32px 20px; }
+        .completed-icon {
+            width: 64px; height: 64px; border-radius: var(--radius);
+            background: var(--ink);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px; color: var(--card); font-size: 22px;
+        }
+        .completed-title {
+            font-size: 22px; font-weight: 700; margin-bottom: 12px; color: var(--ink);
+            letter-spacing: -0.01em;
+        }
+        .completed-subtitle {
+            font-size: 14px; color: var(--ash); margin-bottom: 24px; line-height: 1.6;
+            max-width: 480px; margin-left: auto; margin-right: auto;
+        }
+        .admin-tip {
+            background: var(--tint);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 12px 18px;
+            display: inline-block;
+            margin-bottom: 24px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--ash);
+            letter-spacing: 0.04em;
+        }
+        .admin-tip strong {
+            color: var(--ink);
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        /* Already installed */
+        .installed-msg {
+            text-align: center; padding: 40px 20px;
+        }
+        .installed-msg .icon {
+            font-size: 48px; color: var(--ink); margin-bottom: 16px;
+        }
+
+        /* Dialog — centered modal, distinguished by line style */
+        .dialog-mask {
+            position: fixed; inset: 0;
+            background: rgba(10, 10, 10, 0.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            padding: 24px;
+        }
+        .dialog-mask.show { opacity: 1; pointer-events: auto; }
+        .dialog {
+            background: var(--card);
+            color: var(--ink);
+            border-radius: var(--radius);
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid var(--line-strong);
+            transform: scale(0.96);
+            transition: transform 0.2s ease;
+            overflow: hidden;
+        }
+        .dialog-mask.show .dialog { transform: scale(1); }
+        .dialog-header {
+            display: flex; align-items: center; gap: 12px;
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--line);
+        }
+        .dialog-header .icon-circle {
+            width: 24px; height: 24px; border-radius: var(--radius);
+            display: flex; align-items: center; justify-content: center;
+            background: var(--ink); color: var(--card);
+            flex-shrink: 0; font-size: 13px;
+        }
+        .dialog-title {
+            font-size: 14px;
+            font-weight: 600;
+            font-family: var(--font-mono);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--ink);
+            flex: 1;
+        }
+        .dialog-close {
+            background: none;
+            border: none;
+            color: var(--ash);
+            cursor: pointer;
+            padding: 4px;
+            font-size: 14px;
+            line-height: 1;
+            transition: var(--transition);
+        }
+        .dialog-close:hover { color: var(--ink); }
+        .dialog-body {
+            padding: 20px 22px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--ink);
+            word-break: break-word;
+        }
+        .dialog-footer {
+            padding: 14px 22px;
+            border-top: 1px solid var(--line);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            background: var(--tint);
+        }
+        .dialog .btn {
+            height: 36px;
+            padding: 0 18px;
+            font-size: 12px;
+        }
+        /* State variants — same shape, different border marker */
+        .dialog.error .dialog-header { border-bottom-style: dashed; }
+        .dialog.error .icon-circle { background: var(--card); color: var(--ink); border: 1px dashed var(--ink); }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-6px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        @media (max-width: 768px) {
+            .form-row { grid-template-columns: 1fr; }
+            .env-grid { grid-template-columns: 1fr; }
+            .content-section { padding: 24px 20px; }
+            .progress-container { padding: 24px 20px 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="install-wrapper">
+        <div class="install-container">
+            <div class="progress-container">
+                <div class="progress">
+                    <div class="progress-bar" id="progressBar" style="width: 33%"></div>
+                </div>
+                <div class="steps-container">
+                    <div class="step-item active" data-step="1">
+                        <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></g></svg></div>
+                        <div class="step-text">环境检测</div>
+                    </div>
+                    <div class="step-item" data-step="2">
+                        <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></g></svg></div>
+                        <div class="step-text">执行安装</div>
+                    </div>
+                    <div class="step-item" data-step="3">
+                        <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg></div>
+                        <div class="step-text">安装完成</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-section">
+                <?php if (!empty($installed)): ?>
+                    <!-- 已安装状态 -->
+                    <div class="installed-msg">
+                        <div class="icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12l2 2l4-4"/></g></svg></div>
+                        <h2 class="completed-title">系统已安装</h2>
+                        <p class="completed-subtitle">
+                            NanoAdmin 已安装完成。<br>
+                            如需重新安装，请删除 <code>plugin/nanoadmin/storage/install.lock</code> 文件后重启服务。
+                        </p>
+                        <a href="/" class="btn btn-primary">
+                            <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"/></svg> 进入首页
+                        </a>
+                    </div>
+                <?php else: ?>
+
+                <!-- Step 1: 环境检测 + 数据库配置 + 管理员账号 -->
+                <div class="step-content active" id="step1">
+                    <h2 class="step-title">环境检测</h2>
+
+                    <!-- PHP -->
+                    <div class="env-grid">
+                        <div class="env-card">
+                            <span class="name">
+                                <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m18 16l4-4l-4-4M6 8l-4 4l4 4m8.5-12l-5 16"/></svg>
+                                <?= htmlspecialchars($php['name'] ?? 'PHP 版本') ?>
+                                <small class="text-muted"><?= htmlspecialchars($php['current'] ?? '') ?></small>
+                            </span>
+                            <span class="badge badge-<?= ($php['status'] ?? '') === 'ok' ? 'ok' : 'fail' ?>">
+                                <?= ($php['status'] ?? '') === 'ok' ? '✓ 通过' : '✗ 失败' ?>
+                            </span>
+                        </div>
+                        <?php foreach ($extRequired as $key => $ext): ?>
+                            <div class="env-card">
+                                <span class="name"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.39 4.39a1 1 0 0 0 1.68-.474a2.5 2.5 0 1 1 3.014 3.015a1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474a2.5 2.5 0 1 0-3.014 3.015a1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474a2.5 2.5 0 1 1-3.014-3.015a1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474a2.5 2.5 0 1 0 3.014-3.015a1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z"/></svg> <?= htmlspecialchars($ext['name']) ?></span>
+                                <span class="badge badge-<?= $ext['status'] === 'ok' ? 'ok' : 'fail' ?>">
+                                    <?= $ext['status'] === 'ok' ? '✓ 已安装' : '✗ 缺失' ?>
+                                </span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <h2 class="step-title" style="margin-top: 20px;">数据库配置</h2>
+                    <form id="installForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">数据库主机<span class="required">*</span></label>
+                                <input type="text" class="form-control" name="host" value="127.0.0.1" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">端口<span class="required">*</span></label>
+                                <input type="number" class="form-control" name="port" value="3306" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">数据库名<span class="required">*</span></label>
+                                <input type="text" class="form-control" name="name" value="nanoadmin" required>
+                                <div class="form-help">不存在时自动创建</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">表前缀</label>
+                                <input type="text" class="form-control" name="prefix" value="na_">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">用户名<span class="required">*</span></label>
+                                <input type="text" class="form-control" name="user" value="root" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">密码</label>
+                                <input type="password" class="form-control" name="password">
+                            </div>
+                        </div>
+
+                        <h2 class="step-title" style="margin-top: 20px;">初始管理员</h2>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">管理员账号<span class="required">*</span></label>
+                                <input type="text" class="form-control" name="admin_user" value="admin" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">昵称</label>
+                                <input type="text" class="form-control" name="admin_nickname" value="超级管理员">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">密码<span class="required">*</span></label>
+                                <input type="password" class="form-control" name="admin_password" required>
+                                <div class="form-help">不少于 6 位</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">确认密码<span class="required">*</span></label>
+                                <input type="password" class="form-control" name="admin_password_confirm" required>
+                            </div>
+                        </div>
+
+                        <div class="btn-actions">
+                            <button type="button" class="btn btn-outline" id="testDbBtn">
+                                <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22v-5m3-9V2m2 6a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1zM9 8V2"/></svg> 测试连接
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="installBtn">
+                                <span>开始安装</span>
+                                <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7l7 7l-7 7"/></svg>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Step 2: 安装进度 -->
+                <div class="step-content" id="step2">
+                    <h2 class="step-title">正在安装</h2>
+                    <div class="log-container" id="installLog">
+                        <div class="log-item">
+                            <div class="icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></g></svg></div>
+                            <span>准备开始安装...</span>
+                            <span class="log-time">刚刚</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: 安装完成 -->
+                <div class="step-content" id="step3">
+                    <div class="completed-message">
+                        <div class="completed-icon">
+                            <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg>
+                        </div>
+                        <h2 class="completed-title">安装成功</h2>
+                        <p class="completed-subtitle">
+                            NanoAdmin 已成功安装，现在可以使用初始管理员账号登录。
+                        </p>
+                        <div class="admin-tip">
+                            账号：<strong id="adminUsername">admin</strong>
+                        </div>
+                        <div>
+                            <a href="<?= htmlspecialchars($frontend_url ?? 'http://localhost:3006') ?>" class="btn btn-primary">
+                                <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"/></svg> 进入管理后台
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <div class="dialog-mask" id="dialogMask" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+        <div class="dialog" id="dialog">
+            <div class="dialog-header">
+                <div class="icon-circle" id="dialogIcon"></div>
+                <div class="dialog-title" id="dialogTitle">提示</div>
+                <button type="button" class="dialog-close" id="dialogClose" aria-label="关闭">
+                    <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="dialog-body" id="dialogBody"></div>
+            <div class="dialog-footer">
+                <button type="button" class="btn btn-primary" id="dialogConfirm">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const dialogMask = document.getElementById('dialogMask');
+        const dialogEl = document.getElementById('dialog');
+        const dialogTitleEl = document.getElementById('dialogTitle');
+        const dialogIconEl = document.getElementById('dialogIcon');
+        const dialogBodyEl = document.getElementById('dialogBody');
+        const dialogCloseBtn = document.getElementById('dialogClose');
+        const dialogConfirmBtn = document.getElementById('dialogConfirm');
+                // Inline Lucide SVG icon library — mirrors the FA icons used by the page
+        const ICONS = {
+            database: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></g></svg>',
+            cogs: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></g></svg>',
+            check: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg>',
+            'check-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12l2 2l4-4"/></g></svg>',
+            'tachometer-alt': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"/></svg>',
+            php: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m18 16l4-4l-4-4M6 8l-4 4l4 4m8.5-12l-5 16"/></svg>',
+            'puzzle-piece': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.39 4.39a1 1 0 0 0 1.68-.474a2.5 2.5 0 1 1 3.014 3.015a1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474a2.5 2.5 0 1 0-3.014 3.015a1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474a2.5 2.5 0 1 1-3.014-3.015a1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474a2.5 2.5 0 1 0 3.014-3.015a1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z"/></svg>',
+            plug: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22v-5m3-9V2m2 6a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1zM9 8V2"/></svg>',
+            'arrow-right': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7l7 7l-7 7"/></svg>',
+            'info-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></g></svg>',
+            times: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6L6 18M6 6l12 12"/></svg>',
+            'solid-error': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12.713 16.713Q13 16.425 13 16t-.288-.712T12 15t-.712.288T11 16t.288.713T12 17t.713-.288M11 13h2V7h-2zm1 9q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22" /></svg>',
+            'times-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m15 9l-6 6m0-6l6 6"/></g></svg>',
+            spinner: '<svg class="ic ic-spin" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>',
+        };
+
+        function iconHTML(key) { return ICONS[key] || ''; }
+let lastFocus = null;
+
+        function notify(type, msg) {
+            lastFocus = document.activeElement;
+            dialogEl.className = 'dialog ' + type;
+            dialogTitleEl.textContent = type === 'error' ? '错误' : '成功';
+            dialogIconEl.innerHTML = type === 'success' ? iconHTML('check') : iconHTML('solid-error');
+            dialogBodyEl.textContent = msg;
+            dialogMask.classList.add('show');
+            setTimeout(() => dialogConfirmBtn.focus(), 50);
+        }
+
+        function closeDialog() {
+            dialogMask.classList.remove('show');
+            if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+        }
+
+        dialogCloseBtn.addEventListener('click', closeDialog);
+        dialogConfirmBtn.addEventListener('click', closeDialog);
+        dialogMask.addEventListener('click', (e) => { if (e.target === dialogMask) closeDialog(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && dialogMask.classList.contains('show')) closeDialog();
+        });
+
+        function setStep(step) {
+            document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.step-item').forEach(el => {
+                el.classList.remove('active', 'completed');
+            });
+            const target = document.getElementById('step' + step);
+            if (target) target.classList.add('active');
+            document.querySelector('.step-item[data-step="' + step + '"]').classList.add('active');
+            for (let i = 1; i < step; i++) {
+                document.querySelector('.step-item[data-step="' + i + '"]').classList.add('completed');
+            }
+            document.getElementById('progressBar').style.width = (step / 3 * 100) + '%';
+        }
+
+        function appendLog(msg, type) {
+            const log = document.getElementById('installLog');
+            const item = document.createElement('div');
+            item.className = 'log-item ' + (type || '');
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' +
+                           now.getMinutes().toString().padStart(2, '0') + ':' +
+                           now.getSeconds().toString().padStart(2, '0');
+            const iconKey = type === 'success' ? 'check-circle' : (type === 'error' ? 'times-circle' : 'info-circle');
+            item.innerHTML = '<div class="icon">' + iconHTML(iconKey) + '</div>' +
+                            '<span>' + msg + '</span>' +
+                            '<span class="log-time">' + timeStr + '</span>';
+            log.appendChild(item);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // 测试数据库连接
+        const testDbBtn = document.getElementById('testDbBtn');
+        if (testDbBtn) {
+            testDbBtn.addEventListener('click', async function() {
+                const form = document.getElementById('installForm');
+                const fd = new FormData(form);
+                const data = {};
+                for (const [k, v] of fd.entries()) data[k] = v;
+                testDbBtn.disabled = true;
+                testDbBtn.innerHTML = iconHTML('spinner') + ' 测试中...';
+                try {
+                    const res = await fetch('/install/test-db', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+                    const json = await res.json();
+                    if (json.code === 20000) {
+                        notify('success', json.message);
+                    } else {
+                        notify('error', json.message);
+                    }
+                } catch (err) {
+                    notify('error', '请求失败: ' + err.message);
+                } finally {
+                    testDbBtn.disabled = false;
+                    testDbBtn.innerHTML = iconHTML('plug') + ' 测试连接';
+                }
+            });
+        }
+
+        // 提交安装
+        const form = document.getElementById('installForm');
+        if (form) {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                // 校验密码
+                if (form.admin_password.value !== form.admin_password_confirm.value) {
+                    notify('error', '两次输入的密码不一致');
+                    return;
+                }
+                if (form.admin_password.value.length < 6) {
+                    notify('error', '管理员密码长度不能少于 6 位');
+                    return;
+                }
+
+                setStep(2);
+                appendLog('正在收集配置参数...');
+                const fd = new FormData(form);
+                const data = {};
+                for (const [k, v] of fd.entries()) data[k] = v;
+
+                appendLog('正在测试数据库连接...');
+                try {
+                    const res = await fetch('/install/run', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+                    const json = await res.json();
+
+                    if (json.code === 20000) {
+                        appendLog('✓ 数据库连接成功', 'success');
+                        appendLog('✓ .env 文件已写入', 'success');
+                        appendLog('✓ 数据库表已创建', 'success');
+                        appendLog('✓ 初始数据已导入', 'success');
+                        appendLog('✓ 初始管理员已创建', 'success');
+                        appendLog('✓ install.lock 已生成', 'success');
+
+                        setStep(3);
+                        if (json.data && json.data.admin) {
+                            document.getElementById('adminUsername').textContent = json.data.admin.username;
+                        }
+                    } else {
+                        appendLog('✗ ' + json.message, 'error');
+                        notify('error', json.message);
+                        setStep(1);
+                    }
+                } catch (err) {
+                    appendLog('✗ 请求失败: ' + err.message, 'error');
+                    notify('error', '请求失败: ' + err.message);
+                    setStep(1);
+                }
+            });
+        }
+    })();
+    </script>
+</body>
+</html>

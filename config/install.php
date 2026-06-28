@@ -19,7 +19,7 @@ return [
         'username' => 'root',
         'password' => '',
         'charset' => 'utf8mb4',
-        'prefix' => 'th_',
+        'prefix' => 'na_',
     ],
 
     // 管理员默认配置

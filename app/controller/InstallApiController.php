@@ -231,7 +231,7 @@ class InstallApiController
             'name' => $post['name'] ?? 'nanoadmin',
             'user' => $post['user'] ?? 'root',
             'password' => $post['password'] ?? '',
-            'prefix' => $post['prefix'] ?? 'th_',
+            'prefix' => $post['prefix'] ?? 'na_',
             'admin_user' => $post['admin_user'],
             'admin_password' => $post['admin_password'],
             'admin_nickname' => $post['admin_nickname'] ?? '超级管理员',
