@@ -46,6 +46,35 @@ composer test
 - illuminate/database ^10.0|^11.0
 - firebase/php-jwt ^6.11
 
+## 升级
+
+本插件遵循 [SemVer](https://semver.org/lang/zh-CN/) 语义化版本。每次代码更新都会打新的 git tag,Packagist 不会自动跟随 main 分支。
+
+```bash
+# 查看已安装版本
+composer show nano-boot/nanoadmin
+
+# 升级到最新版本
+composer update nano-boot/nanoadmin
+
+# 升级到指定版本
+composer require nano-boot/nanoadmin:^1.0
+
+# 锁定到精确版本(避免自动升级)
+composer require nano-boot/nanoadmin:1.0.1
+```
+
+版本号含义:
+- `1.0.1` → 1.0.1:补丁版本,bug 修复,完全兼容
+- `1.1.0` → 次版本,新增功能,向后兼容
+- `2.0.0` → 主版本,**可能有破坏性变更**,升级前必看 CHANGELOG
+
+## 版本管理
+
+- 本项目版本号与 git tag 严格绑定
+- tag 不可变,新代码必须通过新 tag 发布
+- 不建议强制覆盖已发布的 tag
+
 ## 作为 webman 插件安装
 
 本仓库**同时**也是一个 webman 插件包（`type: webman-plugin`）。当其他 webman 主项目执行 `composer require nano-boot/nanoadmin` 时：
