@@ -85,7 +85,7 @@ composer require nano-boot/nanoadmin:1.0.1
 4. 复制使用 webman 的 `copy_dir()`，默认**不覆盖已有文件**，用户本地修改的配置会保留
 5. `composer remove nano-boot/nanoadmin` 时 `Install::uninstall()` 会删除主项目 `plugin/nanoadmin/`
 
-主项目最低配置要求（参考 saiadmin）：
+主项目最低配置要求：
 
 ```json
 {
