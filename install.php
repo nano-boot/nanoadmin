@@ -18,11 +18,26 @@ namespace Webman\nanoadmin;
  * 同时把 static/ 下需要被浏览器直接访问的"前端静态资源"
  * （如安装向导用到的 bootstrap / font-awesome 等第三方 CSS）复制到主项目 public/static/ 下，
  * 这样无需配置额外路由即可通过 /static/... 直接访问这些资源。
+ *
+ * 安装/更新时还会在主项目根下创建 storage/ 目录，用于存放 install.lock
+ * 等业务级持久状态标记（区别于 runtime/ 的运行时缓存）。该目录不会被卸载，
+ * 以避免卸载时误删用户的安装状态——重装时 InstallService 会自动复用。
  */
 final class Install
 {
     /** 让 webman Plugin::install() 识别这是一个 webman 插件 */
     public const WEBMAN_PLUGIN = true;
+
+    /**
+     * 主项目根目录下的 storage/ 子目录名。
+     *
+     * 存放 install.lock（已安装标记）、install.flock（安装并发锁）等
+     * 业务级持久状态文件。不放在 runtime/ 是因为 runtime/ 会被用户清缓存误删；
+     * 不放在 public/ 是因为 public/ 是 web 文档根，文件会被 HTTP 访问到；
+     * 不放在 plugin/nanoadmin/storage/ 是因为该目录不在 SHIPPED_ITEMS 白名单，
+     * 不会被复制到主项目，且会污染插件包源码树。
+     */
+    private const PROJECT_STORAGE_DIR = 'storage';
 
     /**
      * 要复制到主项目 plugin/nanoadmin/ 下的业务目录。
@@ -55,6 +70,7 @@ final class Install
     {
         self::copyToPluginDir();
         self::copyToPublic();
+        self::ensureProjectStorageDir();
     }
 
     /**
@@ -64,13 +80,19 @@ final class Install
     {
         self::copyToPluginDir();
         self::copyToPublic();
+        self::ensureProjectStorageDir();
     }
 
     /**
      * 卸载：删除主项目 plugin/nanoadmin/
      *
-     * 注意：为了避免误删，public/static/ 下的资源只删除本插件自带的部分，
-     * 不影响主项目已有的其他静态资源。
+     * 注意 1：为了避免误删，public/static/ 下的资源只删除本插件自带的部分，
+     *         不影响主项目已有的其他静态资源。
+     *
+     * 注意 2：主项目根下的 storage/ 目录故意**不删除**。
+     *         该目录下的 install.lock 是"已安装"标记，卸载插件不应清空用户的安装状态；
+     *         下次重装时 InstallService 检测到 lock 文件存在会拒绝再次执行 SQL。
+     *         若用户确实想"完全重置"，应手动删除 storage/install.lock。
      */
     public static function uninstall(): void
     {
@@ -88,6 +110,27 @@ final class Install
                 echo "Remove public/{$dst}\n";
             }
         }
+    }
+
+    /**
+     * 确保主项目根下的 storage/ 目录存在。
+     *
+     * 用于存放 install.lock（已安装标记）和 install.flock（安装并发锁）。
+     * 在 install/update 时建好，避免业务运行时懒创建失败（典型如 open_basedir 限制
+     * 或父目录不可写的场景）。该目录与 plugin/nanoadmin/ 解耦，跨 install/update 复用。
+     */
+    private static function ensureProjectStorageDir(): void
+    {
+        $dir = base_path() . DIRECTORY_SEPARATOR . self::PROJECT_STORAGE_DIR;
+        if (is_dir($dir)) {
+            return;
+        }
+        if (!@mkdir($dir, 0777, true) && !is_dir($dir)) {
+            // mkdir 失败但其他进程已建好也视为成功（并发场景），否则真失败
+            echo "Warning: cannot create {$dir}, please create it manually with write permission\n";
+            return;
+        }
+        echo "Create " . self::PROJECT_STORAGE_DIR . "/\n";
     }
 
     /**

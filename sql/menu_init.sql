@@ -9,17 +9,17 @@
 -- 1. 按钮节点（type='B'）必须设置 permission，且必须挂在父级菜单页面（type='M'）下
 -- 2. 页面节点（type='M' 或 'D'）不设置 permission（permission 为空）
 -- 3. 同级按钮节点 permission 不可重复
--- 4. permission 值应与 th_sys_permission.code 保持同一值域（如 sys:admin:create）
+-- 4. permission 值应与 na_sys_permission.code 保持同一值域（如 sys:admin:create）
 --
 -- =====================================================
 
 -- 清空菜单表
--- DELETE FROM `th_sys_menu`;
+-- DELETE FROM `na_sys_menu`;
 
 -- 插入默认菜单数据，匹配前端路由结构
 -- 字段顺序: id, name, title, path, component, icon, redirect, permission,
 --           parent_id, sort, type, status, hide, hide_tab, cache, fixed_tab, active_path, deleted
-REPLACE INTO `th_sys_menu` (
+REPLACE INTO `na_sys_menu` (
     `id`, `name`, `title`, `path`, `component`, `icon`, `redirect`, `permission`,
     `parent_id`, `sort`, `type`, `status`,
     `hide`, `hide_tab`, `cache`, `fixed_tab`, `active_path`, `deleted`
@@ -60,9 +60,9 @@ REPLACE INTO `th_sys_menu` (
 
 -- =====================================================
 -- 按钮权限节点（B 类型，permission 必填）
--- 规则：挂在父级菜单页面（M 类型）下，permission 与 th_sys_permission.code 保持同一值域
+-- 规则：挂在父级菜单页面（M 类型）下，permission 与 na_sys_permission.code 保持同一值域
 -- =====================================================
-REPLACE INTO `th_sys_menu` (
+REPLACE INTO `na_sys_menu` (
     `id`, `name`, `title`, `path`, `component`, `permission`, `parent_id`,
     `sort`, `type`, `status`, `hide`, `deleted`
 ) VALUES
@@ -114,13 +114,13 @@ REPLACE INTO `th_sys_menu` (
 -- =====================================================
 -- swagger 文档菜单特殊配置（link 字段不在上方批量插入的列定义中，单独 UPDATE）
 -- =====================================================
-UPDATE `th_sys_menu`
+UPDATE `na_sys_menu`
    SET `link`   = '/sys/openapi',
        `iframe` = 1
  WHERE `id` = 400;
 
 -- 重置自增ID
-ALTER TABLE `th_sys_menu` AUTO_INCREMENT = 8000;
+ALTER TABLE `na_sys_menu` AUTO_INCREMENT = 8000;
 
 -- =====================================================
 -- 表结构说明
@@ -139,5 +139,5 @@ ALTER TABLE `th_sys_menu` AUTO_INCREMENT = 8000;
 -- 1. 按钮节点（type='B'）必须设置 permission，且必须挂在父级菜单页面（type='M'）下
 -- 2. 页面节点（type='M' 或 'D'）不设置 permission（permission 为空字符串）
 -- 3. 同级按钮节点 permission 不可重复
--- 4. permission 值应与 th_sys_permission.code 保持同一值域（如 sys:admin:create）
+-- 4. permission 值应与 na_sys_permission.code 保持同一值域（如 sys:admin:create）
 -- 5. 不允许按钮节点挂在目录（D）或外链（L/I）类型节点下

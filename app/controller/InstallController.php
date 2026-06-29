@@ -113,8 +113,18 @@ class InstallController
             'name'     => trim((string) ($post['name'] ?? 'nanoadmin')),
             'user'     => trim((string) ($post['user'] ?? 'root')),
             'password' => (string) ($post['password'] ?? ''),
-            'prefix'   => trim((string) ($post['prefix'] ?? 'na_')),
+            // 默认与 plugin/nanoadmin/sql/install.sql 里的硬编码前缀保持一致，避免无前缀时空替换
+            'prefix'   => $this->normalizePrefix((string) ($post['prefix'] ?? 'na_')),
         ];
+    }
+
+    /**
+     * 归一化表前缀：仅允许字母数字下划线；为空时回落到 na_
+     */
+    private function normalizePrefix(string $raw): string
+    {
+        $cleaned = preg_replace('/[^a-zA-Z0-9_]/', '', $raw) ?? '';
+        return $cleaned === '' ? 'na_' : $cleaned;
     }
 
     /**

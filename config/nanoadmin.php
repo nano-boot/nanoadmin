@@ -39,9 +39,9 @@ return [
     'auth' => [
         // 不需要认证的路由（前缀匹配）
         'exclude_routes' => [
+            '/install',
             '/sys/auth/login',
             '/sys/auth/refresh',
-            '/sys/install',
             // Swagger UI 和 OpenAPI 文档不需要认证（由中间件自动从 swagger.php 注入，此处保留仅为可读性）
             '/sys/openapi',
             '/sys/openapi/doc',

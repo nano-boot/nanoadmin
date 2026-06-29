@@ -15,9 +15,12 @@
  */
 $e = $env ?? [];
 $php = $e['php'] ?? [];
+$composer      = $e['composer'] ?? [];
 $extRequired    = $e['extensions']['required']    ?? [];
 $extRecommended = $e['extensions']['recommended'] ?? [];
 $dirs           = $e['directories'] ?? [];
+// 已安装状态：进度条直接打满；未安装：从 25%（第一步）起步
+$progressWidth = !empty($installed) ? '100%' : '25%';
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -40,14 +43,19 @@ $dirs           = $e['directories'] ?? [];
             --card: #FFFFFF;           /* card surface */
             --tint: #FAFAFA;           /* inner panel bg */
 
-            /* Typography */
-            --font-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Consolas', monospace;
-            --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+            /* Typography — single mono stack across the whole installer */
+            --font: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Consolas', 'PingFang SC', 'Microsoft YaHei', monospace;
 
             /* Geometry */
             --radius: 3px;
             --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             --shadow-card: 0 1px 2px rgba(10, 10, 10, 0.04);
+
+            /* Status palette — success / fail semantic colors (muted to fit blueprint aesthetic) */
+            --success-bg: #ecf3ee;
+            --success-fg: #3a8262;
+            --fail-bg: #f6eaea;
+            --fail-fg: #a93226;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -58,7 +66,6 @@ $dirs           = $e['directories'] ?? [];
             height: 1em;
             vertical-align: -0.125em;
             fill: none;
-            stroke: currentColor;
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -72,7 +79,7 @@ $dirs           = $e['directories'] ?? [];
         body {
             background: var(--paper);
             min-height: 100vh;
-            font-family: var(--font-sans);
+            font-family: var(--font);
             color: var(--ink);
             padding: 40px 16px;
             -webkit-font-smoothing: antialiased;
@@ -93,12 +100,17 @@ $dirs           = $e['directories'] ?? [];
             background-color: var(--line);
             margin-bottom: 28px;
             overflow: hidden;
+            /* Force children to inherit height; .progress-bar is a Bootstrap flex item
+               which otherwise collapses to height 0 and becomes invisible. */
+            display: block;
         }
         .progress-bar {
             background: var(--ink);
             border-radius: 0;
             transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 0%;
+            min-width: 2px;
+            display: block;
+            height: 100%;
         }
         .steps-container {
             display: flex;
@@ -126,10 +138,10 @@ $dirs           = $e['directories'] ?? [];
             border: 1px solid var(--line-strong);
             color: var(--ash);
             transition: var(--transition);
-            font-size: 18px;
+            font-size: 22px;
         }
         .step-text {
-            font-family: var(--font-mono);
+            font-family: var(--font);
             font-size: 11px;
             font-weight: 500;
             color: var(--ash);
@@ -160,9 +172,9 @@ $dirs           = $e['directories'] ?? [];
             color: var(--ink);
             letter-spacing: -0.01em;
         }
-        .form-group { margin-bottom: 20px; }
+        .form-group { margin-bottom: 10px; }
         .form-label {
-            font-family: var(--font-mono);
+            font-family: var(--font);
             font-weight: 500;
             font-size: 11px;
             color: var(--ash);
@@ -182,7 +194,7 @@ $dirs           = $e['directories'] ?? [];
             color: var(--ink);
             transition: var(--transition);
             width: 100%;
-            font-family: var(--font-sans);
+            font-family: var(--font);
         }
         .form-control:focus {
             border-color: var(--ink);
@@ -191,12 +203,44 @@ $dirs           = $e['directories'] ?? [];
             outline: none;
         }
         .form-control::placeholder { color: var(--chalk); }
+        .form-control.is-invalid {
+            border-color: var(--fail-fg);
+        }
+        .form-control.is-invalid:focus {
+            border-color: var(--fail-fg);
+            box-shadow: 0 0 0 3px rgba(169, 50, 38, 0.08);
+        }
+        .form-error {
+            font-family: var(--font);
+            font-size: 11px;
+            color: var(--fail-fg);
+            margin-top: 6px;
+            letter-spacing: 0.02em;
+            line-height: 1.2;
+            /* matches .form-help so help↔error transition is a true swap, not a jump */
+            min-height: 1.2em;
+            visibility: hidden;
+        }
+        .form-group.has-error .form-error { visibility: visible; }
+        .form-group.has-error .form-help { visibility: hidden; }
+        @keyframes shakeX {
+            0%, 100% { transform: translateX(0); }
+            25%      { transform: translateX(-3px); }
+            75%      { transform: translateX(3px); }
+        }
+        .form-group.shake { animation: shakeX 0.18s ease; }
+        @media (prefers-reduced-motion: reduce) {
+            .form-group.shake { animation: none; }
+        }
         .form-help {
-            font-family: var(--font-mono);
+            font-family: var(--font);
             font-size: 11px;
             color: var(--ash);
             margin-top: 6px;
             letter-spacing: 0.02em;
+            line-height: 1.3;
+            /* matches .form-error so the swap stays the same height */
+            min-height: 1.3em;
         }
         .form-row {
             display: grid;
@@ -217,7 +261,7 @@ $dirs           = $e['directories'] ?? [];
             gap: 8px;
             border: 1px solid transparent;
             cursor: pointer;
-            font-family: var(--font-sans);
+            font-family: var(--font);
         }
         .btn-primary {
             background: var(--ink);
@@ -248,7 +292,7 @@ $dirs           = $e['directories'] ?? [];
             grid-template-columns: repeat(2, 1fr);
             gap: 1px;
             margin-bottom: 24px;
-            background: var(--line);
+            background: var(--card);
             border: 1px solid var(--line);
             border-radius: var(--radius);
             overflow: hidden;
@@ -262,7 +306,7 @@ $dirs           = $e['directories'] ?? [];
             font-size: 14px;
         }
         .env-card .name {
-            font-family: var(--font-mono);
+            font-family: var(--font);
             color: var(--ink);
             letter-spacing: 0.02em;
             display: flex;
@@ -276,16 +320,34 @@ $dirs           = $e['directories'] ?? [];
         .env-card .badge {
             padding: 3px 9px;
             border-radius: var(--radius);
-            font-family: var(--font-mono);
-            font-size: 10px;
-            font-weight: 600;
+            font-family: var(--font);
+            font-size: 12px;
+            font-weight: 500;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            border: 1px solid transparent;
+            background: transparent;
+            border: 0;
         }
-        .badge-ok { background: var(--ink); color: var(--card); }
-        .badge-fail { background: var(--card); color: var(--ink); border-color: var(--ink); }
-        .badge-warning { background: var(--card); color: var(--ash); border: 1px dashed var(--ash); }
+        .badge-ok { color: var(--success-fg); }
+        .badge-fail { color: var(--fail-fg); }
+        .badge-warning { color: var(--ash); font-style: italic; }
+
+        /* Section labels above each env-grid — group "core / recommended / dirs" */
+        .env-section-label {
+            font-family: var(--font);
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--ash);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin: 20px 0 8px;
+        }
+        .env-section-label:first-of-type { margin-top: 0; }
+        .env-card .name .env-require {
+            color: var(--chalk);
+            font-size: 10px;
+            letter-spacing: 0.02em;
+        }
 
         /* Log container — terminal aesthetic */
         .log-container {
@@ -297,7 +359,7 @@ $dirs           = $e['directories'] ?? [];
             overflow-y: auto;
             padding: 16px 18px;
             margin-top: 16px;
-            font-family: var(--font-mono);
+            font-family: var(--font);
         }
         .log-item {
             padding: 8px 12px;
@@ -322,7 +384,7 @@ $dirs           = $e['directories'] ?? [];
             color: var(--chalk);
             font-size: 11px;
             margin-left: auto;
-            font-family: var(--font-mono);
+            font-family: var(--font);
             letter-spacing: 0.04em;
         }
 
@@ -349,7 +411,7 @@ $dirs           = $e['directories'] ?? [];
             padding: 12px 18px;
             display: inline-block;
             margin-bottom: 24px;
-            font-family: var(--font-mono);
+            font-family: var(--font);
             font-size: 12px;
             color: var(--ash);
             letter-spacing: 0.04em;
@@ -404,10 +466,22 @@ $dirs           = $e['directories'] ?? [];
             background: var(--ink); color: var(--card);
             flex-shrink: 0; font-size: 13px;
         }
+        /* status icons in dialog: ink-on-paper with a hairline border, no color */
+        .dialog .icon-circle {
+            background: var(--card);
+            color: var(--ink);
+            border: 1px solid var(--line-strong);
+        }
+        .dialog.success .icon-circle,
+        .dialog.error .icon-circle {
+            background: var(--card);
+            color: var(--ink);
+            border-color: var(--ink);
+        }
         .dialog-title {
             font-size: 14px;
             font-weight: 600;
-            font-family: var(--font-mono);
+            font-family: var(--font);
             letter-spacing: 0.08em;
             text-transform: uppercase;
             color: var(--ink);
@@ -461,25 +535,31 @@ $dirs           = $e['directories'] ?? [];
 <body>
     <div class="install-wrapper">
         <div class="install-container">
-            <div class="progress-container">
-                <div class="progress">
-                    <div class="progress-bar" id="progressBar" style="width: 33%"></div>
+<div class="progress-container">
+                    <div class="progress">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <div class="steps-container">
+                        <div class="step-item <?= !empty($installed) ? 'completed' : 'active' ?>" data-step="1">
+                            <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M20 18a1 1 0 0 1-1 1h-4a3 3 0 0 0-3 3a3 3 0 0 0-3-3H5a1 1 0 0 1-1-1H2a3 3 0 0 0 3 3h4a2 2 0 0 1 2 2h2a2 2 0 0 1 2-2h4a3 3 0 0 0 3-3Zm0-12a1 1 0 0 0-1-1h-4a3 3 0 0 1-3-3a3 3 0 0 1-3 3H5a1 1 0 0 0-1 1H2a3 3 0 0 1 3-3h4a2 2 0 0 0 2-2h2a2 2 0 0 0 2 2h4a3 3 0 0 1 3 3Zm-8 6L9 8H7v8h2v-4l3 4h2V8h-2zm9-4l-2 5.27L17 8h-2l3 8h2l3-8zM1 8v8h5v-2H3v-1h2v-2H3v-1h3V8z" />
+                            </svg></div>
+                            <div class="step-text">环境检测</div>
+                        </div>
+                        <div class="step-item <?= !empty($installed) ? 'completed' : '' ?>" data-step="2">
+                            <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></g></svg></div>
+                            <div class="step-text">数据库配置</div>
+                        </div>
+                        <div class="step-item <?= !empty($installed) ? 'completed' : '' ?>" data-step="3">
+                            <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></g></svg></div>
+                            <div class="step-text">执行安装</div>
+                        </div>
+                        <div class="step-item <?= !empty($installed) ? 'active' : '' ?>" data-step="4">
+                            <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg></div>
+                            <div class="step-text">安装完成</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="steps-container">
-                    <div class="step-item active" data-step="1">
-                        <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></g></svg></div>
-                        <div class="step-text">环境检测</div>
-                    </div>
-                    <div class="step-item" data-step="2">
-                        <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></g></svg></div>
-                        <div class="step-text">执行安装</div>
-                    </div>
-                    <div class="step-item" data-step="3">
-                        <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg></div>
-                        <div class="step-text">安装完成</div>
-                    </div>
-                </div>
-            </div>
 
             <div class="content-section">
                 <?php if (!empty($installed)): ?>
@@ -489,7 +569,7 @@ $dirs           = $e['directories'] ?? [];
                         <h2 class="completed-title">系统已安装</h2>
                         <p class="completed-subtitle">
                             NanoAdmin 已安装完成。<br>
-                            如需重新安装，请删除 <code>plugin/nanoadmin/storage/install.lock</code> 文件后重启服务。
+                            如需重新安装，请删除 <code>storage/install.lock</code> 文件后重启服务。
                         </p>
                         <a href="/" class="btn btn-primary">
                             <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"/></svg> 进入首页
@@ -497,49 +577,120 @@ $dirs           = $e['directories'] ?? [];
                     </div>
                 <?php else: ?>
 
-                <!-- Step 1: 环境检测 + 数据库配置 + 管理员账号 -->
+                <!-- Step 1: 环境检测 -->
                 <div class="step-content active" id="step1">
                     <h2 class="step-title">环境检测</h2>
 
-                    <!-- PHP -->
+                    <!-- 渲染单个检测卡片：
+                         $item  = ['name','require','current'?, 'status']
+                         status ∈ {ok, fail, warning} -->
+                    <?php
+                    $renderBadge = static function (string $status): string {
+                        return match ($status) {
+                            'ok'      => '<span class="badge badge-ok">✓ 通过</span>',
+                            'warning' => '<span class="badge badge-warning">! 建议</span>',
+                            default   => '<span class="badge badge-fail">✗ 失败</span>',
+                        };
+                    };
+                    $puzzleIcon = '<svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.39 4.39a1 1 0 0 0 1.68-.474a2.5 2.5 0 1 1 3.014 3.015a1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474a2.5 2.5 0 1 0-3.014 3.015a1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474a2.5 2.5 0 1 1-3.014-3.015a1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474a2.5 2.5 0 1 0 3.014-3.015a1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z"/></svg>';
+                    ?>
+
+                    <div class="env-section-label">核心环境</div>
                     <div class="env-grid">
+                        <!-- PHP 版本 -->
                         <div class="env-card">
                             <span class="name">
                                 <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m18 16l4-4l-4-4M6 8l-4 4l4 4m8.5-12l-5 16"/></svg>
                                 <?= htmlspecialchars($php['name'] ?? 'PHP 版本') ?>
-                                <small class="text-muted"><?= htmlspecialchars($php['current'] ?? '') ?></small>
+                                <small><?= htmlspecialchars($php['current'] ?? '') ?></small>
+                                <small class="env-require">要求 <?= htmlspecialchars($php['require'] ?? '') ?></small>
                             </span>
-                            <span class="badge badge-<?= ($php['status'] ?? '') === 'ok' ? 'ok' : 'fail' ?>">
-                                <?= ($php['status'] ?? '') === 'ok' ? '✓ 通过' : '✗ 失败' ?>
-                            </span>
+                            <?= $renderBadge($php['status'] ?? 'fail') ?>
                         </div>
+
+                        <!-- Composer 版本 -->
+                        <div class="env-card">
+                            <span class="name">
+                                <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>
+                                <?= htmlspecialchars($composer['name'] ?? 'Composer') ?>
+                                <small><?= htmlspecialchars($composer['current'] ?? '') ?></small>
+                                <small class="env-require">要求 <?= htmlspecialchars($composer['require'] ?? '') ?></small>
+                            </span>
+                            <?= $renderBadge($composer['status'] ?? 'fail') ?>
+                        </div>
+
+                        <!-- 必需 PHP 扩展 -->
                         <?php foreach ($extRequired as $key => $ext): ?>
                             <div class="env-card">
-                                <span class="name"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.39 4.39a1 1 0 0 0 1.68-.474a2.5 2.5 0 1 1 3.014 3.015a1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474a2.5 2.5 0 1 0-3.014 3.015a1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474a2.5 2.5 0 1 1-3.014-3.015a1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474a2.5 2.5 0 1 0 3.014-3.015a1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z"/></svg> <?= htmlspecialchars($ext['name']) ?></span>
-                                <span class="badge badge-<?= $ext['status'] === 'ok' ? 'ok' : 'fail' ?>">
-                                    <?= $ext['status'] === 'ok' ? '✓ 已安装' : '✗ 缺失' ?>
+                                <span class="name">
+                                    <?= $puzzleIcon ?>
+                                    <?= htmlspecialchars($ext['name']) ?>
+                                    <small class="env-require"><?= htmlspecialchars($ext['require'] ?? '') ?></small>
                                 </span>
+                                <?= $renderBadge($ext['status'] ?? 'fail') ?>
                             </div>
                         <?php endforeach; ?>
                     </div>
 
-                    <h2 class="step-title" style="margin-top: 20px;">数据库配置</h2>
-                    <form id="installForm">
+                    <?php if (!empty($extRecommended)): ?>
+                        <div class="env-section-label">推荐扩展（缺失不阻断，仅提示）</div>
+                        <div class="env-grid">
+                            <?php foreach ($extRecommended as $key => $ext): ?>
+                                <div class="env-card">
+                                    <span class="name">
+                                        <?= $puzzleIcon ?>
+                                        <?= htmlspecialchars($ext['name']) ?>
+                                        <small class="env-require"><?= htmlspecialchars($ext['require'] ?? '') ?></small>
+                                    </span>
+                                    <?= $renderBadge($ext['status'] ?? 'warning') ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($dirs)): ?>
+                        <div class="env-section-label">目录权限</div>
+                        <div class="env-grid">
+                            <?php foreach ($dirs as $key => $dir): ?>
+                                <div class="env-card">
+                                    <span class="name">
+                                        <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                                        <?= htmlspecialchars($dir['name']) ?>
+                                        <small class="env-require">要求可写</small>
+                                    </span>
+                                    <?= $renderBadge($dir['status'] ?? 'fail') ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="btn-actions">
+                        <span></span>
+                        <button type="button" class="btn btn-primary" id="goStep2Btn">
+                            <span>下一步：数据库配置</span>
+                            <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7l7 7l-7 7"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: 数据库配置 + 初始管理员 -->
+                <div class="step-content" id="step2">
+                    <h2 class="step-title">数据库配置</h2>
+                    <form id="installForm" novalidate>
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">数据库主机<span class="required">*</span></label>
-                                <input type="text" class="form-control" name="host" value="127.0.0.1" required>
+                                <input type="text" class="form-control" name="host" value="127.0.0.1">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">端口<span class="required">*</span></label>
-                                <input type="number" class="form-control" name="port" value="3306" required>
+                                <input type="number" class="form-control" name="port" value="3306">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">数据库名<span class="required">*</span></label>
-                                <input type="text" class="form-control" name="name" value="nanoadmin" required>
-                                <div class="form-help">不存在时自动创建</div>
+                                <input type="text" class="form-control" name="name" placeholder="不存在时自动创建" value="nanoadmin">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">表前缀</label>
@@ -549,10 +700,10 @@ $dirs           = $e['directories'] ?? [];
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">用户名<span class="required">*</span></label>
-                                <input type="text" class="form-control" name="user" value="root" required>
+                                <input type="text" class="form-control" name="user" value="root">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">密码</label>
+                                <label class="form-label">数据库密码</label>
                                 <input type="password" class="form-control" name="password">
                             </div>
                         </div>
@@ -561,7 +712,7 @@ $dirs           = $e['directories'] ?? [];
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">管理员账号<span class="required">*</span></label>
-                                <input type="text" class="form-control" name="admin_user" value="admin" required>
+                                <input type="text" class="form-control" name="admin_user" value="admin">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">昵称</label>
@@ -571,12 +722,11 @@ $dirs           = $e['directories'] ?? [];
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">密码<span class="required">*</span></label>
-                                <input type="password" class="form-control" name="admin_password" required>
-                                <div class="form-help">不少于 6 位</div>
+                                <input type="password" class="form-control" placeholder="不少于 6 位" name="admin_password">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">确认密码<span class="required">*</span></label>
-                                <input type="password" class="form-control" name="admin_password_confirm" required>
+                                <input type="password" class="form-control" placeholder="确认密码" name="admin_password_confirm">
                             </div>
                         </div>
 
@@ -584,16 +734,22 @@ $dirs           = $e['directories'] ?? [];
                             <button type="button" class="btn btn-outline" id="testDbBtn">
                                 <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22v-5m3-9V2m2 6a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1zM9 8V2"/></svg> 测试连接
                             </button>
-                            <button type="submit" class="btn btn-primary" id="installBtn">
-                                <span>开始安装</span>
-                                <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7l7 7l-7 7"/></svg>
-                            </button>
+                            <div style="display:flex; gap:12px;">
+                                <button type="button" class="btn btn-outline" id="backStep1Btn">
+                                    <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 12H5m7 7l-7-7l7-7"/></svg>
+                                    上一步
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="installBtn">
+                                    <span>开始安装</span>
+                                    <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7l7 7l-7 7"/></svg>
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
 
-                <!-- Step 2: 安装进度 -->
-                <div class="step-content" id="step2">
+                <!-- Step 3: 安装进度 -->
+                <div class="step-content" id="step3">
                     <h2 class="step-title">正在安装</h2>
                     <div class="log-container" id="installLog">
                         <div class="log-item">
@@ -604,8 +760,8 @@ $dirs           = $e['directories'] ?? [];
                     </div>
                 </div>
 
-                <!-- Step 3: 安装完成 -->
-                <div class="step-content" id="step3">
+                <!-- Step 4: 安装完成 -->
+                <div class="step-content" id="step4">
                     <div class="completed-message">
                         <div class="completed-icon">
                             <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg>
@@ -657,7 +813,8 @@ $dirs           = $e['directories'] ?? [];
         const dialogConfirmBtn = document.getElementById('dialogConfirm');
                 // Inline Lucide SVG icon library — mirrors the FA icons used by the page
         const ICONS = {
-            database: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></g></svg>',
+            checklist: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="6" rx="1"/><path d="M7 7h10M7 12h10M7 17h4"/><path d="m16 16l2 2l4-4"/></svg>',
+            database: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>',
             cogs: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0a2.34 2.34 0 0 0 3.319 1.915a2.34 2.34 0 0 1 2.33 4.033a2.34 2.34 0 0 0 0 3.831a2.34 2.34 0 0 1-2.33 4.033a2.34 2.34 0 0 0-3.319 1.915a2.34 2.34 0 0 1-4.659 0a2.34 2.34 0 0 0-3.32-1.915a2.34 2.34 0 0 1-2.33-4.033a2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></g></svg>',
             check: '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg>',
             'check-circle': '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12l2 2l4-4"/></g></svg>',
@@ -709,8 +866,26 @@ let lastFocus = null;
             for (let i = 1; i < step; i++) {
                 document.querySelector('.step-item[data-step="' + i + '"]').classList.add('completed');
             }
-            document.getElementById('progressBar').style.width = (step / 3 * 100) + '%';
+            document.getElementById('progressBar').style.width = (step / 4 * 100) + '%';
         }
+
+        // Step1 → Step2 门控：环境检测任一 fail 时禁止进入数据库配置
+        // 用页面上的 .badge-fail 数量判断（PHP/Composer/必需扩展/目录都会渲染这个类）
+        const envPassed = document.querySelectorAll('#step1 .badge-fail').length === 0;
+        const goStep2Btn = document.getElementById('goStep2Btn');
+        if (goStep2Btn) {
+            if (!envPassed) {
+                goStep2Btn.disabled = true;
+                goStep2Btn.title = '环境检测未通过，请先解决失败项';
+            }
+            goStep2Btn.addEventListener('click', () => setStep(2));
+        }
+        const backStep1Btn = document.getElementById('backStep1Btn');
+        if (backStep1Btn) {
+            backStep1Btn.addEventListener('click', () => setStep(1));
+        }
+
+        setStep(1);
 
         function appendLog(msg, type) {
             const log = document.getElementById('installLog');
@@ -728,11 +903,147 @@ let lastFocus = null;
             log.scrollTop = log.scrollHeight;
         }
 
+        // ---- 表单验证 -------------------------------------------------
+        // 8 字段规则集 + 1 个跨字段规则（密码一致）。
+        // 错误消息用简体中文，无 HTML 注入风险（已是 textContent）。
+        const validators = {
+            host: {
+                required: '请填写数据库主机',
+                pattern: { rx: /^[A-Za-z0-9._-]+$/, msg: '主机名只允许字母、数字、点、下划线、连字符' },
+            },
+            port: {
+                required: '请填写端口',
+                pattern: { rx: /^[0-9]+$/, msg: '端口必须为数字' },
+                range: { min: 1, max: 65535, msg: '端口范围 1-65535' },
+            },
+            name: {
+                required: '请填写数据库名',
+                pattern: { rx: /^[A-Za-z0-9_]+$/, msg: '数据库名只允许字母、数字、下划线' },
+            },
+            prefix: {
+                pattern: { rx: /^[A-Za-z0-9_]*$/, msg: '表前缀只允许字母、数字、下划线（可留空）' },
+            },
+            user: {
+                required: '请填写数据库用户名',
+                minLen: { n: 1, msg: '用户名至少 1 个字符' },
+            },
+            // password 字段可选，但若填写需 ≥ 1
+            password: {},
+            admin_user: {
+                required: '请填写管理员账号',
+                minLen: { n: 3, msg: '管理员账号至少 3 个字符' },
+                pattern: { rx: /^[A-Za-z0-9_]+$/, msg: '管理员账号只允许字母、数字、下划线' },
+            },
+            admin_nickname: {},
+            admin_password: {
+                required: '请填写管理员密码',
+                minLen: { n: 6, msg: '管理员密码至少 6 位' },
+            },
+            admin_password_confirm: {
+                required: '请再次输入管理员密码',
+                match: { field: 'admin_password', msg: '两次输入的密码不一致' },
+            },
+        };
+
+        function getError(field, value) {
+            const v = validators[field];
+            if (!v) return '';
+            if (v.required && !value) return v.required;
+            if (v.pattern && value && !v.pattern.rx.test(value)) return v.pattern.msg;
+            if (v.minLen && value && value.length < v.minLen.n) return v.minLen.msg;
+            if (v.range && value && (Number(value) < v.range.min || Number(value) > v.range.max)) return v.range.msg;
+            if (v.match && value) {
+                const other = form.elements[v.match.field];
+                if (other && value !== other.value) return v.match.msg;
+            }
+            return '';
+        }
+
+        // 把错误消息元素挂到每个 input 后面的 form-group 里（一次性，DOM 稳定）
+        function injectErrorSlots(form) {
+            form.querySelectorAll('.form-control').forEach(input => {
+                const group = input.closest('.form-group');
+                if (!group || group.querySelector('.form-error')) return;
+                const slot = document.createElement('div');
+                slot.className = 'form-error';
+                slot.setAttribute('role', 'alert');
+                slot.setAttribute('aria-live', 'polite');
+                group.appendChild(slot);
+            });
+        }
+
+        function showFieldError(form, name, message) {
+            const input = form.elements[name];
+            if (!input) return;
+            const group = input.closest('.form-group');
+            if (!group) return;
+            const slot = group.querySelector('.form-error');
+            if (message) {
+                group.classList.add('has-error');
+                input.classList.add('is-invalid');
+                if (slot) slot.textContent = message;
+                // 抖动只触发一次，避免每次输入都晃
+                if (!group.dataset.shook) {
+                    group.classList.add('shake');
+                    group.dataset.shook = '1';
+                    group.addEventListener('animationend', () => group.classList.remove('shake'), { once: true });
+                }
+            } else {
+                group.classList.remove('has-error');
+                input.classList.remove('is-invalid');
+                if (slot) slot.textContent = '';
+            }
+        }
+
+        function validateForm(form) {
+            let firstInvalid = null;
+            for (const name of Object.keys(validators)) {
+                const input = form.elements[name];
+                if (!input) continue;
+                const msg = getError(name, (input.value || '').trim());
+                showFieldError(form, name, msg);
+                if (msg && !firstInvalid) firstInvalid = input;
+            }
+            return firstInvalid;
+        }
+
+        function clearErrorOnInput(form) {
+            form.querySelectorAll('.form-control').forEach(input => {
+                input.addEventListener('input', () => {
+                    if (input.classList.contains('is-invalid')) {
+                        showFieldError(form, input.name, '');
+                    }
+                });
+            });
+            // 跨字段：密码任一变动都重评 confirm
+            const pw = form.elements['admin_password'];
+            const pwc = form.elements['admin_password_confirm'];
+            if (pw && pwc) {
+                const reeval = () => {
+                    if (pwc.classList.contains('is-invalid')) {
+                        showFieldError(form, 'admin_password_confirm', getError('admin_password_confirm', pwc.value.trim()));
+                    }
+                };
+                pw.addEventListener('input', reeval);
+            }
+        }
+        // ---- 表单验证 end ---------------------------------------------
+
         // 测试数据库连接
         const testDbBtn = document.getElementById('testDbBtn');
         if (testDbBtn) {
             testDbBtn.addEventListener('click', async function() {
                 const form = document.getElementById('installForm');
+                // 至少保证数据库 4 个字段是合法的，再去连库
+                const dbFields = ['host', 'port', 'name', 'user'];
+                let bad = null;
+                dbFields.forEach(name => {
+                    const input = form.elements[name];
+                    const msg = getError(name, (input.value || '').trim());
+                    showFieldError(form, name, msg);
+                    if (msg && !bad) bad = input;
+                });
+                if (bad) { bad.focus(); return; }
                 const fd = new FormData(form);
                 const data = {};
                 for (const [k, v] of fd.entries()) data[k] = v;
@@ -762,20 +1073,19 @@ let lastFocus = null;
         // 提交安装
         const form = document.getElementById('installForm');
         if (form) {
+            injectErrorSlots(form);
+            clearErrorOnInput(form);
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
 
-                // 校验密码
-                if (form.admin_password.value !== form.admin_password_confirm.value) {
-                    notify('error', '两次输入的密码不一致');
-                    return;
-                }
-                if (form.admin_password.value.length < 6) {
-                    notify('error', '管理员密码长度不能少于 6 位');
+                // 客户端校验：返回首个失败字段以便聚焦
+                const firstInvalid = validateForm(form);
+                if (firstInvalid) {
+                    firstInvalid.focus();
                     return;
                 }
 
-                setStep(2);
+                setStep(3);
                 appendLog('正在收集配置参数...');
                 const fd = new FormData(form);
                 const data = {};
@@ -798,19 +1108,19 @@ let lastFocus = null;
                         appendLog('✓ 初始管理员已创建', 'success');
                         appendLog('✓ install.lock 已生成', 'success');
 
-                        setStep(3);
+                        setStep(4);
                         if (json.data && json.data.admin) {
                             document.getElementById('adminUsername').textContent = json.data.admin.username;
                         }
                     } else {
                         appendLog('✗ ' + json.message, 'error');
                         notify('error', json.message);
-                        setStep(1);
+                        setStep(2);
                     }
                 } catch (err) {
                     appendLog('✗ 请求失败: ' + err.message, 'error');
                     notify('error', '请求失败: ' + err.message);
-                    setStep(1);
+                    setStep(2);
                 }
             });
         }

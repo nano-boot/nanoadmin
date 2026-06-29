@@ -9,7 +9,7 @@ CREATE DATABASE IF NOT EXISTS nanoadmin CHARACTER SET utf8mb4 COLLATE utf8mb4_un
 USE nanoadmin;
 
 -- 1. 用户表
-CREATE TABLE IF NOT EXISTS `th_sys_user` (
+CREATE TABLE IF NOT EXISTS `na_sys_user` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '用户ID',
     `nickname` VARCHAR(50) NOT NULL default '' UNIQUE COMMENT '昵称',
     `password` VARCHAR(255) NOT NULL default '' COMMENT '密码（加密后）',
@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS `th_sys_user` (
 -- ----------------------------
 -- 7. 管理员表
 -- ----------------------------
-DROP TABLE IF EXISTS `th_sys_admin`;
-CREATE TABLE `th_sys_admin` (
+DROP TABLE IF EXISTS `na_sys_admin`;
+CREATE TABLE `na_sys_admin` (
     `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '管理员ID',
     `username` varchar(50) NOT NULL COMMENT '用户名',
     `password` varchar(255) NOT NULL COMMENT '密码',
@@ -58,7 +58,7 @@ CREATE TABLE `th_sys_admin` (
 
 
 -- 2. 角色表
-CREATE TABLE IF NOT EXISTS th_sys_role (
+CREATE TABLE IF NOT EXISTS na_sys_role (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '角色ID',
     code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色代码',
     name VARCHAR(100) NOT NULL COMMENT '角色名称',
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS th_sys_role (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
 
 -- 3. 权限表
-CREATE TABLE IF NOT EXISTS th_sys_permission (
+CREATE TABLE IF NOT EXISTS na_sys_permission (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '权限ID',
     code VARCHAR(100) NOT NULL UNIQUE COMMENT '权限代码',
     name VARCHAR(100) NOT NULL COMMENT '权限名称',
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS th_sys_permission (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';
 
 -- 4. 菜单表
-CREATE TABLE IF NOT EXISTS th_sys_menu (
+CREATE TABLE IF NOT EXISTS na_sys_menu (
     -- 基础字段
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '菜单ID',
     parent_id BIGINT DEFAULT 0 COMMENT '父菜单ID，0为顶级菜单',
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS th_sys_menu (
     
     -- 菜单类型和权限
     type CHAR(1) DEFAULT 'D' COMMENT '菜单类型（D目录 M菜单 B按钮 L外链 I内嵌）',
-    permission VARCHAR(100) DEFAULT '' COMMENT '权限标识（正式动作权限载体；当 type = ''B'' 时应与 th_sys_permission.code 保持同一值域）',
+    permission VARCHAR(100) DEFAULT '' COMMENT '权限标识（正式动作权限载体；当 type = ''B'' 时应与 na_sys_permission.code 保持同一值域）',
     -- roles / auth_list 为历史设计注释口径，当前正式动作权限模型以 B 类型按钮节点 + permission 为准
 
     -- === 显示控制 ===
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS th_sys_menu (
 
 
 -- 5. 用户角色关联表
-CREATE TABLE IF NOT EXISTS th_sys_admin_role (
+CREATE TABLE IF NOT EXISTS na_sys_admin_role (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     admin_id BIGINT NOT NULL COMMENT '管理员ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS th_sys_admin_role (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员角色关联表';
 
 -- 6. 角色权限关联表
-CREATE TABLE IF NOT EXISTS th_sys_role_permission (
+CREATE TABLE IF NOT EXISTS na_sys_role_permission (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     permission_id BIGINT NOT NULL COMMENT '权限ID',
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS th_sys_role_permission (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限关联表';
 
 -- 7. 角色菜单关联表
-CREATE TABLE IF NOT EXISTS th_sys_role_menu (
+CREATE TABLE IF NOT EXISTS na_sys_role_menu (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     menu_id BIGINT NOT NULL COMMENT '菜单ID',
@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS th_sys_role_menu (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色菜单关联表';
 
 -- 8. 文件表
-CREATE TABLE IF NOT EXISTS th_sys_file (
+CREATE TABLE IF NOT EXISTS na_sys_file (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '文件ID',
     original_name VARCHAR(255) NOT NULL COMMENT '原始文件名',
     file_name VARCHAR(255) NOT NULL COMMENT '存储文件名',
@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS th_sys_file (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件表';
 
 -- 9. 字典类型表
-CREATE TABLE IF NOT EXISTS th_sys_dict_type (
+CREATE TABLE IF NOT EXISTS na_sys_dict_type (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典类型ID',
     name VARCHAR(100) NOT NULL COMMENT '字典名称',
     code VARCHAR(100) NOT NULL UNIQUE COMMENT '字典编码',
@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS th_sys_dict_type (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典类型表';
 
 -- 10. 字典数据表
-CREATE TABLE IF NOT EXISTS th_sys_dict_data (
+CREATE TABLE IF NOT EXISTS na_sys_dict_data (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典数据ID',
     dict_type_id BIGINT NOT NULL COMMENT '字典类型ID',
     label VARCHAR(100) NOT NULL COMMENT '字典标签',
@@ -256,29 +256,29 @@ CREATE TABLE IF NOT EXISTS th_sys_dict_data (
 -- 字典初始化数据
 -- =====================================================
 -- 字典类型
-INSERT INTO `th_sys_dict_type` (`name`, `code`, `description`, `status`, `sort`) VALUES
+INSERT INTO `na_sys_dict_type` (`name`, `code`, `description`, `status`, `sort`) VALUES
 ('性别', 'sys_gender', '系统性别枚举', 1, 10),
 ('状态', 'sys_status', '通用状态枚举', 1, 20),
 ('是/否', 'sys_yes_no', '是/否枚举', 1, 30),
 ('通知类型', 'sys_notice_type', '通知消息类型', 1, 40);
 -- 字典数据 - 性别
-INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
+INSERT INTO `na_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
 (1, '未知', '0', 10, 1),
 (1, '男', '1', 20, 1),
 (1, '女', '2', 30, 1);
 
 -- 字典数据 - 状态
-INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
+INSERT INTO `na_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
 (2, '禁用', '0', 10, 1),
 (2, '正常', '1', 20, 1);
 
 -- 字典数据 - 是/否
-INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
+INSERT INTO `na_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
 (3, '否', '0', 10, 1),
 (3, '是', '1', 20, 1);
 
 -- 字典数据 - 通知类型
-INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
+INSERT INTO `na_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
 (5, '系统通知', 'system', 10, 1),
 (5, '活动通知', 'activity', 20, 1),
 (5, '订单通知', 'order', 30, 1),
@@ -287,7 +287,7 @@ INSERT INTO `th_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `statu
 -- =====================================================
 -- 11. 配置表
 -- =====================================================
-CREATE TABLE IF NOT EXISTS `th_sys_config` (
+CREATE TABLE IF NOT EXISTS `na_sys_config` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '配置ID',
     `name` VARCHAR(100) NOT NULL COMMENT '配置名称',
     `key` VARCHAR(100) NOT NULL UNIQUE COMMENT '配置键名',
@@ -313,7 +313,7 @@ CREATE TABLE IF NOT EXISTS `th_sys_config` (
 -- =====================================================
 -- 配置表初始化数据
 -- =====================================================
-INSERT INTO `th_sys_config` (`name`, `key`, `value`, `type`, `options`, `group`, `description`, `sort`, `status`) VALUES
+INSERT INTO `na_sys_config` (`name`, `key`, `value`, `type`, `options`, `group`, `description`, `sort`, `status`) VALUES
 -- 基础配置
 ('网站名称', 'site_name', 'Nano Admin', 'text', '', 'basic', '网站显示名称', 10, 1),
 ('网站Logo', 'site_logo', '', 'text', '', 'basic', '网站Logo地址', 20, 1),
@@ -341,7 +341,7 @@ INSERT INTO `th_sys_config` (`name`, `key`, `value`, `type`, `options`, `group`,
 -- =====================================================
 -- 12. 登录日志表
 -- =====================================================
-CREATE TABLE IF NOT EXISTS `th_sys_log_login` (
+CREATE TABLE IF NOT EXISTS `na_sys_log_login` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
     `admin_id` BIGINT NOT NULL COMMENT '管理员ID',
     `username` VARCHAR(50) NOT NULL COMMENT '用户名',
@@ -362,7 +362,7 @@ CREATE TABLE IF NOT EXISTS `th_sys_log_login` (
 -- =====================================================
 -- 13. 操作日志表
 -- =====================================================
-CREATE TABLE IF NOT EXISTS `th_sys_log_operation` (
+CREATE TABLE IF NOT EXISTS `na_sys_log_operation` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
     `admin_id` BIGINT NOT NULL COMMENT '管理员ID',
     `username` VARCHAR(50) NOT NULL COMMENT '管理员名称',
@@ -389,7 +389,7 @@ CREATE TABLE IF NOT EXISTS `th_sys_log_operation` (
 -- =====================================================
 -- 初始化角色、管理员与权限数据
 -- =====================================================
-INSERT INTO `th_sys_role` (`id`, `code`, `name`, `description`, `status`, `sort`, `deleted`) VALUES
+INSERT INTO `na_sys_role` (`id`, `code`, `name`, `description`, `status`, `sort`, `deleted`) VALUES
 (1, 'R_SUPER', '超级管理员', '系统超级管理员，拥有所有权限', 1, 1, 0),
 (2, 'R_SYSTEM', '系统管理员', '系统管理员，拥有系统管理核心权限', 1, 2, 0)
 ON DUPLICATE KEY UPDATE
@@ -399,7 +399,7 @@ ON DUPLICATE KEY UPDATE
 `sort` = VALUES(`sort`),
 `deleted` = VALUES(`deleted`);
 
-INSERT INTO `th_sys_admin` (`id`, `username`, `password`, `nickname`, `status`, `deleted`) VALUES
+INSERT INTO `na_sys_admin` (`id`, `username`, `password`, `nickname`, `status`, `deleted`) VALUES
 (1, 'admin', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '超级管理员', 1, 0),
 (2, 'system', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '系统管理员', 1, 0)
 ON DUPLICATE KEY UPDATE
@@ -408,12 +408,12 @@ ON DUPLICATE KEY UPDATE
 `status` = VALUES(`status`),
 `deleted` = VALUES(`deleted`);
 
-INSERT INTO `th_sys_admin_role` (`admin_id`, `role_id`) VALUES
+INSERT INTO `na_sys_admin_role` (`admin_id`, `role_id`) VALUES
 (1, 1),
 (2, 2)
 ON DUPLICATE KEY UPDATE `role_id` = VALUES(`role_id`);
 
-INSERT INTO `th_sys_permission` (`id`, `code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted`) VALUES
+INSERT INTO `na_sys_permission` (`id`, `code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted`) VALUES
 (1, 'sys:admin:page', '管理员列表', 'admin', 'page', '查看管理员列表', 1, 100, 0),
 (2, 'sys:admin:create', '创建管理员', 'admin', 'create', '创建新管理员', 1, 101, 0),
 (3, 'sys:admin:view', '查看管理员', 'admin', 'view', '查看管理员详情', 1, 102, 0),
@@ -463,7 +463,7 @@ ON DUPLICATE KEY UPDATE
 `sort` = VALUES(`sort`),
 `deleted` = VALUES(`deleted`);
 
-INSERT INTO `th_sys_role_permission` (`role_id`, `permission_id`) VALUES
+INSERT INTO `na_sys_role_permission` (`role_id`, `permission_id`) VALUES
 (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
 (2, 7), (2, 8), (2, 9), (2, 10), (2, 11), (2, 12), (2, 13),
 (2, 14), (2, 15), (2, 16), (2, 17), (2, 18),

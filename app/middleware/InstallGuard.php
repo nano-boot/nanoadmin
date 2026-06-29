@@ -11,7 +11,7 @@ use Webman\MiddlewareInterface;
 /**
  * 安装守卫中间件
  *
- * 检测 plugin/nanoadmin/storage/install.lock 文件：
+ * 检测 storage/install.lock 文件：
  * - 存在：已安装，放行
  * - 不存在：未安装，除 /install 外全部 302 重定向到 /install
  *
@@ -28,7 +28,7 @@ class InstallGuard implements MiddlewareInterface
 
     public function process(Request $request, callable $next): Response
     {
-        $lock = base_path() . '/plugin/nanoadmin/storage/install.lock';
+        $lock = base_path() . '/storage/install.lock';
 
         // 已安装：放行
         if (is_file($lock)) {
