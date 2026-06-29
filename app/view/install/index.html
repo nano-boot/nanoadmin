@@ -345,7 +345,7 @@ $progressWidth = !empty($installed) ? '100%' : '25%';
         .env-section-label:first-of-type { margin-top: 0; }
         .env-card .name .env-require {
             color: var(--chalk);
-            font-size: 10px;
+            font-size: 11px;
             letter-spacing: 0.02em;
         }
 
@@ -532,7 +532,7 @@ $progressWidth = !empty($installed) ? '100%' : '25%';
         }
     </style>
 </head>
-<body>
+<body class="<?= !empty($installed) ? 'has-installed' : '' ?>">
     <div class="install-wrapper">
         <div class="install-container">
 <div class="progress-container">
@@ -885,7 +885,12 @@ let lastFocus = null;
             backStep1Btn.addEventListener('click', () => setStep(1));
         }
 
-        setStep(1);
+        // 已安装场景：PHP 已渲染好 step4 active、进度条 100%、.installed-msg 面板，
+        // 这里不要再调 setStep(1) 把状态打回去。
+        // body.has-installed 这个 class 是模板顶部根据 $installed 直接渲染的。
+        if (!document.body.classList.contains('has-installed')) {
+            setStep(1);
+        }
 
         function appendLog(msg, type) {
             const log = document.getElementById('installLog');
