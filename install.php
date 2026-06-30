@@ -30,6 +30,7 @@ final class Install
 
     public static function install(): void
     {
+        self::copyToMainConfig();
         self::copyToPluginDir();
         self::copyToPublic();
         self::ensureProjectStorageDir();
@@ -38,9 +39,37 @@ final class Install
     /** copy_dir 默认不覆盖，保留用户本地修改 */
     public static function update(): void
     {
+        self::copyToMainConfig();
         self::copyToPluginDir();
         self::copyToPublic();
         self::ensureProjectStorageDir();
+    }
+
+    /**
+     * 将插件配置复制到主项目 config/ 目录（让 webman config() 助手可用）。
+     * 不覆盖已存在的文件，保留主项目已有的同名配置。
+     */
+    private static function copyToMainConfig(): void
+    {
+        $src  = __DIR__;
+        $dest = config_path(); // 主项目 config/ 目录
+
+        // 要复制到主项目 config/ 的文件
+        $mainConfigFiles = [
+            'cache.php',
+            'redis.php',
+            'think-cache.php',
+        ];
+
+        foreach ($mainConfigFiles as $file) {
+            $from = $src . DIRECTORY_SEPARATOR . $file;
+            $to   = $dest . DIRECTORY_SEPARATOR . $file;
+
+            if (is_file($from) && !file_exists($to)) {
+                copy($from, $to);
+                echo "Create config/{$file}\n";
+            }
+        }
     }
 
     /**
@@ -61,6 +90,16 @@ final class Install
             if (is_dir($dir)) {
                 remove_dir($dir);
                 echo "Remove public/{$dst}\n";
+            }
+        }
+
+        // 卸载主项目 config/ 下的插件配置（保留用户可能已修改过的文件）
+        $mainConfigFiles = ['cache.php', 'redis.php', 'think-cache.php'];
+        foreach ($mainConfigFiles as $file) {
+            $configFile = config_path() . DIRECTORY_SEPARATOR . $file;
+            if (is_file($configFile)) {
+                unlink($configFile);
+                echo "Remove config/{$file}\n";
             }
         }
     }

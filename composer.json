@@ -17,6 +17,8 @@
         "firebase/php-jwt": "^6.11",
         "ext-pdo": "*",
         "webman/database": "^2.1",
+        "webman/cache": "^2.1",
+        "webman/think-cache": "^2.1",
         "illuminate/pagination": "^12.22",
         "illuminate/events": "^12.53",
         "symfony/var-dumper": "^7.3",
@@ -37,14 +39,6 @@
         },
         "files": [
             "app/functions.php"
-        ]
-    },
-    "scripts": {
-        "post-install-cmd": [
-            "php scripts/copy-config-if-not-exists.php"
-        ],
-        "post-update-cmd": [
-            "php scripts/copy-config-if-not-exists.php"
         ]
     },
     "minimum-stability": "stable",

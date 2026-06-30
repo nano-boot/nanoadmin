@@ -5,23 +5,36 @@ namespace plugin\nanoadmin\app\service;
 use plugin\nanoadmin\app\model\DictData;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
+use think\facade\Cache;
+use think\cache\Driver;
 
 /**
  * 字典数据服务类
+ *
+ * 缓存基于 webman/think-cache：
+ *   - 通过 think\facade\Cache 调用，默认走 config/think-cache.php 中 default 指定的 store
+ *   - 缓存键可以使用 ":" 分隔（Redis 命名空间惯例）；think-cache 仅禁用 ";"
+ *   - 用 Cache::tag('dict') 给所有字典键打标，clear() 即可批量失效
+ *   - ttl=0 表示无过期（依赖 CRUD 末尾 clearCache 维护一致性）
  */
 class DictDataService extends BaseService
 {
     /**
-     * 缓存配置
+     * 字典缓存配置（plugin/nanoadmin/config/cache.php 中的 dict 子树）
      * @var array
      */
-    private array $cacheConfig = [];
+    private array $dictConfig = [];
 
     /**
-     * 缓存实例
-     * @var \Redis|null
+     * 缓存驱动实例，null 表示禁用缓存
+     * @var Driver|null
      */
-    private $cache = null;
+    private ?Driver $cache = null;
+
+    /**
+     * 缓存标签名（用于批量失效）
+     */
+    private string $cacheTag = 'dict';
 
     /**
      * 构造函数
@@ -35,69 +48,40 @@ class DictDataService extends BaseService
     }
 
     /**
-     * 加载缓存配置
+     * 加载字典缓存配置（通过 webman config() 助手读取 plugin/nanoadmin/config/nanoadmin.php）
      */
     private function loadCacheConfig(): void
     {
-        $configFile = base_path() . '/plugin/nanoadmin/config/cache.php';
-
-        if (file_exists($configFile)) {
-            $this->cacheConfig = require $configFile;
-        } else {
-            $this->cacheConfig = [
-                'dict' => ['enabled' => false],
-            ];
-        }
+        $this->dictConfig = config('nanoadmin.cache.dict', []);
     }
 
     /**
-     * 初始化缓存连接
+     * 初始化缓存实例
      */
     private function initializeCache(): void
     {
-        $dictConfig = $this->cacheConfig['dict'] ?? [];
-
-        if (!($dictConfig['enabled'] ?? true)) {
+        if (!($this->dictConfig['enabled'] ?? true)) {
             $this->cache = null;
             return;
         }
 
         try {
-            $cacheType = $this->cacheConfig['type'] ?? 'file';
-
-            if ($cacheType === 'redis' && class_exists('\Redis')) {
-                $redisConfig = $this->cacheConfig['redis'] ?? [];
-                $this->cache = new \Redis();
-
-                $host = $redisConfig['host'] ?? '127.0.0.1';
-                $port = $redisConfig['port'] ?? 6379;
-                $timeout = $redisConfig['timeout'] ?? 2;
-
-                if ($this->cache->connect($host, $port, $timeout)) {
-                    if (!empty($redisConfig['password'])) {
-                        $this->cache->auth($redisConfig['password']);
-                    }
-                    $database = $redisConfig['database'] ?? 1;
-                    $this->cache->select($database);
-                } else {
-                    $this->cache = null;
-                }
-            } else {
-                $this->cache = null;
-            }
-        } catch (\Exception $e) {
+            $store = $this->dictConfig['store'] ?? null;
+            $this->cache = ($store !== null && $store !== '')
+                ? Cache::store($store)
+                : Cache::store();
+        } catch (\Throwable $e) {
             $this->cache = null;
         }
     }
 
     /**
-     * 获取缓存键前缀
+     * 构造缓存键（保留 ":" 分隔，与 Redis 命名空间惯例一致）
      */
-    private function getCachePrefix(): string
+    private function buildKey(string $suffix): string
     {
-        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'nanoadmin:';
-        $dictPrefix = $this->cacheConfig['dict']['prefix'] ?? 'dict:';
-        return $redisPrefix . $dictPrefix;
+        $prefix = $this->dictConfig['prefix'] ?? 'dict:';
+        return rtrim($prefix, ':') . ':' . ltrim($suffix, ':');
     }
 
     /**
@@ -125,8 +109,7 @@ class DictDataService extends BaseService
      */
     public function getByIdFromCache(int $id): ?array
     {
-        $prefix = $this->getCachePrefix();
-        $cacheKey = $prefix . 'data:id:' . $id;
+        $cacheKey = $this->buildKey('data:id:' . $id);
 
         $cached = $this->getCache($cacheKey);
         if ($cached !== null) {
@@ -144,9 +127,6 @@ class DictDataService extends BaseService
         return $data;
     }
 
-
-
-
     /**
      * 按字典类型编码获取所有字典数据（带缓存）
      * @param string $typeCode 字典类型编码
@@ -154,28 +134,25 @@ class DictDataService extends BaseService
      */
     public function getByTypeCode(string $typeCode): array
     {
-        $prefix = $this->getCachePrefix();
-        $cacheKey = $prefix . 'data:code:' . $typeCode;
+        $cacheKey = $this->buildKey('data:code:' . $typeCode);
 
         $cached = $this->getCache($cacheKey);
         if ($cached !== null) {
             return $cached;
         }
 
-        // 先通过字典类型编码查出类型 ID
         $dictTypeModel = $this->getDictTypeModel();
-        if ($dictTypeModel) {
-            $type = $dictTypeModel->where('code', $typeCode)->where('deleted', 0)->first();
-            if (!$type) {
-                return [];
-            }
-            $typeId = $type->id;
-        } else {
+        if (!$dictTypeModel) {
+            return [];
+        }
+
+        $type = $dictTypeModel->where('code', $typeCode)->where('deleted', 0)->first();
+        if (!$type) {
             return [];
         }
 
         $data = $this->model
-            ->where('dict_type_id', $typeId)
+            ->where('dict_type_id', $type->id)
             ->where('status', 1)
             ->where('deleted', 0)
             ->orderBy('sort', 'asc')
@@ -203,16 +180,24 @@ class DictDataService extends BaseService
 
     /**
      * 清理字典数据缓存
-     * @param string|null $typeCode 字典类型编码
+     * @param string|null $typeCode 字典类型编码；传 null 时清理该标签下的全部字典键
      */
     public function clearCache(?string $typeCode = null): void
     {
-        $prefix = $this->getCachePrefix();
+        if ($this->cache === null) {
+            return;
+        }
 
-        if ($typeCode !== null) {
-            $this->deleteCache($prefix . 'data:code:' . $typeCode);
-        } else {
-            $this->deleteCacheByPattern($prefix . 'data:code:*');
+        try {
+            if ($typeCode !== null) {
+                $this->cache->delete($this->buildKey('data:code:' . $typeCode));
+                return;
+            }
+
+            // 全量清理：借助 tag 一次清掉所有字典键（不再需要枚举 dict_type）
+            $this->cache->tag($this->cacheTag)->clear();
+        } catch (\Throwable $e) {
+            // 静默失败：缓存清理失败不应阻塞业务流程
         }
     }
 
@@ -358,168 +343,51 @@ class DictDataService extends BaseService
     }
 
     /**
-     * 设置缓存
-     */
-    private function setCache(string $key, $data): bool
-    {
-        if ($this->cache === null) {
-            return $this->setFileCache($key, $data);
-        }
-
-        try {
-            $ttl = $this->cacheConfig['dict']['ttl'] ?? 0;
-            $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE);
-
-            if ($ttl === 0) {
-                return $this->cache->set($key, $jsonData);
-            }
-
-            return $this->cache->setex($key, $ttl, $jsonData);
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
-
-    /**
-     * 获取缓存
+     * 从缓存读取
      */
     private function getCache(string $key)
     {
         if ($this->cache === null) {
-            return $this->getFileCache($key);
+            return null;
         }
 
         try {
-            $data = $this->cache->get($key);
-            if ($data === false) {
-                return null;
-            }
-            return json_decode($data, true);
-        } catch (\Exception $e) {
+            return $this->cache->get($key);
+        } catch (\Throwable $e) {
             return null;
         }
     }
 
     /**
-     * 删除缓存
+     * 写入缓存（写入时给 key 打上 "dict" 标签，方便批量清理）
+     */
+    private function setCache(string $key, $data): bool
+    {
+        if ($this->cache === null) {
+            return false;
+        }
+
+        try {
+            $ttl = (int) ($this->dictConfig['ttl'] ?? 0);
+            return $this->cache->tag($this->cacheTag)->set($key, $data, $ttl);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 删除单个缓存键
      */
     private function deleteCache(string $key): bool
     {
         if ($this->cache === null) {
-            return $this->deleteFileCache($key);
-        }
-
-        try {
-            return $this->cache->del($key) > 0;
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
-
-    /**
-     * 按模式删除缓存
-     */
-    private function deleteCacheByPattern(string $pattern): bool
-    {
-        if ($this->cache === null) {
-            return $this->deleteFileCacheByPattern($pattern);
-        }
-
-        try {
-            $keys = $this->cache->keys($pattern);
-            if (!empty($keys)) {
-                return $this->cache->del($keys) > 0;
-            }
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
-
-    /**
-     * 设置文件缓存
-     */
-    private function setFileCache(string $key, $data): bool
-    {
-        $fileConfig = $this->cacheConfig['file'] ?? [];
-        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/nanoadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'nanoadmin_';
-        $cacheFile = $cachePath . $prefix . md5($key) . '.json';
-
-        if (!is_dir($cachePath)) {
-            mkdir($cachePath, 0755, true);
-        }
-
-        $cacheData = [
-            'expire_time' => 0,
-            'data' => $data,
-        ];
-
-        return file_put_contents($cacheFile, json_encode($cacheData, JSON_UNESCAPED_UNICODE)) !== false;
-    }
-
-    /**
-     * 获取文件缓存
-     */
-    private function getFileCache(string $key)
-    {
-        $fileConfig = $this->cacheConfig['file'] ?? [];
-        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/nanoadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'nanoadmin_';
-        $cacheFile = $cachePath . $prefix . md5($key) . '.json';
-
-        if (!file_exists($cacheFile)) {
-            return null;
-        }
-
-        $cacheData = file_get_contents($cacheFile);
-        if ($cacheData === false) {
-            return null;
-        }
-
-        $cache = json_decode($cacheData, true);
-        if (!$cache || !isset($cache['data'])) {
-            return null;
-        }
-
-        return $cache['data'];
-    }
-
-    /**
-     * 删除文件缓存
-     */
-    private function deleteFileCache(string $key): bool
-    {
-        $fileConfig = $this->cacheConfig['file'] ?? [];
-        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/nanoadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'nanoadmin_';
-        $cacheFile = $cachePath . $prefix . md5($key) . '.json';
-
-        if (file_exists($cacheFile)) {
-            return unlink($cacheFile);
-        }
-
-        return true;
-    }
-
-    /**
-     * 按模式删除文件缓存
-     */
-    private function deleteFileCacheByPattern(string $pattern): bool
-    {
-        $fileConfig = $this->cacheConfig['file'] ?? [];
-        $cachePath = $fileConfig['path'] ?? runtime_path() . '/cache/nanoadmin/';
-        $prefix = $fileConfig['prefix'] ?? 'nanoadmin_';
-
-        if (!is_dir($cachePath)) {
             return true;
         }
 
-        $files = glob($cachePath . $prefix . '*.json');
-        foreach ($files as $file) {
-            @unlink($file);
+        try {
+            return $this->cache->delete($key);
+        } catch (\Throwable $e) {
+            return false;
         }
-
-        return true;
     }
 }
