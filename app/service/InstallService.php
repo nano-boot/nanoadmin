@@ -9,86 +9,31 @@ use PDOException;
 use Throwable;
 
 /**
- * 安装服务
+ * 可视化安装向导核心服务
  *
- * 负责可视化安装向导的核心流程：
- *   1. 检测环境（PHP 版本、扩展、目录权限）
- *   2. 测试数据库连接
- *   3. 写入 .env
- *   4. 执行 sql/install.sql 建表 + 初始化数据（带表前缀替换）
- *   5. 执行 sql/menu_init.sql 写入系统菜单
- *   6. 把所有菜单绑定到 R_SUPER 角色
- *   7. 创建/更新初始管理员
- *   8. 写入 storage/install.lock
+ * 流程：环境检测 → 数据库连接测试 → 写入 .env/database.php →
+ *       执行 install.sql 建表 → 写入菜单 → 绑定超管角色 → 创建管理员 → 写锁文件
  *
  * 设计原则：
- *   - 不引入 think-orm/illuminate 依赖（安装阶段框架配置可能不完整）
- *   - 使用原生 PDO 直接执行 SQL
- *   - SQL 中硬编码的 `th_` 前缀统一替换为用户输入的 prefix
- *   - .env 用文件锁防并发
- *   - 所有失败抛出 \RuntimeException，由 Controller 转为友好提示
+ * - 安装阶段不走 webman 框架（配置可能不完整），用原生 PDO 直连
+ * - SQL 表前缀 `th_` 统一替换为用户填写的 prefix
+ * - .env/database.php 用 env() 读取，无需在 PHP 文件里塞入运行时值
+ * - 所有失败抛 \RuntimeException，由 Controller 转友好提示
  */
 class InstallService
 {
-    /**
-     * 必需的 PHP 扩展
-     */
-    private const REQUIRED_EXTENSIONS = [
-        'pdo',
-        'pdo_mysql',
-        'json',
-        'openssl',
-        'mbstring',
-    ];
-
-    /**
-     * 推荐扩展（缺失不阻断，仅提示）
-     */
-    private const RECOMMENDED_EXTENSIONS = [
-        'curl',
-        'gd',
-        'fileinfo',
-        'zip',
-    ];
-
-    /**
-     * 最低 PHP 版本
-     */
+    private const REQUIRED_EXTENSIONS = ['pdo', 'pdo_mysql', 'json', 'openssl', 'mbstring'];
+    private const RECOMMENDED_EXTENSIONS = ['curl', 'gd', 'fileinfo', 'zip'];
     private const MIN_PHP_VERSION = '8.1.0';
-
-    /**
-     * 最低 Composer 版本
-     */
     private const MIN_COMPOSER_VERSION = '2.0.0';
 
-    /**
-     * 主项目 .env 路径
-     */
     private string $envPath;
-
-    /**
-     * 安装锁文件路径
-     */
     private string $lockPath;
-
-    /**
-     * storage 目录（主项目根下的 storage/，由 Webman\nanoadmin\Install 在 install/update 时创建）
-     */
+    /** storage 目录，由 Webman\nanoadmin\Install 在 install/update 时创建 */
     private string $storagePath;
-
-    /**
-     * SQL 文件路径
-     */
     private string $sqlPath;
-
-    /**
-     * 菜单初始化 SQL 文件路径
-     */
     private string $menuInitSqlPath;
-
-    /**
-     * 当前安装任务使用的表前缀（用户在向导中填写，与 config/database.php 中 prefix 一致）
-     */
+    /** 当前安装使用的表前缀（用户在向导中填写，与 database.php prefix 一致） */
     private string $prefix = 'th_';
 
     public function __construct()
@@ -100,17 +45,12 @@ class InstallService
         $this->menuInitSqlPath  = base_path() . '/plugin/nanoadmin/sql/menu_init.sql';
     }
 
-    /**
-     * 是否已安装
-     */
     public function isInstalled(): bool
     {
         return is_file($this->lockPath);
     }
 
     /**
-     * 环境检测
-     *
      * @return array{
      *   passed:bool,
      *   php:array{name:string,require:string,current:string,status:string},
@@ -121,7 +61,6 @@ class InstallService
      */
     public function checkEnv(): array
     {
-        // PHP 版本
         $phpCheck = [
             'name'    => 'PHP 版本',
             'require' => '>= ' . self::MIN_PHP_VERSION,
@@ -129,10 +68,8 @@ class InstallService
             'status'  => version_compare(PHP_VERSION, self::MIN_PHP_VERSION, '>=') ? 'ok' : 'fail',
         ];
 
-        // Composer 版本
         $composerCheck = $this->checkComposer();
 
-        // 必需扩展
         $requiredChecks = [];
         foreach (self::REQUIRED_EXTENSIONS as $ext) {
             $requiredChecks[$ext] = [
@@ -142,7 +79,6 @@ class InstallService
             ];
         }
 
-        // 推荐扩展
         $recommendedChecks = [];
         foreach (self::RECOMMENDED_EXTENSIONS as $ext) {
             $recommendedChecks[$ext] = [
@@ -152,16 +88,16 @@ class InstallService
             ];
         }
 
-        // 目录可写性
-        $dirs = [
-            'env'          => ['name' => '.env 文件',     'path' => base_path() . '/.env'],
+        // 检查路径自身是否可写；文件不存在时回落到父目录可写性（便于首次安装通过检测）
+        $paths = [
+            'env'          => ['name' => '.env 文件',            'path' => $this->envPath],
             'database_php' => ['name' => 'config/database.php', 'path' => base_path() . '/config/database.php'],
-            'storage'      => ['name' => 'storage 目录',  'path' => $this->storagePath],
-            'config'       => ['name' => 'config 目录',   'path' => base_path() . '/config'],
+            'storage'      => ['name' => 'storage 目录',       'path' => $this->storagePath],
+            'config'       => ['name' => 'config 目录（插件配置）', 'path' => base_path() . '/config'],
         ];
 
         $directoryChecks = [];
-        foreach ($dirs as $key => $meta) {
+        foreach ($paths as $key => $meta) {
             $path = $meta['path'];
             if (is_file($path)) {
                 $writable = is_writable($path);
@@ -176,102 +112,72 @@ class InstallService
             ];
         }
 
-        // 总判定：PHP、Composer、必需扩展、目录任一失败即不通过；推荐扩展不计入
         $passed = $phpCheck['status'] === 'ok'
             && $composerCheck['status'] !== 'fail'
             && !in_array('fail', array_column($requiredChecks, 'status'), true)
             && !in_array('fail', array_column($directoryChecks, 'status'), true);
 
         return [
-            'passed'     => $passed,
-            'php'        => $phpCheck,
-            'composer'   => $composerCheck,
-            'extensions' => [
-                'required'    => $requiredChecks,
-                'recommended' => $recommendedChecks,
-            ],
+            'passed'      => $passed,
+            'php'         => $phpCheck,
+            'composer'    => $composerCheck,
+            'extensions'  => ['required' => $requiredChecks, 'recommended' => $recommendedChecks],
             'directories' => $directoryChecks,
         ];
     }
 
-    /**
-     * Composer 版本检测
-     *
-     * 通过 `composer --version` 解析版本号；找不到 composer 可执行文件视为缺失。
-     * Composer 是 webman + nanoadmin 插件运行的必要工具，必须 >= 2.0。
-     *
-     * @return array{name:string,require:string,current:string,status:string}
-     */
+    /** @return array{name:string,require:string,current:string,status:string} */
     private function checkComposer(): array
     {
-        $name    = 'Composer';
-        $require = '>= ' . self::MIN_COMPOSER_VERSION;
-
-        // 尝试通过 shell 调用 composer --version
         $version = $this->detectComposerVersion();
         if ($version === null) {
             return [
-                'name'    => $name,
-                'require' => $require,
+                'name'    => 'Composer',
+                'require' => '>= ' . self::MIN_COMPOSER_VERSION,
                 'current' => '未检测到',
                 'status'  => 'fail',
             ];
         }
 
-        $status = version_compare($version, self::MIN_COMPOSER_VERSION, '>=') ? 'ok' : 'fail';
-
         return [
-            'name'    => $name,
-            'require' => $require,
+            'name'    => 'Composer',
+            'require' => '>= ' . self::MIN_COMPOSER_VERSION,
             'current' => $version,
-            'status'  => $status,
+            'status'  => version_compare($version, self::MIN_COMPOSER_VERSION, '>=') ? 'ok' : 'fail',
         ];
     }
 
-    /**
-     * 调用 `composer --version` 获取版本号
-     *
-     * 多路尝试以适配不同环境：
-     *   1. shell 直接调用 `composer`（最常见）
-     *   2. `composer.phar`（部分项目把 phar 放在 vendor/bin）
-     *   3. `php composer.phar --version`
-     *
-     * @return string|null 版本号（如 "2.6.5"），检测失败返回 null
-     */
+    /** 依次尝试 composer / composer.phar / php composer.phar，返回版本号或 null */
     private function detectComposerVersion(): ?string
     {
         $candidates = ['composer', 'composer.phar'];
 
         foreach ($candidates as $bin) {
-            // 优先用 shell_exec（最简洁），捕获错误
             $output = @shell_exec(escapeshellcmd($bin) . ' --version 2>&1');
             if (is_string($output) && $output !== '' && stripos($output, 'composer') !== false) {
-                $version = $this->parseComposerVersion($output);
-                if ($version !== null) {
-                    return $version;
+                $v = $this->parseComposerVersion($output);
+                if ($v !== null) {
+                    return $v;
                 }
             }
 
-            // 兜底：用 `which` / `command -v` 找绝对路径
             $path = @shell_exec('command -v ' . escapeshellarg($bin) . ' 2>/dev/null');
             if (is_string($path) && trim($path) !== '') {
-                $absolute = trim($path);
-                $output2   = @shell_exec(escapeshellcmd($absolute) . ' --version 2>&1');
+                $output2 = @shell_exec(escapeshellcmd(trim($path)) . ' --version 2>&1');
                 if (is_string($output2) && $output2 !== '') {
-                    $version = $this->parseComposerVersion($output2);
-                    if ($version !== null) {
-                        return $version;
+                    $v = $this->parseComposerVersion($output2);
+                    if ($v !== null) {
+                        return $v;
                     }
                 }
             }
 
-            // 最后兜底：php composer.phar
             if ($bin === 'composer.phar') {
-                $output3 = @shell_exec('php ' . escapeshellcmd($bin) . ' --version 2>&1');
+                $output3 = @shell_exec('php ' . escapeshellarg($bin) . ' --version 2>&1');
                 if (is_string($output3) && $output3 !== '') {
-                    $version = $this->parseComposerVersion($output3);
-                    if ($version !== null) {
-                        return $version;
+                    $v = $this->parseComposerVersion($output3);
+                    if ($v !== null) {
+                        return $v;
                     }
                 }
             }
@@ -280,15 +186,7 @@ class InstallService
         return null;
     }
 
-    /**
-     * 从 `composer --version` 输出中提取语义化版本号
-     *
-     * 输出示例：
-     *   "Composer version 2.6.5 2023-10-06 16:00:00"
-     *   "Composer 2.5.1 2023-05-10 ..."
-     *
-     * @return string|null 例如 "2.6.5"，解析失败返回 null
-     */
+    /** 从 composer --version 输出中提取版本号，如 "2.6.5" */
     private function parseComposerVersion(string $output): ?string
     {
         if (preg_match('/Composer[^\d]*(\d+\.\d+(?:\.\d+)?)/i', $output, $m)) {
@@ -297,11 +195,7 @@ class InstallService
         return null;
     }
 
-    /**
-     * 测试数据库连接（不创建数据库）
-     *
-     * @return array{success:bool, message:string, server_version?:string}
-     */
+    /** @return array{success:bool, message:string, server_version?:string, db_exists?:bool} */
     public function testDatabaseConnection(array $db): array
     {
         $this->validateDbParams($db);
@@ -311,12 +205,11 @@ class InstallService
         try {
             $pdo = new PDO($dsn, $db['user'], $db['password'], [
                 PDO::ATTR_TIMEOUT            => 5,
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "set names utf8mb4",
+                PDO::ATTR_ERRMODE           => PDO::ERRMODE_EXCEPTION,
+                PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8mb4',
             ]);
 
-            // 探测数据库是否存在（不创建）
-            $stmt = $pdo->query("SHOW DATABASES LIKE " . $pdo->quote($db['name']));
+            $stmt = $pdo->query('SHOW DATABASES LIKE ' . $pdo->quote($db['name']));
             $exists = (bool) $stmt->fetchColumn();
 
             return [
@@ -328,19 +221,12 @@ class InstallService
                 'db_exists'      => $exists,
             ];
         } catch (PDOException $e) {
-            return [
-                'success' => false,
-                'message' => $this->translatePdoError($e->getMessage()),
-            ];
+            return ['success' => false, 'message' => $this->translatePdoError($e->getMessage())];
         }
     }
 
     /**
-     * 执行安装主流程
-     *
-     * @param array $params
-     *   - host, port, name, user, password, prefix：数据库连接
-     *   - admin_user, admin_password, admin_nickname：初始管理员
+     * @param array $params host,port,name,user,password,prefix + admin_user,admin_password,admin_nickname
      * @return array{success:bool, message:string, admin?:array}
      */
     public function runInstallation(array $params): array
@@ -348,19 +234,14 @@ class InstallService
         $this->validateDbParams($params);
         $this->validateAdminParams($params);
 
-        // 记住本次安装用的表前缀，所有 SQL 改写都依赖它
         $prefix = $params['prefix'] ?? 'na_';
         $prefix = preg_replace('/[^a-zA-Z0-9_]/', '', (string) $prefix);
-        if ($prefix === '') {
-            $prefix = 'na_';
-        }
-        $this->prefix = $prefix;
+        $this->prefix = $prefix ?: 'na_';
 
         if ($this->isInstalled()) {
             throw new \RuntimeException('系统已安装，无需重复安装');
         }
 
-        // 并发防护：文件锁
         $lockFile = $this->storagePath . '/install.flock';
         if (!is_dir($this->storagePath)) {
             mkdir($this->storagePath, 0777, true);
@@ -371,31 +252,21 @@ class InstallService
         }
 
         try {
-            // 1. 测试连接
             $test = $this->testDatabaseConnection($params);
             if (!$test['success']) {
                 throw new \RuntimeException($test['message']);
             }
 
-            // 2. 连接数据库（自动创建库）
             $pdo = $this->connectAndCreateDatabase($params);
 
-            // 3. 写入 .env（必须先写，后续 config/database.php 才认得到 prefix）
+            // 写入 .env / database.php 必须先于 SQL（因为 env() 依赖这些变量）
             $this->writeEnv($params);
+            $this->writeDatabaseConfig($params);
 
-            // 4. 执行 install.sql —— 建表 + 自带的 admin/role/permission 演示数据
             $this->runInstallSql($pdo, $params['name']);
-
-            // 5. 执行 menu_init.sql —— 写入所有菜单节点
             $this->runMenuInitSql($pdo);
-
-            // 6. 把菜单绑定到 R_SUPER 角色，让超管登录后看得到菜单
             $this->bindSuperRoleMenus($pdo);
-
-            // 7. 创建/更新初始管理员（密码使用用户填的，覆盖 install.sql 自带的 hash）
             $this->createAdmin($pdo, $params);
-
-            // 8. 写入 install.lock
             $this->writeLockFile();
 
             return [
@@ -412,9 +283,6 @@ class InstallService
         }
     }
 
-    /**
-     * 校验数据库参数
-     */
     private function validateDbParams(array $db): void
     {
         foreach (['host', 'port', 'name', 'user'] as $field) {
@@ -424,9 +292,6 @@ class InstallService
         }
     }
 
-    /**
-     * 校验管理员参数
-     */
     private function validateAdminParams(array $params): void
     {
         if (empty($params['admin_user'])) {
@@ -444,19 +309,17 @@ class InstallService
         }
     }
 
-    /**
-     * 连接数据库，必要时自动创建
-     */
+    /** 连接数据库，数据库不存在时自动创建 */
     private function connectAndCreateDatabase(array $db): PDO
     {
         $dsn = sprintf('mysql:host=%s;port=%s;charset=utf8mb4', $db['host'], $db['port']);
         $pdo = new PDO($dsn, $db['user'], $db['password'], [
             PDO::ATTR_TIMEOUT            => 5,
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::MYSQL_ATTR_INIT_COMMAND => "set names utf8mb4",
+            PDO::ATTR_ERRMODE           => PDO::ERRMODE_EXCEPTION,
+            PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8mb4',
         ]);
 
-        $stmt = $pdo->query("SHOW DATABASES LIKE " . $pdo->quote($db['name']));
+        $stmt = $pdo->query('SHOW DATABASES LIKE ' . $pdo->quote($db['name']));
         if (!$stmt->fetchColumn()) {
             $dbName = str_replace('`', '``', $db['name']);
             $pdo->exec("CREATE DATABASE `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
@@ -467,14 +330,13 @@ class InstallService
     }
 
     /**
-     * 写入或 patch 主项目 .env
+     * 写入/更新主项目 .env
      *
-     * 已有 .env 则精确替换 DB_* 段；不存在则从 .env.example 复制模板，再注入。
-     * config/database.php 通过 env() 函数读取这些变量，无需改动。
+     * 已有 .env 则精确替换 DB_* 段；不存在则从 .env.example 复制模板，无模板则用内置默认内容。
+     * config/database.php 通过 env() 读取这些变量。
      */
     public function writeEnv(array $db): void
     {
-        // 加载模板
         if (!is_file($this->envPath)) {
             $template = base_path() . '/.env.example';
             if (is_file($template)) {
@@ -487,23 +349,22 @@ class InstallService
         $content = file_get_contents($this->envPath);
 
         $map = [
-            'DB_HOST'     => $db['host'],
-            'DB_PORT'     => $db['port'],
-            'DB_DATABASE' => $db['name'],
-            'DB_USERNAME' => $db['user'],
-            'DB_PASSWORD' => $db['password'] ?? '',
-            'DB_PREFIX'   => $db['prefix'] ?? '',
-            'DB_CHARSET'  => 'utf8mb4',
+            'DB_CONNECTION' => 'mysql',
+            'DB_HOST'       => $db['host'],
+            'DB_PORT'       => $db['port'],
+            'DB_DATABASE'   => $db['name'],
+            'DB_USERNAME'   => $db['user'],
+            'DB_PASSWORD'   => $db['password'] ?? '',
+            'DB_PREFIX'     => $db['prefix'] ?? '',
+            'DB_CHARSET'    => 'utf8mb4',
         ];
 
         foreach ($map as $key => $value) {
-            // 已有 KEY：替换值
             $pattern = '/^' . preg_quote($key, '/') . '\s*=.*$/m';
             $replacement = $key . '=' . $this->escapeEnvValue((string) $value);
             if (preg_match($pattern, $content)) {
                 $content = preg_replace($pattern, $replacement, $content);
             } else {
-                // 不存在：追加到文件末尾
                 $content .= PHP_EOL . $replacement;
             }
         }
@@ -511,9 +372,7 @@ class InstallService
         file_put_contents($this->envPath, $content, LOCK_EX);
     }
 
-    /**
-     * 转义 .env 值（处理空格、# 等特殊字符）
-     */
+    /** 转义 .env 值（处理空格、# 等特殊字符） */
     private function escapeEnvValue(string $value): string
     {
         if (preg_match('/[\s#"\\\\]/', $value)) {
@@ -523,8 +382,91 @@ class InstallService
     }
 
     /**
-     * 默认 .env 模板（无 .env.example 时使用）
+     * 写入/创建主项目 config/database.php
+     *
+     * 文件不存在时创建（mkdir + 直接写）；存在时先备份再覆盖，
+     * 写入成功清理备份，失败保留备份供回滚。
      */
+    public function writeDatabaseConfig(array $db): void
+    {
+        $configPath = base_path() . '/config/database.php';
+        $configDir = dirname($configPath);
+
+        if (!is_file($configPath)) {
+            if (!is_dir($configDir)) {
+                if (!@mkdir($configDir, 0755, true) && !is_dir($configDir)) {
+                    throw new \RuntimeException('无法创建 config 目录：' . $configDir);
+                }
+            }
+            if (!is_writable($configDir)) {
+                throw new \RuntimeException('config 目录不可写，无法创建 database.php：' . $configDir);
+            }
+
+            $bytes = @file_put_contents($configPath, $this->renderDatabaseConfigPhp($db), LOCK_EX);
+            if ($bytes === false) {
+                throw new \RuntimeException('config/database.php 创建失败：' . $configPath);
+            }
+            return;
+        }
+
+        if (!is_writable($configPath)) {
+            throw new \RuntimeException('config/database.php 不可写，请手动赋予写权限');
+        }
+
+        $backup = $configPath . '.bak';
+        if (is_file($backup)) {
+            @unlink($backup);
+        }
+        if (!@copy($configPath, $backup)) {
+            throw new \RuntimeException('config/database.php 备份失败，无法继续');
+        }
+
+        $bytes = @file_put_contents($configPath, $this->renderDatabaseConfigPhp($db), LOCK_EX);
+        if ($bytes === false) {
+            throw new \RuntimeException('config/database.php 写入失败，原文件已备份至 ' . $backup);
+        }
+
+        @unlink($backup);
+    }
+
+    /** 渲染 config/database.php 内容模板（使用 env() 读取 .env，与 webman 默认结构一致） */
+    private function renderDatabaseConfigPhp(array $db): string
+    {
+        unset($db); // 本文件最终形态是 env() 调用，用户输入已写入 .env
+        return <<<'PHP'
+<?php
+return [
+    'default' => env('DB_CONNECTION', 'mysql'),
+    'connections' => [
+        'mysql' => [
+            'driver'      => env('DB_CONNECTION', 'mysql'),
+            'host'        => env('DB_HOST', '127.0.0.1'),
+            'port'        => (int) env('DB_PORT', 3306),
+            'database'    => env('DB_DATABASE', ''),
+            'username'    => env('DB_USERNAME', ''),
+            'password'    => env('DB_PASSWORD', ''),
+            'charset'     => env('DB_CHARSET', 'utf8mb4'),
+            'collation'   => 'utf8mb4_general_ci',
+            'prefix'      => env('DB_PREFIX', ''),
+            'strict'      => true,
+            'engine'      => null,
+            'options'     => [
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ],
+            'pool' => [
+                'max_connections'    => 5,
+                'min_connections'    => 1,
+                'wait_timeout'       => 3,
+                'idle_timeout'       => 60,
+                'heartbeat_interval' => 50,
+            ],
+        ],
+    ],
+];
+PHP;
+    }
+
+    /** 无 .env.example 时的内置默认模板 */
     private function defaultEnvTemplate(): string
     {
         return <<<'EOF'
@@ -545,14 +487,10 @@ EOF;
     }
 
     /**
-     * 执行 sql/install.sql
+     * 执行 sql/install.sql（建表 + 演示数据）
      *
-     * SQL 文件以 `;` 分隔每条语句，但 MySQL 的存储过程 / DELIMITER 不存在，
-     * 我们的 install.sql 只含标准 DDL/DML，可以按 `;` 切分后逐条执行。
-     *
-     * 同一份脚本会做两步事：
-     *   1. 建表（含 CREATE TABLE）
-     *   2. 写入演示数据（INSERT 系统字典、默认 admin/role/permission）
+     * MySQL DDL 语句会隐式提交事务，导致 PDO 视角的事务在第一条 DDL 后就结束了；
+     * 用 inTransaction() 守卫避免对已结束的事务调用 rollBack / commit。
      */
     public function runInstallSql(PDO $pdo, string $database): void
     {
@@ -565,27 +503,28 @@ EOF;
             throw new \RuntimeException('SQL 文件读取失败');
         }
 
-        // 过滤 USE 和 CREATE DATABASE 语句（已在外层处理）
         $statements = $this->splitSql($sql);
 
         $pdo->beginTransaction();
         try {
             foreach ($statements as $statement) {
-                // 替换表前缀：``na_xxx`` -> ``{prefix}xxx``，裸写 `na_xxx` 也覆盖
                 $statement = $this->replaceTablePrefix($statement);
-
                 try {
                     $pdo->exec($statement);
                 } catch (PDOException $e) {
-                    // 重复建表/键等"幂等失败"忽略
                     if (!$this->isIdempotentError($e)) {
                         throw $e;
                     }
                 }
             }
-            $pdo->commit();
+
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+            }
         } catch (Throwable $e) {
-            $pdo->rollBack();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             throw new \RuntimeException(
                 '执行 SQL 失败: ' . $e->getMessage() . ' (SQL: ' . substr($e->getMessage(), 0, 100) . ')',
                 0,
@@ -595,15 +534,13 @@ EOF;
     }
 
     /**
-     * 执行 sql/menu_init.sql
+     * 执行 sql/menu_init.sql（写入系统菜单）
      *
-     * menu_init.sql 包含系统所有菜单节点（REPLACE INTO `th_sys_menu`），
-     * 不执行它的话超管登录后看不到任何菜单（前端菜单由后端动态接口返回）。
+     * 缺失时仅记录告警，不阻断安装；重复键错误可忽略（REPLACE INTO）。
      */
     public function runMenuInitSql(PDO $pdo): void
     {
         if (!is_file($this->menuInitSqlPath)) {
-            // 菜单脚本可选：缺失时仅记录告警，不阻断安装
             error_log('[Install] menu_init.sql 不存在，跳过菜单初始化: ' . $this->menuInitSqlPath);
             return;
         }
@@ -613,101 +550,69 @@ EOF;
             throw new \RuntimeException('菜单 SQL 文件读取失败');
         }
 
-        $statements = $this->splitSql($sql);
-
-        foreach ($statements as $statement) {
-            $statement = $this->replaceTablePrefix($statement);
+        foreach ($this->splitSql($sql) as $statement) {
+            $statement = $this->replaceTablePrefix(trim($statement));
             if ($statement === '') {
                 continue;
             }
-
             try {
                 $pdo->exec($statement);
             } catch (PDOException $e) {
-                // 菜单脚本主要是 REPLACE INTO，重复键错误可忽略
                 if (stripos($e->getMessage(), 'Duplicate') === false
                     && stripos($e->getMessage(), 'already exists') === false) {
-                    throw new \RuntimeException(
-                        '执行菜单 SQL 失败: ' . $e->getMessage(),
-                        0,
-                        $e
-                    );
+                    throw new \RuntimeException('执行菜单 SQL 失败: ' . $e->getMessage(), 0, $e);
                 }
             }
         }
     }
 
-    /**
-     * 将所有菜单绑定到 R_SUPER 角色
-     *
-     * 必须在 menu_init.sql 之后执行；前置 INSERT IGNORE 防止重复。
-     */
+    /** 将所有菜单绑定到 R_SUPER 角色（INSERT IGNORE 幂等） */
     public function bindSuperRoleMenus(PDO $pdo): void
     {
         $roleTable = $this->prefix . 'sys_role';
         $menuTable = $this->prefix . 'sys_menu';
         $roleMenuTable = $this->prefix . 'sys_role_menu';
 
-        // 取 R_SUPER 角色 ID
         $stmt = $pdo->prepare("SELECT id FROM `{$roleTable}` WHERE `code` = ? LIMIT 1");
         $stmt->execute(['R_SUPER']);
         $roleId = $stmt->fetchColumn();
-
         if (!$roleId) {
-            // install.sql 没建出 R_SUPER，跳过（幂等）
             return;
         }
 
-        // 取所有未删除的菜单 ID
         $stmt = $pdo->query("SELECT id FROM `{$menuTable}` WHERE `deleted` = 0");
         $menuIds = $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
-
         if (empty($menuIds)) {
             return;
         }
 
-        $sql = "INSERT IGNORE INTO `{$roleMenuTable}` (`role_id`, `menu_id`) VALUES (?, ?)";
-        $bindStmt = $pdo->prepare($sql);
+        $bindStmt = $pdo->prepare(
+            "INSERT IGNORE INTO `{$roleMenuTable}` (`role_id`, `menu_id`) VALUES (?, ?)"
+        );
         foreach ($menuIds as $menuId) {
             $bindStmt->execute([$roleId, $menuId]);
         }
     }
 
-    /**
-     * 替换 SQL 中的硬编码 `na_` 前缀为当前安装任务的 prefix
-     *
-     * 同时处理 `` `na_xxx` ``（反引号包裹）和裸写 `na_xxx` 两种形态，
-     * 注意只替换作为表名前缀出现的 `na_`，避免误伤 `na_sys_xxx` 字段值。
-     */
+    /** 把 SQL 中的硬编码 `th_` 前缀替换为当前 prefix（处理反引号和裸写两种形态） */
     private function replaceTablePrefix(string $statement): string
     {
-        // `` `na_xxx` `` -> `` `{prefix}xxx` ``
         $statement = str_replace('`th_', '`' . $this->prefix, $statement);
-        // 裸写 th_xxx（前面是空白、逗号、括号或行首，避免误匹配字段值）
-        $statement = preg_replace('/(^|[\s,()])th_/i', '$1' . $this->prefix, $statement);
-        return $statement;
+        return preg_replace('/(^|[\s,()])th_/i', '$1' . $this->prefix, $statement);
     }
 
-    /**
-     * 按 `;` 切分 SQL，过滤注释和 USE/CREATE DATABASE
-     *
-     * @return string[]
-     */
+    /** 按 ; 切分 SQL，跳过注释和 USE/CREATE DATABASE */
     private function splitSql(string $sql): array
     {
-        // 移除 `--` 注释
         $lines = preg_replace('/^\s*--.*$/m', '', $sql);
-        // 移除多行注释
         $lines = preg_replace('/\/\*.*?\*\//s', '', (string) $lines);
 
-        $parts = explode(';', (string) $lines);
         $statements = [];
-        foreach ($parts as $part) {
+        foreach (explode(';', (string) $lines) as $part) {
             $trimmed = trim($part);
             if ($trimmed === '') {
                 continue;
             }
-            // 跳过 CREATE DATABASE / USE
             if (preg_match('/^\s*(CREATE\s+DATABASE|USE)\s/i', $trimmed)) {
                 continue;
             }
@@ -716,21 +621,12 @@ EOF;
         return $statements;
     }
 
-    /**
-     * 是否幂等错误（重复建表/键），可以忽略
-     */
+    /** 是否幂等错误（重复建表/键，可忽略） */
     private function isIdempotentError(PDOException $e): bool
     {
         $msg = $e->getMessage();
-        $patterns = [
-            'already exists',
-            'Duplicate key name',
-            'Duplicate entry',
-            'multiple primary key',
-            "Table .* doesn't exist",  // DROP TABLE IF EXISTS 时
-        ];
-        foreach ($patterns as $pattern) {
-            if (stripos($msg, $pattern) !== false) {
+        foreach (['already exists', 'Duplicate key name', 'Duplicate entry', 'multiple primary key', "Table .* doesn't exist"] as $p) {
+            if (stripos($msg, $p) !== false) {
                 return true;
             }
         }
@@ -738,20 +634,21 @@ EOF;
     }
 
     /**
-     * 创建/更新初始管理员
+     * 创建/更新初始管理员（覆盖 install.sql 自带的演示账户）
+     *
+     * 使用 ON DUPLICATE KEY UPDATE 保证幂等。
      */
     public function createAdmin(PDO $pdo, array $params): void
     {
         $username = $params['admin_user'];
         $password = password_hash($params['admin_password'], PASSWORD_DEFAULT);
         $nickname = $params['admin_nickname'] ?? '超级管理员';
-        $now      = date('Y-m-d H:i:s');
+        $now = date('Y-m-d H:i:s');
 
-        $adminTable   = $this->prefix . 'sys_admin';
-        $roleTable    = $this->prefix . 'sys_role';
+        $adminTable = $this->prefix . 'sys_admin';
+        $roleTable = $this->prefix . 'sys_role';
         $adminRoleTable = $this->prefix . 'sys_admin_role';
 
-        // 覆盖 install.sql 中默认 admin/system 账户，统一为用户填写的账号
         $sql = "INSERT INTO `{$adminTable}` (`id`, `username`, `password`, `nickname`, `status`, `deleted`, `created_at`, `updated_at`)
                 VALUES (1, ?, ?, ?, 1, 0, ?, ?)
                 ON DUPLICATE KEY UPDATE
@@ -765,21 +662,18 @@ EOF;
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$username, $password, $nickname, $now, $now]);
 
-        // 确保 admin_role 关联存在
         $roleCheck = $pdo->prepare("SELECT id FROM `{$roleTable}` WHERE `code` = ? LIMIT 1");
         $roleCheck->execute(['R_SUPER']);
         $superRole = $roleCheck->fetchColumn();
-
         if ($superRole) {
-            $assocSql = "INSERT IGNORE INTO `{$adminRoleTable}` (`admin_id`, `role_id`) VALUES (1, ?)";
-            $assocStmt = $pdo->prepare($assocSql);
+            $assocStmt = $pdo->prepare(
+                "INSERT IGNORE INTO `{$adminRoleTable}` (`admin_id`, `role_id`) VALUES (1, ?)"
+            );
             $assocStmt->execute([$superRole]);
         }
     }
 
-    /**
-     * 写入安装锁文件
-     */
+    /** 写入 storage/install.lock */
     public function writeLockFile(): void
     {
         if (!is_dir($this->storagePath)) {
@@ -794,9 +688,7 @@ EOF;
         file_put_contents($this->lockPath, $content, LOCK_EX);
     }
 
-    /**
-     * 翻译 PDO 错误信息为更友好的中文提示
-     */
+    /** 将 PDO 错误信息翻译为友好中文 */
     private function translatePdoError(string $message): string
     {
         if (stripos($message, 'Access denied for user') !== false) {

@@ -391,10 +391,9 @@ $progressWidth = !empty($installed) ? '100%' : '25%';
         /* Complete */
         .completed-message { text-align: center; padding: 32px 20px; }
         .completed-icon {
-            width: 64px; height: 64px; border-radius: var(--radius);
-            background: var(--ink);
+            width: 1em; height: 1em; border-radius: var(--radius);
             display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 24px; color: var(--card); font-size: 22px;
+            margin: 0 auto 24px; color: var(--ink); font-size: 48px;
         }
         .completed-title {
             font-size: 22px; font-weight: 700; margin-bottom: 12px; color: var(--ink);
@@ -555,7 +554,9 @@ $progressWidth = !empty($installed) ? '100%' : '25%';
                             <div class="step-text">执行安装</div>
                         </div>
                         <div class="step-item <?= !empty($installed) ? 'active' : '' ?>" data-step="4">
-                            <div class="step-icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg></div>
+                            <div class="step-icon">
+                                <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg>
+                            </div>
                             <div class="step-text">安装完成</div>
                         </div>
                     </div>
@@ -565,7 +566,9 @@ $progressWidth = !empty($installed) ? '100%' : '25%';
                 <?php if (!empty($installed)): ?>
                     <!-- 已安装状态 -->
                     <div class="installed-msg">
-                        <div class="icon"><svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12l2 2l4-4"/></g></svg></div>
+                        <div class="icon">
+                            <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12l2 2l4-4"/></g></svg>
+                        </div>
                         <h2 class="completed-title">系统已安装</h2>
                         <p class="completed-subtitle">
                             NanoAdmin 已安装完成。<br>
@@ -764,7 +767,7 @@ $progressWidth = !empty($installed) ? '100%' : '25%';
                 <div class="step-content" id="step4">
                     <div class="completed-message">
                         <div class="completed-icon">
-                            <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 6L9 17l-5-5"/></svg>
+                            <svg class="ic" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12l2 2l4-4"/></g></svg>
                         </div>
                         <h2 class="completed-title">安装成功</h2>
                         <p class="completed-subtitle">

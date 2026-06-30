@@ -17,7 +17,6 @@
         "firebase/php-jwt": "^6.11",
         "ext-pdo": "*",
         "webman/database": "^2.1",
-        "webman/cache": "^2.1",
         "webman/think-cache": "^2.1",
         "illuminate/pagination": "^12.22",
         "illuminate/events": "^12.53",
