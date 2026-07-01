@@ -14,6 +14,33 @@
  */
 
 return [
+    // ============================================================
+    // exclude_routes 共享池（Phase 1 改造）
+    // ============================================================
+    // permission 和 log_operation 共用，避免跨中间件分散维护
+    // 格式：'@no_permission_routes' 在 BaseMiddleware 中展开
+    // 注意：auth.exclude_routes 不引用此池（语义不同：免登录 vs 免权限）
+    'no_permission_routes' => [
+        // 平台路由（由 BaseMiddleware 自动注入，运营改不动）
+        '/sys/install',
+        '/sys/openapi',
+        '/sys/openapi/doc',
+
+        // 认证相关（已登录但免权限）
+        '/sys/auth/info',
+        '/sys/auth/permissions',
+        '/sys/auth/menus',
+        '/sys/menu/route',
+
+        // 完全匿名（免登录 + 免权限 + 免日志）
+        '/sys/auth/login',
+        '/sys/auth/refresh',
+        '/sys/auth/captcha',
+        '/sys/auth/check',
+        '/sys/auth/logout',
+    ],
+
+    // 跨域中间件
     // 跨域中间件
     'cors' => [
         // 是否启用 CORS
@@ -54,17 +81,11 @@ return [
     // 操作日志中间件
     'log_operation' => [
         // 不记录操作日志的路由（前缀匹配）
+        // @no_permission_routes 引用共享池，BaseMiddleware 自动展开
         'exclude_routes' => [
-            '/sys/auth/login',
-            '/sys/auth/refresh',
-            '/sys/auth/check',
-            '/sys/menu/route',
-            '/sys/auth/info',
-            '/sys/auth/permissions',
-            '/sys/auth/menus',
-            // Swagger UI 和 OpenAPI 文档不记录日志
-            '/sys/openapi',
-            '/sys/openapi/doc',
+            '@no_permission_routes',
+            // 追加只对"日志"敏感的高频轮询接口
+            '/sys/notification/poll',
         ],
 
         // 不记录操作日志的 HTTP 方法
@@ -84,19 +105,8 @@ return [
     // 权限验证中间件
     'permission' => [
         // 不需要权限验证的路由（前缀匹配）
-        'exclude_routes' => [
-            '/sys/auth/login',
-            '/sys/auth/logout',
-            '/sys/auth/refresh',
-            '/sys/auth/info',
-            '/sys/auth/permissions',
-            '/sys/auth/menus',
-            '/sys/menu/route',
-            '/sys/install',
-            // Swagger UI 和 OpenAPI 文档不需要权限验证
-            '/sys/openapi',
-            '/sys/openapi/doc',
-        ],
+        // @no_permission_routes 引用共享池，BaseMiddleware 自动展开
+        'exclude_routes' => '@no_permission_routes',
 
         // 超级管理员角色代码（命中其一即放行所有权限）
         'super_admin_roles' => ['R_SUPER', 'super_admin', 'administrator'],

@@ -22,12 +22,7 @@ return [
         InstallGuard::class,
         CorsMiddleware::class,
         AuthMiddleware::class,
-        LogOperationMiddleware::class,
-        // PermissionMiddleware::class,
-    ],
-
-    // 控制器分组中间件（按需启用权限校验中间件）
-    'admin' => [
         PermissionMiddleware::class,
+        LogOperationMiddleware::class,
     ],
 ];

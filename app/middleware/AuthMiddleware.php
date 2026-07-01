@@ -4,28 +4,24 @@ namespace plugin\nanoadmin\app\middleware;
 
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\common\IpLocation;
-use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
 use plugin\nanoadmin\app\common\JwtUtil;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
-use plugin\nanoadmin\app\library\swagger\SwaggerRoutes;
 use plugin\nanoadmin\app\model\ModelFactory;
 use plugin\nanoadmin\app\service\LogLoginService;
 
 /**
  * 认证中间件
  * 处理JWT Token验证和用户信息注入
+ *
+ * exclude_routes 由 BaseMiddleware::resolveExcludeRoutes() 统一解析：
+ * - 支持 @no_permission_routes 引用语法
+ * - 自动注入平台路由 + Swagger 路由
  */
-class AuthMiddleware implements MiddlewareInterface
+class AuthMiddleware extends BaseMiddleware
 {
-    /**
-     * 不需要认证的路由（前缀匹配，从 config('plugin.nanoadmin.nanoadmin.auth.exclude_routes') 读取）
-     * @var array
-     */
-    protected array $excludeRoutes = [];
-
     /**
      * 登录失败是否记录到登录日志
      * @var bool
@@ -44,7 +40,7 @@ class AuthMiddleware implements MiddlewareInterface
     }
 
     /**
-     * 从配置文件加载默认排除路由等设置
+     * 从配置文件加载认证配置
      */
     protected function loadConfig(): void
     {
@@ -53,9 +49,8 @@ class AuthMiddleware implements MiddlewareInterface
             self::$cachedConfig = is_array($config) ? $config : [];
         }
 
-        $this->excludeRoutes     = self::$cachedConfig['exclude_routes'] ?? [];
-        // 自动注入 swagger / openapi 路由白名单（随 swagger.php ui_route / doc_route / enabled 同步）
-        $this->excludeRoutes     = array_values(array_unique(array_merge($this->excludeRoutes, SwaggerRoutes::excludeRoutes())));
+        // 使用 BaseMiddleware 的 resolveExcludeRoutes 解析路由（含 @ 引用 + 自动注入）
+        $this->excludeRoutes = $this->resolveExcludeRoutes(self::$cachedConfig);
         $this->recordFailedLogin = (bool) (self::$cachedConfig['record_failed_login'] ?? true);
     }
 
@@ -130,38 +125,25 @@ class AuthMiddleware implements MiddlewareInterface
      */
     protected function shouldSkipAuth(Request $request): bool
     {
-        $path = $request->path();
-        
-        foreach ($this->excludeRoutes as $route) {
-            if (str_starts_with($path, $route)) {
-                return true;
-            }
-        }
-        
-        return false;
+        return $this->matchesExcludeRoute($request);
     }
 
     /**
      * 从请求中提取Token
+     *
      * @param Request $request
      * @return string|null
      */
     protected function extractToken(Request $request): ?string
     {
-        // 1. 从Authorization头部获取
+        // 1. Authorization: Bearer {token}
         $authHeader = $request->header('Authorization', '');
         if (!empty($authHeader)) {
             return JwtUtil::extractTokenFromHeader($authHeader);
         }
 
-        // 2. 从查询参数获取（兼容性）
-        $token = $request->get('token', '');
-        if (!empty($token)) {
-            return $token;
-        }
-
-        // 3. 从POST参数获取（兼容性）
-        $token = $request->post('token', '');
+        // 2. X-Token 自定义 header（部分前端框架用）
+        $token = $request->header('X-Token', '');
         if (!empty($token)) {
             return $token;
         }
@@ -210,34 +192,4 @@ class AuthMiddleware implements MiddlewareInterface
         }
     }
 
-    /**
-     * 添加排除路由
-     * @param string|array $routes
-     */
-    public function addExcludeRoutes(string|array $routes): void
-    {
-        if (is_string($routes)) {
-            $routes = [$routes];
-        }
-        
-        $this->excludeRoutes = array_merge($this->excludeRoutes, $routes);
-    }
-
-    /**
-     * 设置排除路由
-     * @param array $routes
-     */
-    public function setExcludeRoutes(array $routes): void
-    {
-        $this->excludeRoutes = $routes;
-    }
-
-    /**
-     * 获取排除路由列表
-     * @return array
-     */
-    public function getExcludeRoutes(): array
-    {
-        return $this->excludeRoutes;
-    }
 }

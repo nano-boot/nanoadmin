@@ -2,19 +2,23 @@
 
 namespace plugin\nanoadmin\app\middleware;
 
-use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\common\ApiException;
-use plugin\nanoadmin\app\library\swagger\SwaggerRoutes;
 
 /**
  * 权限验证中间件
  * 基于路由的权限检查
+ *
+ * exclude_routes 由 BaseMiddleware::resolveExcludeRoutes() 统一解析：
+ * - 支持 @no_permission_routes 引用语法
+ * - 自动注入平台路由 + Swagger 路由
+ *
+ * Fail-closed: 未登记权限的路由直接拒绝访问
  */
-class PermissionMiddleware implements MiddlewareInterface
+class PermissionMiddleware extends BaseMiddleware
 {
     /**
      * 路由权限映射（从 config('plugin.nanoadmin.nanoadmin.permission.route_permissions') 读取）
@@ -22,12 +26,6 @@ class PermissionMiddleware implements MiddlewareInterface
      * @var array
      */
     protected array $routePermissions = [];
-
-    /**
-     * 不需要权限验证的路由（从 config 读取）
-     * @var array
-     */
-    protected array $excludeRoutes = [];
 
     /**
      * 超级管理员角色代码（从 config 读取）
@@ -57,10 +55,9 @@ class PermissionMiddleware implements MiddlewareInterface
         }
 
         $this->routePermissions = self::$cachedConfig['route_permissions'] ?? [];
-        $this->excludeRoutes     = self::$cachedConfig['exclude_routes'] ?? [];
-        // 自动注入 swagger / openapi 路由白名单（随 swagger.php ui_route / doc_route / enabled 同步）
-        $this->excludeRoutes     = array_values(array_unique(array_merge($this->excludeRoutes, SwaggerRoutes::excludeRoutes())));
-        $this->superAdminRoles   = self::$cachedConfig['super_admin_roles'] ?? [];
+        $this->superAdminRoles  = self::$cachedConfig['super_admin_roles'] ?? [];
+        // 使用 BaseMiddleware 的 resolveExcludeRoutes 解析路由（含 @ 引用 + 自动注入）
+        $this->excludeRoutes    = $this->resolveExcludeRoutes(self::$cachedConfig);
     }
 
     /**
@@ -91,10 +88,10 @@ class PermissionMiddleware implements MiddlewareInterface
 
             // 获取当前路由需要的权限
             $requiredPermission = $this->getRequiredPermission($request);
-            
+
+            // Fail-closed: 未登记权限的路由直接拒绝访问
             if (empty($requiredPermission)) {
-                // 如果没有配置权限要求，默认允许访问
-                return $handler($request);
+                throw new ApiException(Code::FORBIDDEN, '该接口未登记权限，请联系管理员');
             }
 
             // 检查用户是否有权限
@@ -119,15 +116,7 @@ class PermissionMiddleware implements MiddlewareInterface
      */
     protected function shouldSkipPermissionCheck(Request $request): bool
     {
-        $path = $request->path();
-        
-        foreach ($this->excludeRoutes as $route) {
-            if (str_starts_with($path, $route)) {
-                return true;
-            }
-        }
-        
-        return false;
+        return $this->matchesExcludeRoute($request);
     }
 
     /**
@@ -254,37 +243,6 @@ class PermissionMiddleware implements MiddlewareInterface
     public function getRoutePermissions(): array
     {
         return $this->routePermissions;
-    }
-
-    /**
-     * 添加排除路由
-     * @param string|array $routes
-     */
-    public function addExcludeRoutes(string|array $routes): void
-    {
-        if (is_string($routes)) {
-            $routes = [$routes];
-        }
-        
-        $this->excludeRoutes = array_merge($this->excludeRoutes, $routes);
-    }
-
-    /**
-     * 设置排除路由
-     * @param array $routes
-     */
-    public function setExcludeRoutes(array $routes): void
-    {
-        $this->excludeRoutes = $routes;
-    }
-
-    /**
-     * 获取排除路由列表
-     * @return array
-     */
-    public function getExcludeRoutes(): array
-    {
-        return $this->excludeRoutes;
     }
 
     /**

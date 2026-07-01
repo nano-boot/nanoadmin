@@ -4,23 +4,19 @@ namespace plugin\nanoadmin\app\middleware;
 
 use plugin\nanoadmin\app\service\LogOperationService;
 use plugin\nanoadmin\app\model\ModelFactory;
-use plugin\nanoadmin\app\library\swagger\SwaggerRoutes;
-use Webman\MiddlewareInterface;
 use Webman\Http\Response;
 use Webman\Http\Request;
 
 /**
  * 操作日志中间件
  * 记录所有已认证接口的访问日志
+ *
+ * exclude_routes 由 BaseMiddleware::resolveExcludeRoutes() 统一解析：
+ * - 支持 @no_permission_routes 引用语法
+ * - 自动注入平台路由 + Swagger 路由
  */
-class LogOperationMiddleware implements MiddlewareInterface
+class LogOperationMiddleware extends BaseMiddleware
 {
-    /**
-     * 不记录日志的路由（支持前缀匹配，从 config 读取）
-     * @var array
-     */
-    protected array $excludeRoutes = [];
-
     /**
      * 不记录日志的 HTTP 方法（从 config 读取）
      * @var array
@@ -54,9 +50,8 @@ class LogOperationMiddleware implements MiddlewareInterface
             self::$cachedConfig = is_array($config) ? $config : [];
         }
 
-        $this->excludeRoutes  = self::$cachedConfig['exclude_routes'] ?? [];
-        // 自动注入 swagger / openapi 路由白名单（随 swagger.php ui_route / doc_route / enabled 同步）
-        $this->excludeRoutes  = array_values(array_unique(array_merge($this->excludeRoutes, SwaggerRoutes::excludeRoutes())));
+        // 使用 BaseMiddleware 的 resolveExcludeRoutes 解析路由（含 @ 引用 + 自动注入）
+        $this->excludeRoutes  = $this->resolveExcludeRoutes(self::$cachedConfig);
         $this->excludeMethods = array_map('strtoupper', self::$cachedConfig['exclude_methods'] ?? []);
         $this->sensitiveKeys  = array_map('strtolower', self::$cachedConfig['sensitive_keys'] ?? []);
     }
@@ -101,7 +96,6 @@ class LogOperationMiddleware implements MiddlewareInterface
      */
     protected function shouldSkip(Request $request): bool
     {
-        $path = $request->path();
         $method = strtoupper($request->method());
 
         // 方法过滤
@@ -109,14 +103,8 @@ class LogOperationMiddleware implements MiddlewareInterface
             return true;
         }
 
-        // 路由过滤
-        foreach ($this->excludeRoutes as $route) {
-            if (str_starts_with($path, $route)) {
-                return true;
-            }
-        }
-
-        return false;
+        // 路由过滤（使用父类的 matchesExcludeRoute）
+        return $this->matchesExcludeRoute($request);
     }
 
     /**
