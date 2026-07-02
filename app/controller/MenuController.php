@@ -3,6 +3,8 @@
 namespace plugin\nanoadmin\app\controller;
 
 use OpenApi\Attributes as OA;
+use plugin\nanoadmin\app\attribute\AllowAnonymous;
+use plugin\nanoadmin\app\attribute\Permission;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\library\swagger\OpenApiModifier;
 use plugin\nanoadmin\app\library\swagger\SchemaConstants;
@@ -30,8 +32,15 @@ use support\Response;
  *  PUT    /sys/menu/{id}    update 更新菜单
  *  DELETE /sys/menu/{id}    destroy 删除菜单
  *  POST   /sys/menu/sort    sort   批量更新菜单排序
+ *
+ * Phase 2 注解化（来源：authorization-refactoring-plan.md §2.4）：
+ *  - 类级 #[Permission] 提供兜底权限码 sys:menu（方法级未声明时用）
+ *  - 方法级 #[Permission] 精确声明每个方法的权限码（与 config/nanoadmin.php route_permissions 对齐）
+ *  - route() 方法用 #[AllowAnonymous(requirePermission: false)] 声明免权限
+ *    （前端路由接口，已登录但不能要求权限，否则新用户登录后无法获取自己的菜单）
  */
 #[OA\Tag(name: '菜单管理', description: '系统菜单管理（树形结构 + 排序）')]
+#[Permission(title: '菜单管理', code: 'sys:menu', module: 'system')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class MenuController extends BaseController
 {
@@ -54,6 +63,7 @@ class MenuController extends BaseController
         tags: ['菜单管理'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => MenuQuery::class]
     )]
+    #[Permission(title: '菜单列表', code: 'sys:menu:page', module: 'system', action: 'page')]
     #[DataResponse(example: [
         ['id' => 1, 'parent_id' => 0, 'name' => '系统管理', 'type' => 'D', 'children' => []],
     ])]
@@ -72,6 +82,7 @@ class MenuController extends BaseController
         tags: ['菜单管理'],
         x: [OpenApiModifier::X_REQUEST_BODY => MenuRequest::class]
     )]
+    #[Permission(title: '创建菜单', code: 'sys:menu:create', module: 'system', action: 'create')]
     #[DataResponse(schema: MenuResponse::class)]
     public function store(Request $request): Response
     {
@@ -81,6 +92,9 @@ class MenuController extends BaseController
 
     /**
      * 获取当前管理员可访问的路由配置
+     *
+     * 已登录但免权限：前端路由登录后立即调用，
+     * 否则新用户登录后会因权限不足拿不到自己的菜单 → 死循环。
      */
     #[OA\Get(
         path: '/sys/menu/route',
@@ -88,6 +102,7 @@ class MenuController extends BaseController
         description: '获取当前登录管理员可访问的前端路由配置（含按钮权限）',
         tags: ['菜单管理']
     )]
+    #[AllowAnonymous(requireToken: true, requirePermission: false, description: '当前管理员路由（已登录免权限）')]
     #[DataResponse(example: [
         ['id' => 1, 'name' => '系统管理', 'path' => '/system', 'component' => 'Layout', 'children' => []],
     ])]
@@ -108,6 +123,7 @@ class MenuController extends BaseController
             'id' => ['type' => 'integer', 'description' => '菜单ID'],
         ]]
     )]
+    #[Permission(title: '菜单详情', code: 'sys:menu:view', module: 'system', action: 'page')]
     #[DataResponse(schema: MenuResponse::class)]
     public function show(int $id): Response
     {
@@ -129,6 +145,7 @@ class MenuController extends BaseController
             OpenApiModifier::X_REQUEST_BODY => MenuRequest::class,
         ]
     )]
+    #[Permission(title: '更新菜单', code: 'sys:menu:update', module: 'system', action: 'update')]
     #[DataResponse(schema: MenuResponse::class)]
     public function update(Request $request, int $id): Response
     {
@@ -147,6 +164,7 @@ class MenuController extends BaseController
             'id' => ['type' => 'integer', 'description' => '菜单ID'],
         ]]
     )]
+    #[Permission(title: '删除菜单', code: 'sys:menu:delete', module: 'system', action: 'delete')]
     #[DataResponse()]
     public function destroy(int $id): Response
     {
@@ -164,6 +182,7 @@ class MenuController extends BaseController
         tags: ['菜单管理'],
         x: [OpenApiModifier::X_REQUEST_BODY => MenuSortRequest::class]
     )]
+    #[Permission(title: '菜单排序', code: 'sys:menu:update', module: 'system', action: 'update')]
     #[DataResponse()]
     public function sort(Request $request): Response
     {

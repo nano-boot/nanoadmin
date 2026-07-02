@@ -3,6 +3,7 @@
 namespace plugin\nanoadmin\app\controller;
 
 use OpenApi\Attributes as OA;
+use plugin\nanoadmin\app\attribute\AllowAnonymous;
 use plugin\nanoadmin\app\common\JwtUtil;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\library\swagger\OpenApiModifier;
@@ -30,7 +31,11 @@ use support\Response;
  *
  * 中间件策略：
  *  - 类级默认走 AuthMiddleware（要求登录态）
- *  - login 方法用 #[Middleware()] 覆盖为"无中间件"
+ *  - login / refresh / logout / check 方法用 #[AllowAnonymous] 声明免登录
+ *
+ * Phase 2 注解化（来源：authorization-refactoring-plan.md §2.4）：
+ *  - 4 个完全匿名方法用 #[AllowAnonymous(requireToken: false, requirePermission: false)]
+ *  - 3 个已登录但免权限方法用 #[AllowAnonymous(requireToken: true, requirePermission: false)]
  *
  * @author NanoAdmin Team
  * @since 1.0.0
@@ -80,7 +85,8 @@ class AuthController
     /**
      * 管理员登录
      *
-     * 无需认证中间件（公开接口）
+     * 完全匿名（公开接口）。Phase 2 用 #[AllowAnonymous] 替换原 #[Middleware()] 写法。
+     * 共享池 auth.exclude_routes 也包含 /sys/auth/login 作为兜底（纵深防御）。
      */
     #[OA\Post(
         path: '/sys/auth/login',
@@ -88,7 +94,7 @@ class AuthController
         tags: ['认证'],
         x: [OpenApiModifier::X_REQUEST_BODY => LoginRequest::class]
     )]
-    #[Middleware()]
+    #[AllowAnonymous(requireToken: false, requirePermission: false, description: '管理员登录（完全匿名）')]
     #[DataResponse(schema: LoginResponse::class)]
     public function login(Request $request): Response
     {
@@ -107,12 +113,15 @@ class AuthController
 
     /**
      * 管理员登出
+     *
+     * 完全匿名（requireToken: false）：登出接口需要"未登录"也能调用（清掉过期 token）。
      */
     #[OA\Post(
         path: '/sys/auth/logout',
         summary: '管理员登出',
         tags: ['认证']
     )]
+    #[AllowAnonymous(requireToken: false, requirePermission: false, description: '管理员登出（完全匿名）')]
     #[DataResponse()]
     public function logout(Request $request): Response
     {
@@ -122,12 +131,15 @@ class AuthController
 
     /**
      * 获取当前用户信息
+     *
+     * 已登录但免权限（个人中心，前端路由登录后立即调用）。
      */
     #[OA\Get(
         path: '/sys/auth/info',
         summary: '获取当前管理员信息',
         tags: ['认证']
     )]
+    #[AllowAnonymous(requireToken: true, requirePermission: false, description: '当前管理员信息（免权限）')]
     #[DataResponse(schema: AuthInfoResponse::class)]
     public function info(Request $request): Response
     {
@@ -147,6 +159,8 @@ class AuthController
 
     /**
      * 刷新 Token
+     *
+     * 完全匿名（刷新 token 需要 refresh_token 自身作为凭证，不需要 access_token）。
      */
     #[OA\Post(
         path: '/sys/auth/refresh',
@@ -154,6 +168,7 @@ class AuthController
         tags: ['认证'],
         x: [OpenApiModifier::X_REQUEST_BODY => RefreshRequest::class]
     )]
+    #[AllowAnonymous(requireToken: false, requirePermission: false, description: '刷新 Token（完全匿名）')]
     #[DataResponse(schema: TokenResponse::class)]
     public function refresh(Request $request): Response
     {
@@ -164,12 +179,15 @@ class AuthController
 
     /**
      * 获取当前用户的权限列表
+     *
+     * 已登录但免权限（前端按钮权限来源）。
      */
     #[OA\Get(
         path: '/sys/auth/permissions',
         summary: '获取当前管理员权限列表',
         tags: ['认证']
     )]
+    #[AllowAnonymous(requireToken: true, requirePermission: false, description: '当前管理员权限列表（免权限）')]
     #[DataResponse()]
     public function permissions(Request $request): Response
     {
@@ -184,12 +202,15 @@ class AuthController
 
     /**
      * 获取当前用户的菜单列表
+     *
+     * 已登录但免权限（前端动态菜单来源）。
      */
     #[OA\Get(
         path: '/sys/auth/menus',
         summary: '获取当前管理员菜单列表',
         tags: ['认证']
     )]
+    #[AllowAnonymous(requireToken: true, requirePermission: false, description: '当前管理员菜单列表（免权限）')]
     #[DataResponse()]
     public function menus(Request $request): Response
     {
@@ -204,6 +225,8 @@ class AuthController
 
     /**
      * 检查 Token 有效性
+     *
+     * 完全匿名（任何人都可以传入 token 检查其有效性，不需要先登录）。
      */
     #[OA\Post(
         path: '/sys/auth/check',
@@ -211,6 +234,7 @@ class AuthController
         tags: ['认证'],
         x: [OpenApiModifier::X_REQUEST_BODY => CheckRequest::class]
     )]
+    #[AllowAnonymous(requireToken: false, requirePermission: false, description: '检查 Token 有效性（完全匿名）')]
     #[DataResponse(schema: CheckResponse::class)]
     public function check(Request $request): Response
     {

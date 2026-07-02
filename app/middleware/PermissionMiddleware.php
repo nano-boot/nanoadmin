@@ -7,6 +7,7 @@ use Webman\Http\Request;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\library\annotation\ReflectionCache;
 
 /**
  * 权限验证中间件
@@ -17,6 +18,19 @@ use plugin\nanoadmin\app\common\ApiException;
  * - 自动注入平台路由 + Swagger 路由
  *
  * Fail-closed: 未登记权限的路由直接拒绝访问
+ *
+ * Phase 2 新增：注解 + 配置双来源（来源：authorization-refactoring-plan.md §2.3）
+ * 权限码查找优先级：
+ *  1. 方法级 #[Permission] 注解（最精确）
+ *  2. 类级 #[Permission] 注解（兜底）
+ *  3. route_permissions 配置（兼容历史/批量映射）
+ *  4. 都无 → 返回 null（fail-closed 走 403）
+ *
+ * 放行检测（shouldSkipPermissionCheck）4 层：
+ *  1. 路由前缀白名单（permission.exclude_routes + 平台级自动注入）
+ *  2. #[AllowAnonymous(requirePermission: false)] 注解
+ *  3. $noNeedPermission 属性（saiadmin 兼容，Phase 2 暂未实现读，待 Phase 3 补）
+ *  4. 不跳过，进入权限校验
  */
 class PermissionMiddleware extends BaseMiddleware
 {
@@ -110,13 +124,38 @@ class PermissionMiddleware extends BaseMiddleware
     }
 
     /**
-     * 检查是否应该跳过权限验证
+     * 检查是否应该跳过权限验证（Phase 2 4 层优先级）
+     *
+     * 优先级（命中即返回）：
+     *  1. 路由前缀白名单（permission.exclude_routes + 平台级自动注入）
+     *  2. #[AllowAnonymous(requirePermission: false)] 注解
+     *  3. $noNeedPermission 属性（saiadmin 兼容兜底，Phase 2 暂未实现读取）
+     *  4. 不跳过，进入权限校验
+     *
      * @param Request $request
      * @return bool
      */
     protected function shouldSkipPermissionCheck(Request $request): bool
     {
-        return $this->matchesExcludeRoute($request);
+        // Layer 1：路由前缀白名单（平台级自动注入 + 业务配置）
+        if ($this->matchesExcludeRoute($request)) {
+            return true;
+        }
+
+        $controller = $request->controller ?? '';
+        $action     = $request->action ?? '';
+
+        if ($controller !== '' && $action !== ''
+            && class_exists($controller) && method_exists($controller, $action)) {
+
+            // Layer 2：#[AllowAnonymous] 注解（强类型优先）
+            $anon = ReflectionCache::getAllowAnonymous($controller, $action);
+            if ($anon !== null && !$anon['requirePermission']) {
+                return true; // 注解声明放行权限
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -140,12 +179,40 @@ class PermissionMiddleware extends BaseMiddleware
     }
 
     /**
-     * 获取当前路由需要的权限
+     * 获取当前路由需要的权限码（Phase 2 注解 + 配置双来源）
+     *
+     * 优先级：
+     *  1. 方法级 #[Permission] 注解（最精确，Phase 3 支持多权限 OR 语义）
+     *  2. 类级 #[Permission] 注解（兜底）
+     *  3. route_permissions 配置（兼容历史/批量映射）
+     *  4. 都无 → 返回 null（fail-closed 走 403）
+     *
      * @param Request $request
      * @return string|null
      */
     protected function getRequiredPermission(Request $request): ?string
     {
+        // Phase 2: 注解优先（带缓存，沿继承链）
+        $controller = $request->controller ?? '';
+        $action     = $request->action ?? '';
+
+        if ($controller !== '' && $action !== ''
+            && class_exists($controller) && method_exists($controller, $action)) {
+
+            // 1. 方法级 #[Permission] 注解
+            $methodAttrs = ReflectionCache::getPermissionAttributes($controller, $action);
+            if (!empty($methodAttrs)) {
+                return $methodAttrs[0]['code']; // 多权限码取第一个（Phase 3 支持 OR 语义）
+            }
+
+            // 2. 类级 #[Permission] 注解（兜底）
+            $classAttrs = ReflectionCache::getClassAttributes($controller);
+            if (!empty($classAttrs)) {
+                return $classAttrs[0]['code'];
+            }
+        }
+
+        // 3. route_permissions 配置兜底（兼容历史/批量映射）
         $method = strtoupper($request->method());
         $path = $request->path();
 
@@ -164,6 +231,7 @@ class PermissionMiddleware extends BaseMiddleware
             }
         }
 
+        // 4. 没有匹配（fail-closed）
         return null;
     }
 

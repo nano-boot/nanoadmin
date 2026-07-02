@@ -256,11 +256,11 @@ CREATE TABLE IF NOT EXISTS na_sys_dict_data (
 -- 字典初始化数据
 -- =====================================================
 -- 字典类型
-INSERT INTO `na_sys_dict_type` (`name`, `code`, `description`, `status`, `sort`) VALUES
-('性别', 'sys_gender', '系统性别枚举', 1, 10),
-('状态', 'sys_status', '通用状态枚举', 1, 20),
-('是/否', 'sys_yes_no', '是/否枚举', 1, 30),
-('通知类型', 'sys_notice_type', '通知消息类型', 1, 40);
+INSERT INTO `na_sys_dict_type` (`id`, `name`, `code`, `description`, `status`, `sort`) VALUES
+(1, '性别', 'sys_gender', '系统性别枚举', 1, 10),
+(2, '状态', 'sys_status', '通用状态枚举', 1, 20),
+(3, '是/否', 'sys_yes_no', '是/否枚举', 1, 30),
+(4, '通知类型', 'sys_notice_type', '通知消息类型', 1, 40);
 -- 字典数据 - 性别
 INSERT INTO `na_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
 (1, '未知', '0', 10, 1),
@@ -279,10 +279,10 @@ INSERT INTO `na_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `statu
 
 -- 字典数据 - 通知类型
 INSERT INTO `na_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `status`) VALUES
-(5, '系统通知', 'system', 10, 1),
-(5, '活动通知', 'activity', 20, 1),
-(5, '订单通知', 'order', 30, 1),
-(5, '物流通知', 'delivery', 40, 1);
+(4, '系统通知', 'system', 10, 1),
+(4, '活动通知', 'activity', 20, 1),
+(4, '订单通知', 'order', 30, 1),
+(4, '物流通知', 'delivery', 40, 1);
 
 -- =====================================================
 -- 11. 配置表

@@ -12,8 +12,14 @@ use Webman\Http\Request;
  * 记录所有已认证接口的访问日志
  *
  * exclude_routes 由 BaseMiddleware::resolveExcludeRoutes() 统一解析：
- * - 支持 @no_permission_routes 引用语法
+ * - 支持 @no_permission_routes 引用语法（permission 和 log_operation 共享）
  * - 自动注入平台路由 + Swagger 路由
+ *
+ * Phase 2 行为：
+ *  - 未认证请求直接放行（不记录日志，因为没有 admin 信息）
+ *  - 已认证请求按 log_operation.exclude_routes 判断
+ *  - 完全匿名接口（#[AllowAnonymous(requireToken: false)]）由于未认证走第一条短路
+ *  - Phase 3 计划：通过 #[Permission(log: false)] 精细化控制
  */
 class LogOperationMiddleware extends BaseMiddleware
 {

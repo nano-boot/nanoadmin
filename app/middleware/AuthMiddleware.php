@@ -9,6 +9,7 @@ use Webman\Http\Request;
 use plugin\nanoadmin\app\common\JwtUtil;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\library\annotation\ReflectionCache;
 use plugin\nanoadmin\app\model\ModelFactory;
 use plugin\nanoadmin\app\service\LogLoginService;
 
@@ -17,8 +18,15 @@ use plugin\nanoadmin\app\service\LogLoginService;
  * 处理JWT Token验证和用户信息注入
  *
  * exclude_routes 由 BaseMiddleware::resolveExcludeRoutes() 统一解析：
- * - 支持 @no_permission_routes 引用语法
- * - 自动注入平台路由 + Swagger 路由
+ *  - 支持 @no_permission_routes 引用语法
+ *  - 自动注入平台路由 + Swagger 路由
+ *
+ * Phase 2 新增：4 层优先级放行检测（来源：authorization-refactoring-plan.md §2.9.7）
+ *  - Layer 1 平台路由自动注入（BaseMiddleware::resolveExcludeRoutes 已处理）
+ *  - Layer 2 共享池配置（auth.exclude_routes）
+ *  - Layer 3 #[AllowAnonymous(requireToken: false)] 注解（强类型，IDE 提示）
+ *  - Layer 4 $noNeedLogin 属性（saiadmin 兼容兜底，注解优先）
+ *  - Layer 5 正常 token 校验
  */
 class AuthMiddleware extends BaseMiddleware
 {
@@ -119,13 +127,44 @@ class AuthMiddleware extends BaseMiddleware
     }
 
     /**
-     * 检查是否应该跳过认证
+     * 检查是否应该跳过认证（Phase 2 4 层优先级）
+     *
+     * 优先级（命中即返回）：
+     *  1. 路由前缀白名单（auth.exclude_routes + 平台级自动注入）
+     *  2. #[AllowAnonymous(requireToken: false)] 注解
+     *  3. $noNeedLogin 属性（saiadmin 兼容）
+     *  4. 不跳过，进入正常 token 校验
+     *
      * @param Request $request
      * @return bool
      */
     protected function shouldSkipAuth(Request $request): bool
     {
-        return $this->matchesExcludeRoute($request);
+        // Layer 1：路由前缀白名单（平台级自动注入 + 业务配置）
+        if ($this->matchesExcludeRoute($request)) {
+            return true;
+        }
+
+        $controller = $request->controller ?? '';
+        $action     = $request->action ?? '';
+
+        if ($controller !== '' && $action !== ''
+            && class_exists($controller) && method_exists($controller, $action)) {
+
+            // Layer 2：#[AllowAnonymous] 注解（强类型优先）
+            $anon = ReflectionCache::getAllowAnonymous($controller, $action);
+            if ($anon !== null && !$anon['requireToken']) {
+                return true; // 注解声明放行 token
+            }
+
+            // Layer 3：$noNeedLogin 属性（saiadmin 兼容兜底）
+            $noNeed = ReflectionCache::getNoNeedLogin($controller);
+            if (in_array($action, $noNeed, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
