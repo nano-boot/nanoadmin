@@ -430,7 +430,7 @@ class Menu extends BaseModel
      */
     public function children(): HasMany
     {
-        return $this->hasMany(self::class, 'parent_id', 'id')->orderBy('sort', 'asc')->orderBy('id', 'asc');
+        return $this->hasMany(self::class, 'parent_id', 'id')->orderBy('sort', 'desc')->orderBy('id', 'asc');
     }
 
     /**
@@ -454,7 +454,7 @@ class Menu extends BaseModel
         if (!$includeDeleted) {
             $query->where('deleted', false);
         }
-        $allMenus = $query->orderBy('sort', 'asc')
+        $allMenus = $query->orderBy('sort', 'desc')
                           ->orderBy('id', 'asc')
                           ->get()
                           ->toArray();
@@ -495,13 +495,13 @@ class Menu extends BaseModel
      */
     public function getAdminMenuTree(int $adminId): array
     {
-        // ✅ 一次性预加载 roles 和 roles.menus，避免重复查询角色
+        //  一次性预加载 roles 和 roles.menus，避免重复查询角色
         $admin = Admin::with(['roles.menus'])->find($adminId);
         if (!$admin) {
             return [];
         }
 
-        // ✅ 使用集合方法检查超级管理员，无需手动循环
+        // 使用集合方法检查超级管理员，无需手动循环
         $isSuperAdmin = $admin->roles->contains('code', 'R_SUPER');
 
         // 超级管理员获取所有菜单
@@ -509,7 +509,7 @@ class Menu extends BaseModel
             return $this->getTree();
         }
 
-        // ✅ 直接从已预加载的关联数据中收集菜单ID，无需额外查询
+        //  直接从已预加载的关联数据中收集菜单ID，无需额外查询
         $menuIds = [];
         foreach ($admin->roles as $role) {
             foreach ($role->menus as $menu) {
@@ -539,7 +539,7 @@ class Menu extends BaseModel
         // 获取所有相关菜单
         $menus = $this->whereIn('id', $menuIds)
                      ->enabled()
-                     ->orderBy('sort', 'asc')
+                     ->orderBy('sort', 'desc')
                      ->orderBy('id', 'asc')
                      ->get();
         
@@ -586,7 +586,7 @@ class Menu extends BaseModel
             $query->where('menu_type', $where['menu_type']);
         }
         
-        return $query->orderBy('sort', 'asc')
+        return $query->orderBy('sort', 'desc')
                     ->orderBy('id', 'asc')
                     ->paginate($limit, ['*'], 'page', $page);
     }
@@ -1057,7 +1057,7 @@ class Menu extends BaseModel
             $query->where('deleted', false);
         }
         
-        return $query->orderBy('sort', 'asc')
+        return $query->orderBy('sort', 'desc')
                     ->orderBy('id', 'asc')
                     ->select("{$this->getTable()}.*")
                     ->get();
@@ -1110,7 +1110,7 @@ class Menu extends BaseModel
     {
         return $this->where('permission', $permission)
                    ->enabled()
-                   ->orderBy('sort', 'asc')
+                   ->orderBy('sort', 'desc')
                    ->orderBy('id', 'asc')
                    ->get();
     }
@@ -1125,7 +1125,7 @@ class Menu extends BaseModel
         $query = $this->where('status', 1)
                       ->where('deleted', false);
 
-        return $query->orderBy('sort', 'asc')
+        return $query->orderBy('sort', 'desc')
                    ->orderBy('id', 'asc')
                    ->select("{$this->getTable()}.*")
                    ->get();
@@ -1882,7 +1882,7 @@ class Menu extends BaseModel
     {
         $menus = $this->where('parent_id', $parentId)
                      ->where('deleted', false)
-                     ->orderBy('sort', 'asc')
+                     ->orderBy('sort', 'desc')
                      ->get();
         
         $stats = [
@@ -1932,7 +1932,7 @@ class Menu extends BaseModel
     {
         $menus = $this->where('parent_id', $parentId)
                      ->where('deleted', false)
-                     ->orderBy('sort', 'asc')
+                     ->orderBy('sort', 'desc')
                      ->orderBy('id', 'asc')
                      ->get();
         

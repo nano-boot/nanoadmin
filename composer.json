@@ -18,6 +18,7 @@
         "ext-pdo": "*",
         "webman/database": "^2.1",
         "webman/think-cache": "^2.1",
+        "webman/validation": "^2.2",
         "illuminate/pagination": "^12.22",
         "illuminate/events": "^12.53",
         "symfony/var-dumper": "^7.3",
