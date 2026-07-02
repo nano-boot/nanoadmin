@@ -371,7 +371,7 @@ CREATE TABLE IF NOT EXISTS `na_sys_log_operation` (
     `description` VARCHAR(500) DEFAULT '' COMMENT '操作描述',
     `request_method` VARCHAR(10) DEFAULT '' COMMENT '请求方法',
     `request_url` VARCHAR(500) DEFAULT '' COMMENT '请求URL',
-    `request_params` VARCHAR(500) DEFAULT NULL COMMENT '请求参数',
+    `request_params` VARCHAR(2000) NULL COMMENT '请求参数',
     `response_code` INT DEFAULT 20000 COMMENT '响应状态码',
     `response_msg` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '响应消息',
     `http_status` INT DEFAULT 200 COMMENT 'HTTP状态码',

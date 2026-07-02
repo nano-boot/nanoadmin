@@ -211,6 +211,10 @@ class LogOperationMiddleware extends BaseMiddleware
 
     /**
      * 解析模块名称、操作类型和描述
+     *
+     * 规则：
+     *  - module 取 path 第二段（如 menu / admin / login-log），含 list → 用于中文化
+     *  - action 优先取 path 第三段（数字视为 ID，子动作为「详情」），空则为 HTTP 方法映射（更新/创建/列表/删除）
      * @param string $path
      * @param string $method
      * @return array
@@ -224,7 +228,9 @@ class LogOperationMiddleware extends BaseMiddleware
         $segments = array_slice($segments, 1);
 
         $module = $segments[0] ?? 'unknown';
-        $action = $segments[1] ?? '';
+        // path 第三段：可能是 {id}（数字）或子操作（roles / sort ...）
+        // 这里用作 sub-action hint，HTTP 方法仍主导基础动作
+        $subAction = $segments[1] ?? '';
 
         // 规范化模块名称
         $moduleMap = [
@@ -243,60 +249,124 @@ class LogOperationMiddleware extends BaseMiddleware
 
         $moduleName = $moduleMap[$module] ?? $module;
 
-        // 解析操作类型
-        $actionMap = [
-            'GET' => [
-                '' => '列表',
-                'select' => '下拉列表',
-                'stats' => '统计',
-                'roles' => '角色列表',
-                'permissions' => '权限列表',
-                'menus' => '菜单列表',
-                'route' => '路由',
-                'group' => '分组',
-                'download' => '下载',
-            ],
-            'POST' => [
-                '' => '创建',
-                'roles' => '分配角色',
-                'permissions' => '分配权限',
-                'menus' => '分配菜单',
-                'sort' => '排序',
-                'upload' => '上传',
-                'batch' => '批量操作',
-            ],
-            'PUT' => [
-                '' => '更新',
-                'info' => '更新资料',
-                'password' => '修改密码',
-                'batch' => '批量更新',
-            ],
-            'DELETE' => [
-                '' => '删除',
-                'batch' => '批量删除',
-            ],
+        // 解析操作类型：HTTP 方法决定基础动作，path 决定 sub-action（详情 / 子操作）
+        $baseActionMap = [
+            'GET' => '查询',
+            'POST' => '创建',
+            'PUT' => '更新',
+            'PATCH' => '修改',
+            'DELETE' => '删除',
         ];
 
-        $actionName = $action;
-        if (isset($actionMap[$method][$action])) {
-            $actionName = $actionMap[$method][$action];
-        } elseif (is_numeric($action)) {
-            $actionName = '详情';
+        $subActionMap = [
+            'select' => '下拉列表',
+            'stats' => '统计',
+            'roles' => '角色',
+            'permissions' => '权限',
+            'menus' => '菜单',
+            'route' => '路由',
+            'group' => '分组',
+            'download' => '下载',
+            'sort' => '排序',
+            'upload' => '上传',
+            'batch' => '批量',
+            'info' => '资料',
+            'password' => '密码',
+            'export' => '导出',
+            'import' => '导入',
+        ];
+
+        $baseName = $baseActionMap[$method] ?? '请求';
+
+        // 1) 命名子动作（如 /admin/123/roles → 「分配角色」）
+        if ($subAction !== '' && isset($subActionMap[$subAction])) {
+            $actionName = ($method === 'POST' && in_array($subAction, ['roles', 'permissions', 'menus'], true))
+                ? '分配' . $subActionMap[$subAction]
+                : $subActionMap[$subAction] . $baseName;
+        }
+        // 2) 数字子动作（如 /admin/123、/menu/200）→ 详情类操作
+        elseif ($subAction !== '' && is_numeric($subAction)) {
+            if ($method === 'GET') {
+                $actionName = '详情';
+            } else {
+                // PUT /admin/123 或 DELETE /admin/123 等 → 仍按基础动作
+                $actionName = $baseName;
+            }
+        }
+        // 3) 空 subAction → 仅基础动作（如 PUT /admin）
+        else {
+            $actionName = $baseName;
         }
 
-        // 生成描述
-        $description = sprintf(
-            '%s%s%s',
-            $moduleName,
-            $actionName ? "「{$actionName}」" : '',
-            $this->getMethodName($method)
-        );
+        // 生成描述：「菜单」「更新」/「菜单」「详情」「查询」
+        $description = "{$moduleName}「{$actionName}」";
 
         return [
             'module' => $moduleName,
-            'action' => $actionName ?: $method,
+            'action' => $actionName,
             'description' => $description,
         ];
+    }
+
+    /**
+     * 请求参数单列最大字节数缓存（按列定义动态探测）
+     * TEXT 列最大 65535，MEDIUMTEXT 16777215，这里给硬上限 60000 防失控
+     * @var int|null
+     */
+    protected static ?int $requestParamsMaxBytes = null;
+
+    /**
+     * 探测 th_sys_log_operation.request_params 列允许的最大字节数
+     * - TEXT (utf8mb4): 16383 字符 ≈ 65532 字节
+     * - VARCHAR(500): 500 字符 ≈ 2000 字节
+     * - 若探测失败，安全起见回落到 500（旧 schema 默认）
+     * @return int
+     */
+    protected function detectRequestParamsMaxBytes(): int
+    {
+        if (self::$requestParamsMaxBytes !== null) {
+            return self::$requestParamsMaxBytes;
+        }
+
+        try {
+            $sql = "SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
+                    FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = ?
+                      AND COLUMN_NAME = 'request_params'";
+            $row = \support\Db::selectOne($sql, ['sys_log_operation']);
+
+            if ($row) {
+                // webman 默认 PDO::FETCH_OBJ，但其他模式可能返回数组。这里
+                // 两种都兼容：object 用 ->，array 用 []。
+                $get = static fn(string $key) => is_array($row)
+                    ? ($row[$key] ?? null)
+                    : ($row->$key ?? null);
+
+                $type = strtolower((string)($get('DATA_TYPE')));
+                $len  = (int)($get('CHARACTER_MAXIMUM_LENGTH') ?? 0);
+                if (in_array($type, ['text', 'tinytext', 'mediumtext', 'longtext'], true)) {
+                    self::$requestParamsMaxBytes = match ($type) {
+                        'tinytext' => 255,
+                        'text' => 65535,
+                        'mediumtext' => 16777215,
+                        'longtext' => 4294967295,
+                        default => 65535,
+                    };
+                    return self::$requestParamsMaxBytes;
+                }
+                if ($type === 'varchar' || $type === 'char') {
+                    self::$requestParamsMaxBytes = max(1, $len);
+                    return self::$requestParamsMaxBytes;
+                }
+            }
+        } catch (\Throwable $e) {
+            // 表/列还没建好（首次安装），回落
+        }
+
+        // 兜底：500 字节 ≈ install.sql 旧 schema 行为
+        self::$requestParamsMaxBytes = 500;
+        return self::$requestParamsMaxBytes;
     }
 
     /**
@@ -330,24 +400,19 @@ class LogOperationMiddleware extends BaseMiddleware
         }
 
         $json = json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        return mb_substr($json, 0, 65535);
-    }
+        if ($json === false) {
+            return '';
+        }
 
-    /**
-     * 获取 HTTP 方法中文名称
-     * @param string $method
-     * @return string
-     */
-    protected function getMethodName(string $method): string
-    {
-        return match ($method) {
-            'GET' => '查询',
-            'POST' => '操作',
-            'PUT' => '更新',
-            'DELETE' => '删除',
-            'PATCH' => '修改',
-            default => '请求',
-        };
+        $maxBytes = $this->detectRequestParamsMaxBytes();
+        if (strlen($json) <= $maxBytes) {
+            return $json;
+        }
+
+        // 超长截断：保留头尾结构和末尾 "...[truncated]" 标记
+        $marker = sprintf('...[truncated %d bytes]', strlen($json) - $maxBytes + 32);
+        $keep = max(0, $maxBytes - strlen($marker));
+        return mb_strcut($json, 0, $keep) . $marker;
     }
 
     /**
