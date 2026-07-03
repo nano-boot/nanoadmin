@@ -3,6 +3,8 @@
 namespace plugin\nanoadmin\app\controller;
 
 use OpenApi\Attributes as OA;
+use plugin\nanoadmin\app\attribute\AllowAnonymous;
+use plugin\nanoadmin\app\attribute\Permission;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
@@ -27,8 +29,14 @@ use support\Response;
 /**
  * 管理员控制器
  *
+ * Phase 2 注解化（来源：authorization-refactoring-plan.md §1）：
+ *  - 类级 #[Permission] 提供兜底权限码 sys:admin（方法级未声明时使用）
+ *  - 方法级 #[Permission] 精确声明每个方法的权限码（与 route_permissions 对齐）
+ *  - 自操作接口（修改自己密码、修改自己资料）用 #[AllowAnonymous(requirePermission: false)]
+ *    标注"已登录但免权限"，与 MenuController::route 同模式
  */
 #[OA\Tag(name: '管理员', description: '系统管理员管理')]
+#[Permission(title: '管理员管理', code: 'sys:admin', module: 'system')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class AdminController extends BaseController
 {
@@ -47,6 +55,7 @@ class AdminController extends BaseController
         tags: ['管理员'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => AdminQuery::class]
     )]
+    #[Permission(title: '管理员列表', code: 'sys:admin:page', module: 'system', action: 'page')]
     #[PageResponse(schema: AdminResponse::class)]
     public function page(Request $request): Response
     {
@@ -62,6 +71,7 @@ class AdminController extends BaseController
             'id' => ['type' => 'integer', 'description' => '管理员ID'],
         ]]
     )]
+    #[Permission(title: '管理员详情', code: 'sys:admin:view', module: 'system', action: 'page')]
     #[DataResponse(schema: AdminResponse::class)]
     public function show(int $id): Response
     {
@@ -75,6 +85,7 @@ class AdminController extends BaseController
         tags: ['管理员'],
         x: [OpenApiModifier::X_REQUEST_BODY => AdminRequest::class]
     )]
+    #[Permission(title: '创建管理员', code: 'sys:admin:create', module: 'system', action: 'create')]
     #[DataResponse()]
     public function create(Request $request): Response
     {
@@ -93,6 +104,7 @@ class AdminController extends BaseController
             OpenApiModifier::X_REQUEST_BODY => AdminRequest::class
         ]
     )]
+    #[Permission(title: '更新管理员', code: 'sys:admin:update', module: 'system', action: 'update')]
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
@@ -108,6 +120,7 @@ class AdminController extends BaseController
             'id' => ['type' => 'integer', 'description' => '管理员ID'],
         ]]
     )]
+    #[Permission(title: '删除管理员', code: 'sys:admin:delete', module: 'system', action: 'delete')]
     #[DataResponse()]
     public function destroy(int $id): Response
     {
@@ -121,6 +134,7 @@ class AdminController extends BaseController
         summary: '批量删除管理员',
         tags: ['管理员']
     )]
+    #[Permission(title: '批量删除管理员', code: 'sys:admin:delete', module: 'system', action: 'delete')]
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
@@ -141,6 +155,7 @@ class AdminController extends BaseController
             OpenApiModifier::X_REQUEST_BODY => AdminRoleRequest::class
         ]
     )]
+    #[Permission(title: '分配管理员角色', code: 'sys:admin:assign-role', module: 'system', action: 'update')]
     #[DataResponse()]
     public function assignRoles(Request $request, int $id): Response
     {
@@ -158,6 +173,7 @@ class AdminController extends BaseController
             'id' => ['type' => 'integer', 'description' => '管理员ID'],
         ]]
     )]
+    #[Permission(title: '查看管理员角色', code: 'sys:admin:view', module: 'system', action: 'page')]
     #[DataResponse()]
     public function getRoles(int $id): Response
     {
@@ -172,6 +188,7 @@ class AdminController extends BaseController
         tags: ['管理员'],
         x: [OpenApiModifier::X_REQUEST_BODY => AdminPasswordRequest::class]
     )]
+    #[AllowAnonymous(requireToken: true, requirePermission: false, description: '修改当前用户密码（已登录免权限）')]
     #[DataResponse()]
     public function updateCurrentPassword(Request $request): Response
     {
@@ -197,6 +214,7 @@ class AdminController extends BaseController
         tags: ['管理员'],
         x: [OpenApiModifier::X_REQUEST_BODY => AdminProfileRequest::class]
     )]
+    #[AllowAnonymous(requireToken: true, requirePermission: false, description: '更新当前用户资料（已登录免权限）')]
     #[DataResponse(schema: AdminResponse::class)]
     public function updateProfile(Request $request): Response
     {

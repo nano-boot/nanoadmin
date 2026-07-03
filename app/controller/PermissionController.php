@@ -3,6 +3,7 @@
 namespace plugin\nanoadmin\app\controller;
 
 use OpenApi\Attributes as OA;
+use plugin\nanoadmin\app\attribute\Permission;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\middleware\AuthMiddleware;
 use plugin\nanoadmin\app\middleware\PermissionMiddleware;
@@ -22,8 +23,15 @@ use support\Response;
 /**
  * 权限控制器
  *
+ * Phase 2 注解化（来源：authorization-refactoring-plan.md §1）：
+ *  - 类级 #[Permission] 提供兜底权限码 sys:permission
+ *  - 方法级 #[Permission] 精确声明每个方法的权限码（与 route_permissions 对齐）
+ *
+ * 注意：本 controller 路径使用复数 /sys/permissions（与 MenuController 等单数风格不同），
+ * 历史原因，迁移时保持一致。
  */
 #[OA\Tag(name: '权限', description: '权限管理')]
+#[Permission(title: '权限管理', code: 'sys:permission', module: 'system')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class PermissionController extends BaseController
 {
@@ -45,6 +53,7 @@ class PermissionController extends BaseController
         tags: ['权限'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => PermissionQuery::class]
     )]
+    #[Permission(title: '权限列表', code: 'sys:permission:page', module: 'system', action: 'page')]
     #[PageResponse(schema: PermissionResponse::class)]
     public function page(Request $request): Response
     {
@@ -63,6 +72,7 @@ class PermissionController extends BaseController
             'id' => ['type' => 'integer', 'description' => '权限ID'],
         ]]
     )]
+    #[Permission(title: '权限详情', code: 'sys:permission:view', module: 'system', action: 'page')]
     #[DataResponse(schema: PermissionResponse::class)]
     public function show(int $id): Response
     {
@@ -79,6 +89,7 @@ class PermissionController extends BaseController
         tags: ['权限'],
         x: [OpenApiModifier::X_REQUEST_BODY => PermissionRequest::class]
     )]
+    #[Permission(title: '创建权限', code: 'sys:permission:create', module: 'system', action: 'create')]
     #[DataResponse()]
     public function store(Request $request): Response
     {
@@ -100,6 +111,7 @@ class PermissionController extends BaseController
             OpenApiModifier::X_REQUEST_BODY => PermissionRequest::class
         ]
     )]
+    #[Permission(title: '更新权限', code: 'sys:permission:update', module: 'system', action: 'update')]
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
@@ -118,6 +130,7 @@ class PermissionController extends BaseController
             'id' => ['type' => 'integer', 'description' => '权限ID'],
         ]]
     )]
+    #[Permission(title: '删除权限', code: 'sys:permission:delete', module: 'system', action: 'delete')]
     #[DataResponse()]
     public function destroy(int $id): Response
     {
@@ -134,6 +147,7 @@ class PermissionController extends BaseController
         summary: '批量删除权限',
         tags: ['权限']
     )]
+    #[Permission(title: '批量删除权限', code: 'sys:permission:delete', module: 'system', action: 'delete')]
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {

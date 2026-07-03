@@ -32,6 +32,10 @@ return [
         '/sys/auth/menus',
         '/sys/menu/route',
 
+        // 自操作接口（已登录但免权限，个人中心场景）
+        '/sys/admin/password',
+        '/sys/admin/info',
+
         // 完全匿名（免登录 + 免权限 + 免日志）
         '/sys/auth/login',
         '/sys/auth/refresh',

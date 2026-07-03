@@ -60,6 +60,7 @@ class ReflectionCache
             'class'         => "nanoadmin:reflection:{$env}:class_",
             'anonymous'     => "nanoadmin:reflection:{$env}:anonymous_",
             'no_need_login' => "nanoadmin:reflection:{$env}:no_need_login_",
+            'no_need_permission' => "nanoadmin:reflection:{$env}:no_need_permission_",
         ];
 
         if (!function_exists('config')) {
@@ -283,6 +284,45 @@ class ReflectionCache
             try {
                 $ref = new ReflectionClass($controller);
                 $data = $ref->getDefaultProperties()['noNeedLogin'] ?? [];
+                $result = is_array($data) ? array_values($data) : [];
+            } catch (\Throwable $e) {
+                $result = [];
+            }
+        }
+
+        static::cacheSet($key, $result, (int) $cfg['expire'], (string) $cfg['tag']);
+        return $result;
+    }
+
+    /**
+     * 获取控制器 $noNeedPermission 属性（兼容 saiadmin，M2 补全）
+     *
+     * 设计来源：authorization-refactoring-plan.md §一 "Phase 1 收尾" + §五 行动清单
+     *  - 与 AuthMiddleware 的 $noNeedLogin 对应，PermissionMiddleware 同样需要兜底读取
+     *  - 注解 #[AllowAnonymous(requirePermission: false)] 优先级高于属性
+     *  - Phase 3 全部迁注解后可移除
+     *
+     * 使用场景：少数老 controller 用 $noNeedPermission 属性标记某些方法跳过权限校验
+     * （如登录后的"个人中心"接口），未及时改为 AllowAnonymous 注解的过渡期。
+     *
+     * @param string $controller
+     * @return array<int, string> 方法名列表
+     */
+    public static function getNoNeedPermission(string $controller): array
+    {
+        $cfg = static::config();
+        $key = $cfg['no_need_permission'] . md5($controller);
+
+        $data = static::cacheGet($key);
+        if ($data !== null) {
+            return is_array($data) ? $data : [];
+        }
+
+        $result = [];
+        if (class_exists($controller)) {
+            try {
+                $ref = new ReflectionClass($controller);
+                $data = $ref->getDefaultProperties()['noNeedPermission'] ?? [];
                 $result = is_array($data) ? array_values($data) : [];
             } catch (\Throwable $e) {
                 $result = [];
