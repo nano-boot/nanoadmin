@@ -55,7 +55,7 @@ class DictTypeController extends BaseController
         tags: ['字典类型'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => DictTypeQuery::class]
     )]
-    #[Permission(title: '字典类型列表', code: 'sys:dict:type:page', module: 'system', action: 'page')]
+    #[Permission(title: '字典类型列表', code: 'sys:dict:type:query', module: 'system', action: 'page')]
     #[PageResponse(schema: DictTypeResponse::class)]
     public function page(Request $request): Response
     {
@@ -71,7 +71,7 @@ class DictTypeController extends BaseController
             'id' => ['type' => 'integer', 'description' => '字典类型ID'],
         ]]
     )]
-    #[Permission(title: '字典类型详情', code: 'sys:dict:type:page', module: 'system', action: 'page')]
+    #[Permission(title: '字典类型详情', code: 'sys:dict:type:query', module: 'system', action: 'page')]
     #[DataResponse(schema: DictTypeResponse::class)]
     public function show(int $id): Response
     {

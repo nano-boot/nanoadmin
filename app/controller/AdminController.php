@@ -55,7 +55,7 @@ class AdminController extends BaseController
         tags: ['管理员'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => AdminQuery::class]
     )]
-    #[Permission(title: '管理员列表', code: 'sys:admin:page', module: 'system', action: 'page')]
+    #[Permission(title: '管理员列表', code: 'sys:admin:query', module: 'system', action: 'page')]
     #[PageResponse(schema: AdminResponse::class)]
     public function page(Request $request): Response
     {
@@ -71,7 +71,7 @@ class AdminController extends BaseController
             'id' => ['type' => 'integer', 'description' => '管理员ID'],
         ]]
     )]
-    #[Permission(title: '管理员详情', code: 'sys:admin:view', module: 'system', action: 'page')]
+    #[Permission(title: '管理员详情', code: 'sys:admin:query', module: 'system', action: 'page')]
     #[DataResponse(schema: AdminResponse::class)]
     public function show(int $id): Response
     {
@@ -173,7 +173,7 @@ class AdminController extends BaseController
             'id' => ['type' => 'integer', 'description' => '管理员ID'],
         ]]
     )]
-    #[Permission(title: '查看管理员角色', code: 'sys:admin:view', module: 'system', action: 'page')]
+    #[Permission(title: '查看管理员角色', code: 'sys:admin:query', module: 'system', action: 'page')]
     #[DataResponse()]
     public function getRoles(int $id): Response
     {

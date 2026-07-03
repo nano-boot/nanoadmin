@@ -59,7 +59,7 @@ class RoleController extends BaseController
         tags: ['角色'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => RoleQuery::class]
     )]
-    #[Permission(title: '角色列表', code: 'sys:role:page', module: 'system', action: 'page')]
+    #[Permission(title: '角色列表', code: 'sys:role:query', module: 'system', action: 'page')]
     #[PageResponse(schema: RoleResponse::class)]
     public function page(Request $request): Response
     {
@@ -72,7 +72,7 @@ class RoleController extends BaseController
         summary: '角色下拉列表',
         tags: ['角色']
     )]
-    #[Permission(title: '角色下拉列表', code: 'sys:role:view', module: 'system', action: 'page')]
+    #[Permission(title: '角色下拉列表', code: 'sys:role:query', module: 'system', action: 'page')]
     #[DataResponse(schema: RoleResponse::class)]
     public function selectList(): Response
     {
@@ -84,7 +84,7 @@ class RoleController extends BaseController
         summary: '角色详情',
         tags: ['角色']
     )]
-    #[Permission(title: '角色详情', code: 'sys:role:view', module: 'system', action: 'page')]
+    #[Permission(title: '角色详情', code: 'sys:role:query', module: 'system', action: 'page')]
     #[DataResponse(schema: RoleResponse::class)]
     public function show(int $id): Response
     {
@@ -183,7 +183,7 @@ class RoleController extends BaseController
         summary: '获取角色权限',
         tags: ['角色']
     )]
-    #[Permission(title: '查看角色权限', code: 'sys:role:view', module: 'system', action: 'page')]
+    #[Permission(title: '查看角色权限', code: 'sys:role:query', module: 'system', action: 'page')]
     #[DataResponse(schema: RolePermissionResponse::class)]
     public function getPermissions(int $id): Response
     {
@@ -216,7 +216,7 @@ class RoleController extends BaseController
         summary: '获取角色菜单',
         tags: ['角色']
     )]
-    #[Permission(title: '查看角色菜单', code: 'sys:role:view', module: 'system', action: 'page')]
+    #[Permission(title: '查看角色菜单', code: 'sys:role:query', module: 'system', action: 'page')]
     #[DataResponse(schema: RoleMenuResponse::class)]
     public function getMenus(int $id): Response
     {

@@ -63,7 +63,7 @@ class MenuController extends BaseController
         tags: ['菜单管理'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => MenuQuery::class]
     )]
-    #[Permission(title: '菜单列表', code: 'sys:menu:page', module: 'system', action: 'page')]
+    #[Permission(title: '菜单列表', code: 'sys:menu:query', module: 'system', action: 'page')]
     #[DataResponse(example: [
         ['id' => 1, 'parent_id' => 0, 'name' => '系统管理', 'type' => 'D', 'children' => []],
     ])]
@@ -123,7 +123,7 @@ class MenuController extends BaseController
             'id' => ['type' => 'integer', 'description' => '菜单ID'],
         ]]
     )]
-    #[Permission(title: '菜单详情', code: 'sys:menu:view', module: 'system', action: 'page')]
+    #[Permission(title: '菜单详情', code: 'sys:menu:query', module: 'system', action: 'page')]
     #[DataResponse(schema: MenuResponse::class)]
     public function show(int $id): Response
     {

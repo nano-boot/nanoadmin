@@ -1,6 +1,7 @@
 <?php
 
 use plugin\nanoadmin\app\middleware\InstallGuard;
+use plugin\nanoadmin\app\middleware\InitMiddleware;
 use plugin\nanoadmin\app\middleware\AuthMiddleware;
 use plugin\nanoadmin\app\middleware\CorsMiddleware;
 use plugin\nanoadmin\app\middleware\LogOperationMiddleware;
@@ -15,12 +16,16 @@ use plugin\nanoadmin\app\middleware\PermissionMiddleware;
  *
  * 如需调整中间件顺序或禁用某个中间件，编辑本文件即可。
  * 业务参数（白名单路由、权限映射等）请编辑 config/nanoadmin.php。
+ *
+ * Phase 2 P0：在链最早期加入 InitMiddleware，提前实例化控制器，
+ * 后续中间件（PermissionMiddleware）直接复用，避免重复反射。
  */
 return [
     // 全局中间件
     '@' => [
         InstallGuard::class,
         CorsMiddleware::class,
+        InitMiddleware::class,             // ← Phase 2 P0：提前实例化控制器
         AuthMiddleware::class,
         PermissionMiddleware::class,
         LogOperationMiddleware::class,

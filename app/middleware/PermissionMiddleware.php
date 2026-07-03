@@ -7,11 +7,12 @@ use Webman\Http\Request;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\PermissionInferrer;
+use plugin\nanoadmin\app\common\cache\AdminAuthCache;
 use plugin\nanoadmin\app\library\annotation\ReflectionCache;
 
 /**
  * 权限验证中间件
- * 基于路由的权限检查
  *
  * exclude_routes 由 BaseMiddleware::resolveExcludeRoutes() 统一解析：
  * - 支持 @no_permission_routes 引用语法
@@ -19,33 +20,36 @@ use plugin\nanoadmin\app\library\annotation\ReflectionCache;
  *
  * Fail-closed: 未登记权限的路由直接拒绝访问
  *
- * Phase 2 新增：注解 + 配置双来源（来源：authorization-refactoring-plan.md §2.3）
+ * Phase 2 P0 完成（来源：authorization-refactoring-plan.md §2.9）：
  * 权限码查找优先级：
  *  1. 方法级 #[Permission] 注解（最精确）
  *  2. 类级 #[Permission] 注解（兜底）
- *  3. route_permissions 配置（兼容历史/批量映射）
+ *  3. PermissionInferrer 自动推断（替代原 route_permissions 配置）
  *  4. 都无 → 返回 null（fail-closed 走 403）
+ *
+ * 权限校验使用 AdminAuthCache（替代直接调 $admin->hasPermission）：
+ *  - MD5 自动失效（权限/角色表变更时缓存自动失效）
+ *  - 减少每次请求都做的 admin→roles→permissions 三表关联
  *
  * 放行检测（shouldSkipPermissionCheck）4 层：
  *  1. 路由前缀白名单（permission.exclude_routes + 平台级自动注入）
  *  2. #[AllowAnonymous(requirePermission: false)] 注解
- *  3. $noNeedPermission 属性（saiadmin 兼容兜底，M2 补全，见 ReflectionCache::getNoNeedPermission）
+ *  3. $noNeedPermission 属性（saiadmin 兼容兜底，见 ReflectionCache::getNoNeedPermission）
  *  4. 不跳过，进入权限校验
  */
 class PermissionMiddleware extends BaseMiddleware
 {
     /**
-     * 路由权限映射（从 config('plugin.nanoadmin.nanoadmin.permission.route_permissions') 读取）
-     * 格式：['METHOD:/path' => '权限代码']
-     * @var array
-     */
-    protected array $routePermissions = [];
-
-    /**
      * 超级管理员角色代码（从 config 读取）
      * @var array
      */
     protected array $superAdminRoles = [];
+
+    /**
+     * AdminAuthCache 实例
+     * @var AdminAuthCache|null
+     */
+    protected ?AdminAuthCache $authCache = null;
 
     /**
      * 解析后的配置缓存
@@ -56,6 +60,18 @@ class PermissionMiddleware extends BaseMiddleware
     public function __construct()
     {
         $this->loadConfig();
+        $this->authCache = new AdminAuthCache();
+    }
+
+    /**
+     * 获取 AdminAuthCache（懒加载）
+     */
+    protected function getAuthCache(): AdminAuthCache
+    {
+        if ($this->authCache === null) {
+            $this->authCache = new AdminAuthCache();
+        }
+        return $this->authCache;
     }
 
     /**
@@ -68,7 +84,6 @@ class PermissionMiddleware extends BaseMiddleware
             self::$cachedConfig = is_array($config) ? $config : [];
         }
 
-        $this->routePermissions = self::$cachedConfig['route_permissions'] ?? [];
         $this->superAdminRoles  = self::$cachedConfig['super_admin_roles'] ?? [];
         // 使用 BaseMiddleware 的 resolveExcludeRoutes 解析路由（含 @ 引用 + 自动注入）
         $this->excludeRoutes    = $this->resolveExcludeRoutes(self::$cachedConfig);
@@ -108,7 +123,7 @@ class PermissionMiddleware extends BaseMiddleware
                 throw new ApiException(Code::FORBIDDEN, '该接口未登记权限，请联系管理员');
             }
 
-            // 检查用户是否有权限
+            // 检查用户是否有权限（使用 AdminAuthCache）
             if (!$this->hasPermission($admin, $requiredPermission)) {
                 throw new ApiException(Code::FORBIDDEN, '权限不足，无法访问该资源');
             }
@@ -124,12 +139,12 @@ class PermissionMiddleware extends BaseMiddleware
     }
 
     /**
-     * 检查是否应该跳过权限验证（Phase 2 4 层优先级）
+     * 检查是否应该跳过权限验证（4 层优先级）
      *
      * 优先级（命中即返回）：
      *  1. 路由前缀白名单（permission.exclude_routes + 平台级自动注入）
      *  2. #[AllowAnonymous(requirePermission: false)] 注解
-     *  3. $noNeedPermission 属性（saiadmin 兼容兜底，M2 补全）
+     *  3. $noNeedPermission 属性（saiadmin 兼容兜底）
      *  4. 不跳过，进入权限校验
      *
      * @param Request $request
@@ -185,12 +200,12 @@ class PermissionMiddleware extends BaseMiddleware
     }
 
     /**
-     * 获取当前路由需要的权限码（Phase 2 注解 + 配置双来源）
+     * 获取当前路由需要的权限码（Phase 2 注解 + 推断双来源）
      *
      * 优先级：
      *  1. 方法级 #[Permission] 注解（最精确，Phase 3 支持多权限 OR 语义）
      *  2. 类级 #[Permission] 注解（兜底）
-     *  3. route_permissions 配置（兼容历史/批量映射）
+     *  3. PermissionInferrer 自动推断（替代原 route_permissions 配置）
      *  4. 都无 → 返回 null（fail-closed 走 403）
      *
      * @param Request $request
@@ -198,7 +213,6 @@ class PermissionMiddleware extends BaseMiddleware
      */
     protected function getRequiredPermission(Request $request): ?string
     {
-        // Phase 2: 注解优先（带缓存，沿继承链）
         $controller = $request->controller ?? '';
         $action     = $request->action ?? '';
 
@@ -218,23 +232,10 @@ class PermissionMiddleware extends BaseMiddleware
             }
         }
 
-        // 3. route_permissions 配置兜底（兼容历史/批量映射）
-        $method = strtoupper($request->method());
-        $path = $request->path();
-
-        // 构建路由键
-        $routeKey = $method . ':' . $path;
-
-        // 直接匹配
-        if (isset($this->routePermissions[$routeKey])) {
-            return $this->routePermissions[$routeKey];
-        }
-
-        // 模式匹配（支持通配符）
-        foreach ($this->routePermissions as $pattern => $permission) {
-            if ($this->matchRoute($pattern, $routeKey)) {
-                return $permission;
-            }
+        // 3. PermissionInferrer 自动推断（替代原 route_permissions 配置）
+        $inferred = PermissionInferrer::infer($request->method(), $request->path());
+        if ($inferred !== null) {
+            return $inferred;
         }
 
         // 4. 没有匹配（fail-closed）
@@ -242,33 +243,20 @@ class PermissionMiddleware extends BaseMiddleware
     }
 
     /**
-     * 路由模式匹配
-     * @param string $pattern 路由模式
-     * @param string $route 实际路由
-     * @return bool
-     */
-    protected function matchRoute(string $pattern, string $route): bool
-    {
-        // 将通配符转换为正则表达式
-        $regex = str_replace(['*', '/'], ['[^/]+', '\/'], $pattern);
-        $regex = '/^' . $regex . '$/';
-
-        return preg_match($regex, $route) === 1;
-    }
-
-    /**
-     * 检查用户是否有指定权限
+     * 检查用户是否有指定权限（通过 AdminAuthCache）
+     *
      * @param mixed $admin
      * @param string $permission
      * @return bool
      */
     protected function hasPermission($admin, string $permission): bool
     {
-        if (!$admin || !method_exists($admin, 'hasPermission')) {
+        if (!$admin || !isset($admin->id)) {
             return false;
         }
 
-        return $admin->hasPermission($permission);
+        $userPermissions = $this->getAuthCache()->getAdminPermissions((int) $admin->id);
+        return in_array($permission, $userPermissions, true);
     }
 
     /**
@@ -280,43 +268,6 @@ class PermissionMiddleware extends BaseMiddleware
     protected function forbiddenResponse(string $message, int $code): Response
     {
         return R::forbidden($message);
-    }
-
-    /**
-     * 添加路由权限映射
-     * @param string $route 路由模式
-     * @param string $permission 权限代码
-     */
-    public function addRoutePermission(string $route, string $permission): void
-    {
-        $this->routePermissions[$route] = $permission;
-    }
-
-    /**
-     * 批量添加路由权限映射
-     * @param array $permissions 权限映射数组
-     */
-    public function addRoutePermissions(array $permissions): void
-    {
-        $this->routePermissions = array_merge($this->routePermissions, $permissions);
-    }
-
-    /**
-     * 设置路由权限映射
-     * @param array $permissions 权限映射数组
-     */
-    public function setRoutePermissions(array $permissions): void
-    {
-        $this->routePermissions = $permissions;
-    }
-
-    /**
-     * 获取路由权限映射
-     * @return array
-     */
-    public function getRoutePermissions(): array
-    {
-        return $this->routePermissions;
     }
 
     /**

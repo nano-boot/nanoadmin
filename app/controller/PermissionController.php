@@ -53,7 +53,7 @@ class PermissionController extends BaseController
         tags: ['权限'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => PermissionQuery::class]
     )]
-    #[Permission(title: '权限列表', code: 'sys:permission:page', module: 'system', action: 'page')]
+    #[Permission(title: '权限列表', code: 'sys:permission:query', module: 'system', action: 'page')]
     #[PageResponse(schema: PermissionResponse::class)]
     public function page(Request $request): Response
     {
@@ -72,7 +72,7 @@ class PermissionController extends BaseController
             'id' => ['type' => 'integer', 'description' => '权限ID'],
         ]]
     )]
-    #[Permission(title: '权限详情', code: 'sys:permission:view', module: 'system', action: 'page')]
+    #[Permission(title: '权限详情', code: 'sys:permission:query', module: 'system', action: 'page')]
     #[DataResponse(schema: PermissionResponse::class)]
     public function show(int $id): Response
     {

@@ -56,7 +56,7 @@ class DictDataController extends BaseController
         tags: ['字典数据'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => DictDataQuery::class]
     )]
-    #[Permission(title: '字典数据列表', code: 'sys:dict:type:page', module: 'system', action: 'page')]
+    #[Permission(title: '字典数据列表', code: 'sys:dict:type:query', module: 'system', action: 'page')]
     #[PageResponse(schema: DictDataResponse::class)]
     public function page(Request $request): Response
     {
@@ -72,7 +72,7 @@ class DictDataController extends BaseController
             'id' => ['type' => 'integer', 'description' => '字典数据ID'],
         ]]
     )]
-    #[Permission(title: '字典数据详情', code: 'sys:dict:type:page', module: 'system', action: 'page')]
+    #[Permission(title: '字典数据详情', code: 'sys:dict:type:query', module: 'system', action: 'page')]
     #[DataResponse(schema: DictDataResponse::class)]
     public function show(int $id): Response
     {

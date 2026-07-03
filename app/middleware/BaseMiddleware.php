@@ -98,6 +98,13 @@ abstract class BaseMiddleware implements MiddlewareInterface
         $path = '/' . ltrim($request->path(), '/');
 
         foreach ($this->excludeRoutes as $route) {
+            // 根路径精确匹配，避免 '/' 把所有路由都放行
+            if ($route === '/') {
+                if ($path === '/') {
+                    return true;
+                }
+                continue;
+            }
             // 前缀匹配：'/sys/auth/login' 匹配 '/sys/auth/login/sub'
             if (str_starts_with($path, $route) || $path === $route) {
                 return true;

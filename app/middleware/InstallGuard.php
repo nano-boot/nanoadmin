@@ -28,17 +28,15 @@ class InstallGuard implements MiddlewareInterface
 
     /**
      * 平台级白名单路由（供 BaseMiddleware 自动注入）
-     *
-     * 这些路由由 BaseMiddleware 自动注入到 exclude_routes，
-     * 防止运营误删导致 /install 等平台路由 401。
+
      *
      * @return string[]
      */
     public static function platformRoutes(): array
     {
         return [
+            '/',
             '/install',
-            '/sys/install',
         ];
     }
 

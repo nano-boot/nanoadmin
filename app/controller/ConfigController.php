@@ -49,7 +49,7 @@ class ConfigController extends BaseController
         tags: ['系统配置'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => ConfigQuery::class]
     )]
-    #[Permission(title: '配置列表', code: 'sys:config:page', module: 'system', action: 'page')]
+    #[Permission(title: '配置列表', code: 'sys:config:query', module: 'system', action: 'page')]
     #[PageResponse(schema: ConfigResponse::class)]
     public function page(Request $request): Response
     {
@@ -73,7 +73,7 @@ class ConfigController extends BaseController
         required: false,
         schema: new OA\Schema(type: 'string', example: 'basic')
     )]
-    #[Permission(title: '按分组获取配置', code: 'sys:config:page', module: 'system', action: 'page')]
+    #[Permission(title: '按分组获取配置', code: 'sys:config:query', module: 'system', action: 'page')]
     #[DataResponse(schema: ConfigItemResponse::class)]
     public function getByGroup(Request $request): Response
     {
@@ -90,7 +90,7 @@ class ConfigController extends BaseController
             'id' => ['type' => 'integer', 'description' => '配置ID'],
         ]]
     )]
-    #[Permission(title: '配置详情', code: 'sys:config:page', module: 'system', action: 'page')]
+    #[Permission(title: '配置详情', code: 'sys:config:query', module: 'system', action: 'page')]
     #[DataResponse(schema: ConfigResponse::class)]
     public function show(int $id): Response
     {

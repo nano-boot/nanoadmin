@@ -25,7 +25,7 @@ use support\Response;
  * Phase 2 注解化（来源：authorization-refactoring-plan.md §1）：
  *  - 类级 #[Permission] 提供兜底权限码 sys:log
  *  - 方法级 #[Permission] 精确声明每个方法的权限码（与 route_permissions 对齐）
- *  - route_permissions 中登录日志只读，全部映射到 sys:log:page（与操作日志共用权限族）
+ *  - route_permissions 中登录日志只读，全部映射到 sys:log:query（与操作日志共用权限族）
  */
 #[OA\Tag(name: '登录日志', description: '登录日志管理')]
 #[Permission(title: '登录日志', code: 'sys:log', module: 'system')]
@@ -47,7 +47,7 @@ class LogLoginController extends BaseController
         tags: ['登录日志'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => LogLoginQuery::class]
     )]
-    #[Permission(title: '登录日志列表', code: 'sys:log:page', module: 'system', action: 'page')]
+    #[Permission(title: '登录日志列表', code: 'sys:log:query', module: 'system', action: 'page')]
     #[PageResponse(schema: LogLoginResponse::class)]
     public function page(Request $request): Response
     {
@@ -63,7 +63,7 @@ class LogLoginController extends BaseController
             'id' => ['type' => 'integer', 'description' => '日志ID'],
         ]]
     )]
-    #[Permission(title: '登录日志详情', code: 'sys:log:page', module: 'system', action: 'page')]
+    #[Permission(title: '登录日志详情', code: 'sys:log:query', module: 'system', action: 'page')]
     #[DataResponse(schema: LogLoginResponse::class)]
     public function show(int $id): Response
     {
