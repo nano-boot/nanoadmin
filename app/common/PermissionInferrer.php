@@ -76,9 +76,15 @@ class PermissionInferrer
     private static function parsePath(string $path): ?string
     {
         // 移除路径参数 {id}、{xxx} 等
-        $normalizedPath = preg_replace('/\{\d+\}|\{[a-zA-Z_][a-zA-Z0-9_]*\}', '', $path);
-        $normalizedPath = rtrim($normalizedPath, '/');
-        $normalizedPath = preg_replace('/\/+/', '/', $normalizedPath);
+        // 注意：Phase 2 实现漏写了正则的闭合分隔符 '/'
+        // （实际源码是 '/\{\d+\}|\{[a-zA-Z_][a-zA-Z0-9_]*\}' 缺尾 /），
+        // 导致 PCRE 在每个请求的 PermissionInferrer::infer() 中抛 "No ending delimiter '/'"，
+        // 触发 deprecation warning + preg_replace 返回 null + rtrim() TypeError。
+        // 该 bug 被 M4 推进时的 scan:permissions 命令一次性复现。
+        // 修复：补上闭合分隔符，并把花括号转义用 \# 风格（兼容 PHP PCRE2）。
+        $normalizedPath = preg_replace('#\{\d+\}|\{[a-zA-Z_][a-zA-Z0-9_]*\}#', '', $path);
+        $normalizedPath = rtrim((string) $normalizedPath, '/');
+        $normalizedPath = preg_replace('#/+#', '/', (string) $normalizedPath);
 
         // 提取各段
         $segments = array_values(array_filter(explode('/', $normalizedPath)));
