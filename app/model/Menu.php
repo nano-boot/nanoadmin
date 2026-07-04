@@ -148,16 +148,18 @@ class Menu extends BaseModel
         // 任何菜单变更（save/update/create 后）触发缓存失效
         static::saved(function (self $menu): void {
             self::invalidateMenuCache();
+            self::invalidateRouteCache();
         });
 
         // 删除后触发缓存失效
         static::deleted(function (self $menu): void {
             self::invalidateMenuCache();
+            self::invalidateRouteCache();
         });
     }
 
     /**
-     * 清理菜单相关缓存
+     * 清理菜单相关缓存（转换层：MenuTransformService）
      */
     protected static function invalidateMenuCache(): void
     {
@@ -165,6 +167,21 @@ class Menu extends BaseModel
             MenuTransformService::getInstance()->invalidateCache();
         } catch (\Throwable $e) {
             error_log('[Menu] invalidateMenuCache failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 清理路由数据缓存（数据层：AdminRouteCache）
+     *
+     * 任何菜单变更都可能导致 /sys/menu/route 路由树变化，
+     * 在保存事件里直接清掉 tag('route') 下的所有缓存，避免依赖指纹机制。
+     */
+    protected static function invalidateRouteCache(): void
+    {
+        try {
+            (new \plugin\nanoadmin\app\common\cache\AdminRouteCache())->clearAll();
+        } catch (\Throwable $e) {
+            error_log('[Menu] invalidateRouteCache failed: ' . $e->getMessage());
         }
     }
 
@@ -558,34 +575,34 @@ class Menu extends BaseModel
         if (empty($menuIds)) {
             return [];
         }
-        
-        // 获取所有相关菜单
+
+        // 一次性取出所有相关菜单,转为数组后纯内存构建树形结构
         $menus = $this->whereIn('id', $menuIds)
                      ->where('status', 1)
                      ->where('deleted', false)
                      ->orderBy('sort', 'desc')
                      ->orderBy('id', 'asc')
-                     ->get();
-        
-        // 构建菜单映射
+                     ->get()
+                     ->toArray();
+
+        // 以 id 为键建立 Map,O(n) 时间复杂度
         $menuMap = [];
         foreach ($menus as $menu) {
-            $menuMap[$menu->id] = $menu->toArray();
-            $menuMap[$menu->id]['children'] = [];
+            $menu['children'] = [];
+            $menuMap[$menu['id']] = $menu;
         }
-        
-        // 构建树形结构
+
+        // 单次遍历构建树形结构
         $tree = [];
-        foreach ($menuMap as $menu) {
+        foreach ($menuMap as &$menu) {
             if ($menu['parent_id'] == 0) {
-                $tree[] = &$menuMap[$menu['id']];
-            } else {
-                if (isset($menuMap[$menu['parent_id']])) {
-                    $menuMap[$menu['parent_id']]['children'][] = &$menuMap[$menu['id']];
-                }
+                $tree[] = &$menu;
+            } elseif (isset($menuMap[$menu['parent_id']])) {
+                $menuMap[$menu['parent_id']]['children'][] = &$menu;
             }
         }
-        
+        unset($menu);
+
         return $tree;
     }
 

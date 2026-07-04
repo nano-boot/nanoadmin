@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\common\cache;
 
-use Illuminate\Support\Facades\DB;
+use support\Db;
 use plugin\nanoadmin\app\common\Cache;
 use plugin\nanoadmin\app\model\Admin;
 use plugin\nanoadmin\app\model\Menu;
@@ -19,11 +19,14 @@ use Webman\ThinkCache\Driver;
  *  - getAdminMenuTree($adminId)          → Admin 关联 roles.menus + Menu::whereIn
  *  - getAdminButtonPermissionScope($adminId) → Admin 关联 roles.permissions
  *
- * 失效策略（参考 AdminAuthCache 的 MD5 哨兵方案）：
- *  - 联合 sys_menu / sys_role / sys_role_menu / sys_role_permission / sys_permission / sys_admin
- *    6 张表的 (id, updated_at) 签名生成 MD5 指纹。
- *  - 任一张表变更 → 指纹变化 → tag('route') 下所有缓存一次清空。
- *  - 无需在每个 Model 上挂 saved/deleted 事件，避免遗漏。
+ * 失效策略：事件驱动为主，指纹兜底
+ *  - 主路径：Menu/Role/Permission/Admin 模型 saved/deleted 事件触发 clearAll()
+ *  - 兜底：MD5 指纹（联合 4 张主表的 id+updated_at + 3 张关联表的主键集合）
+ *  - 关联表（sys_role_menu / sys_role_permission / sys_admin_role）没有 updated_at 列，
+ *    指纹改用 "主键字符串" 作为签名；任何关联表行变更都会让签名变化
+ *
+ * 备注：使用 webman 的 support\Db 而不是 Illuminate\Support\Facades\DB，
+ * 避免 facade root 在某些路径下未初始化导致指纹静默失败。
  *
  * 使用 webman/think-cache（通过 plugin\nanoadmin\app\common\Cache 门面）。
  */
@@ -50,9 +53,45 @@ class AdminRouteCache
         ['admin_role' => 'sys_admin_role'],
     ];
 
+    protected static bool $modelListenersRegistered = false;
+
     public function __construct()
     {
         $this->initializeCache();
+        self::registerModelListeners();
+    }
+
+    /**
+     * 注册模型事件监听器（每个进程只注册一次）。
+     *
+     * Menu/Role/Permission/Admin 任意 saved/deleted/restored 事件都触发 clearAll()，
+     * 确保 /sys/menu/route 缓存与底层数据保持一致。
+     *
+     * 由 AdminRouteCache::__construct 主动调用，不需要在每个模型里挂钩子。
+     */
+    protected static function registerModelListeners(): void
+    {
+        if (self::$modelListenersRegistered) {
+            return;
+        }
+        self::$modelListenersRegistered = true;
+
+        foreach ([Menu::class, Role::class, Permission::class, Admin::class] as $modelClass) {
+            $modelClass::saved(function () {
+                try {
+                    (new self())->clearAll();
+                } catch (\Throwable $e) {
+                    error_log('[AdminRouteCache] model listener clearAll failed: ' . $e->getMessage());
+                }
+            });
+            $modelClass::deleted(function () {
+                try {
+                    (new self())->clearAll();
+                } catch (\Throwable $e) {
+                    error_log('[AdminRouteCache] model listener clearAll failed: ' . $e->getMessage());
+                }
+            });
+        }
     }
 
     /**
@@ -109,9 +148,23 @@ class AdminRouteCache
 
     /**
      * 联合多张表的 (id, updated_at) 构造指纹
+     *
+     * 注意：3 张关联表 (sys_role_menu / sys_role_permission / sys_admin_role) 没有 updated_at 列，
+     * 因此只用 (role_id, menu_id 等) 主键拼接作为签名。任何关联表行集变化都会让签名变化。
      */
     private function buildFingerprint(): string
     {
+        // 自身也走 redis 缓存（30 秒 TTL），避免每个 webman worker 冷启动时都跑 7 张表
+        // 失效链路：Menu/Role/Permission/Admin 任意 saved/deleted → clearAll() 删 fingerprint key
+        try {
+            $cached = $this->cache?->get($this->prefix . 'fp_self');
+            if (is_string($cached) && $cached !== '') {
+                return $cached;
+            }
+        } catch (\Throwable $e) {
+            // 缓存不可用 → 直接往下走 DB
+        }
+
         $parts = [];
 
         $rows = Menu::query()->select('id', 'updated_at')->get();
@@ -120,11 +173,11 @@ class AdminRouteCache
         $rows = Role::query()->select('id', 'updated_at')->get();
         $parts['role'] = $rows->map(fn ($r) => $r->id . ':' . $r->updated_at)->all();
 
-        $rows = DB::table('sys_role_menu')->select('role_id', 'menu_id', 'updated_at')->get();
-        $parts['role_menu'] = $rows->map(fn ($r) => $r->role_id . ':' . $r->menu_id . ':' . $r->updated_at)->all();
+        $rows = Db::table('sys_role_menu')->select('role_id', 'menu_id')->orderBy('role_id')->orderBy('menu_id')->get();
+        $parts['role_menu'] = $rows->map(fn ($r) => $r->role_id . ':' . $r->menu_id)->all();
 
-        $rows = DB::table('sys_role_permission')->select('role_id', 'permission_id', 'updated_at')->get();
-        $parts['role_permission'] = $rows->map(fn ($r) => $r->role_id . ':' . $r->permission_id . ':' . $r->updated_at)->all();
+        $rows = Db::table('sys_role_permission')->select('role_id', 'permission_id')->orderBy('role_id')->orderBy('permission_id')->get();
+        $parts['role_permission'] = $rows->map(fn ($r) => $r->role_id . ':' . $r->permission_id)->all();
 
         $rows = Permission::query()->select('id', 'updated_at')->get();
         $parts['permission'] = $rows->map(fn ($r) => $r->id . ':' . $r->updated_at)->all();
@@ -132,11 +185,20 @@ class AdminRouteCache
         $rows = Admin::query()->select('id', 'updated_at')->get();
         $parts['admin'] = $rows->map(fn ($r) => $r->id . ':' . $r->updated_at)->all();
 
-        $rows = DB::table('sys_admin_role')->select('admin_id', 'role_id', 'updated_at')->get();
-        $parts['admin_role'] = $rows->map(fn ($r) => $r->admin_id . ':' . $r->role_id . ':' . $r->updated_at)->all();
+        $rows = Db::table('sys_admin_role')->select('admin_id', 'role_id')->orderBy('admin_id')->orderBy('role_id')->get();
+        $parts['admin_role'] = $rows->map(fn ($r) => $r->admin_id . ':' . $r->role_id)->all();
 
         ksort($parts);
-        return md5(json_encode($parts, JSON_UNESCAPED_UNICODE));
+        $fingerprint = md5(json_encode($parts, JSON_UNESCAPED_UNICODE));
+
+        // 写回 redis 缓存自身（30 秒 TTL），避免 32 worker 冷启动各自付 500ms
+        try {
+            $this->cache?->set($this->prefix . 'fp_self', $fingerprint, 30);
+        } catch (\Throwable $e) {
+            // 缓存不可用 → 静默
+        }
+
+        return $fingerprint;
     }
 
     /**
@@ -608,5 +670,6 @@ class AdminRouteCache
     {
         $this->clearAllCaches();
         $this->cache?->delete($this->prefix . 'fingerprint');
+        $this->cache?->delete($this->prefix . 'fp_self');
     }
 }

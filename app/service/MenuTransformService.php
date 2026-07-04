@@ -853,7 +853,7 @@ class MenuTransformService
 
         // 生成缓存键
         $cacheKey = $this->buildKey('route_tree:' . md5(json_encode($menuTree) . implode(',', $userRoles)));
-        
+
         // 尝试从缓存获取
         $cached = $this->getCache($cacheKey);
         if ($cached !== null) {
@@ -862,11 +862,11 @@ class MenuTransformService
 
         // 缓存未命中，执行转换
         $routes = $this->toRouteConfigTree($menuTree);
-        
+
         // 存储到缓存
         $ttl = $this->getCacheTTL('route_config');
         $this->setCache($cacheKey, $routes, $ttl);
-        
+
         return $routes;
     }
 

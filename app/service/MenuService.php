@@ -47,6 +47,9 @@ class MenuService
      *
      * 走 $menu->save() / delete() / restore() 的变更由 Menu 模型事件自动失效缓存，
      * 只有查询构造器 update() 跳过事件，此处补位。
+     *
+     * 同步清理 AdminRouteCache：因为查询构造器 update() 不触发模型事件，
+     * 路由缓存必须由 Service 主动失效，否则 /sys/menu/route 会返回旧数据。
      */
     private function invalidateMenuCacheFromService(): void
     {
@@ -54,6 +57,11 @@ class MenuService
             MenuTransformService::getInstance()->invalidateCache();
         } catch (\Throwable $e) {
             error_log('[MenuService] invalidateMenuCacheFromService failed: ' . $e->getMessage());
+        }
+        try {
+            $this->routeCache->clearAll();
+        } catch (\Throwable $e) {
+            error_log('[MenuService] routeCache->clearAll failed: ' . $e->getMessage());
         }
     }
     /**
@@ -239,6 +247,13 @@ class MenuService
             throw new ApiException(Code::SYSTEM_ERROR, '创建菜单失败');
         }
 
+        // 主动失效路由缓存（Menu::saved 事件已清一次，双保险）
+        try {
+            $this->routeCache->clearAll();
+        } catch (\Throwable $e) {
+            error_log('[MenuService] createMenu routeCache->clearAll failed: ' . $e->getMessage());
+        }
+
         // 返回格式化后的数据
         $transformService = MenuTransformService::getInstance();
         return $transformService->formatForApi($menu->toArray());
@@ -345,11 +360,18 @@ class MenuService
         
         // 更新菜单（updated_at 由 Model 层处理）
         $result = $this->model->updateMenu($id, $data);
-        
+
         if (!$result) {
             throw new ApiException(Code::SYSTEM_ERROR, '更新菜单失败');
         }
-        
+
+        // 主动失效路由缓存（Menu::saved 事件已清一次，双保险）
+        try {
+            $this->routeCache->clearAll();
+        } catch (\Throwable $e) {
+            error_log('[MenuService] updateMenu routeCache->clearAll failed: ' . $e->getMessage());
+        }
+
         // 获取更新后的菜单数据
         $updatedMenu = $this->model->find($id);
 
@@ -387,6 +409,13 @@ class MenuService
 
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '删除菜单失败');
+        }
+
+        // 主动失效路由缓存（Menu::deleted 事件已清一次，双保险）
+        try {
+            $this->routeCache->clearAll();
+        } catch (\Throwable $e) {
+            error_log('[MenuService] deleteMenu routeCache->clearAll failed: ' . $e->getMessage());
         }
 
         return true;
