@@ -6,6 +6,8 @@ use plugin\nanoadmin\app\model\ModelFactory;
 use plugin\nanoadmin\app\model\Menu;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\common\Cache;
+use Webman\ThinkCache\Driver;
 
 /**
  * 菜单数据转换服务
@@ -20,16 +22,38 @@ class MenuTransformService
     private Menu $menuModel;
 
     /**
-     * 缓存配置
+     * 菜单缓存配置
      * @var array
      */
-    private array $cacheConfig;
+    private array $menuConfig = [];
 
     /**
-     * 缓存实例
-     * @var mixed
+     * 缓存驱动实例，null 表示禁用缓存
+     * @var Driver|null
      */
-    private $cache;
+    private ?Driver $cache = null;
+
+    /**
+     * 缓存标签名（用于批量失效）
+     */
+    private string $cacheTag = 'menu';
+
+    /**
+     * 单例实例（静态缓存，避免重复构造）
+     * @var self|null
+     */
+    private static ?self $instance = null;
+
+    /**
+     * 获取单例实例
+     */
+    public static function getInstance(): self
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
 
     /**
      * 构造函数
@@ -42,62 +66,40 @@ class MenuTransformService
     }
 
     /**
-     * 加载缓存配置
+     * 加载菜单缓存配置
      */
     private function loadCacheConfig(): void
     {
-        $configFile = base_path() . '/plugin/nanoadmin/config/cache.php';
-        
-        if (file_exists($configFile)) {
-            $this->cacheConfig = require $configFile;
-        } else {
-            $this->cacheConfig = [
-                'menu' => ['enabled' => false],
-            ];
-        }
+        $this->menuConfig = config('nanoadmin.cache.menu', []);
     }
 
     /**
-     * 初始化缓存
+     * 初始化缓存实例
      */
     private function initializeCache(): void
     {
-        if (!($this->cacheConfig['menu']['enabled'] ?? true)) {
+        if (!($this->menuConfig['enabled'] ?? true)) {
             $this->cache = null;
             return;
         }
 
         try {
-            $cacheType = $this->cacheConfig['type'] ?? 'file';
-            
-            if ($cacheType === 'redis' && class_exists('\Redis')) {
-                $redisConfig = $this->cacheConfig['redis'] ?? [];
-                $this->cache = new \Redis();
-                
-                $host = $redisConfig['host'] ?? '127.0.0.1';
-                $port = $redisConfig['port'] ?? 6379;
-                $timeout = $redisConfig['timeout'] ?? 2;
-                
-                if ($this->cache->connect($host, $port, $timeout)) {
-                    // 设置密码（如果有）
-                    if (!empty($redisConfig['password'])) {
-                        $this->cache->auth($redisConfig['password']);
-                    }
-                    
-                    // 选择数据库
-                    $database = $redisConfig['database'] ?? 1;
-                    $this->cache->select($database);
-                } else {
-                    throw new \Exception('Redis连接失败');
-                }
-            } else {
-                // 使用文件缓存
-                $this->cache = null;
-            }
-        } catch (\Exception $e) {
-            // 缓存初始化失败，使用文件缓存
+            $store = $this->menuConfig['store'] ?? null;
+            $this->cache = ($store !== null && $store !== '')
+                ? Cache::store($store)
+                : Cache::store();
+        } catch (\Throwable $e) {
             $this->cache = null;
         }
+    }
+
+    /**
+     * 构造缓存键（使用 ":" 分隔，与 Redis 命名空间惯例一致）
+     */
+    private function buildKey(string $suffix): string
+    {
+        $prefix = $this->menuConfig['prefix'] ?? 'menu:';
+        return rtrim($prefix, ':') . ':' . ltrim($suffix, ':');
     }
 
     /**
@@ -731,30 +733,19 @@ class MenuTransformService
     // ==================== 缓存相关方法 ====================
 
     /**
-     * 获取缓存键前缀
-     * @return string
-     */
-    private function getCachePrefix(): string
-    {
-        $redisPrefix = $this->cacheConfig['redis']['prefix'] ?? 'nanoadmin:';
-        $menuPrefix = $this->cacheConfig['menu']['prefix'] ?? 'menu:';
-        return $redisPrefix . $menuPrefix;
-    }
-
-    /**
      * 获取缓存TTL
      * @param string $strategy 缓存策略名称
      * @return int
      */
     private function getCacheTTL(string $strategy = 'default'): int
     {
-        $strategies = $this->cacheConfig['menu']['strategies'] ?? [];
+        $strategies = $this->menuConfig['strategies'] ?? [];
         
         if (isset($strategies[$strategy]['ttl'])) {
-            return $strategies[$strategy]['ttl'];
+            return (int) $strategies[$strategy]['ttl'];
         }
         
-        return $this->cacheConfig['menu']['ttl'] ?? 3600;
+        return (int) ($this->menuConfig['ttl'] ?? 3600);
     }
 
     /**
@@ -764,11 +755,11 @@ class MenuTransformService
      */
     private function isCacheStrategyEnabled(string $strategy): bool
     {
-        if (!($this->cacheConfig['menu']['enabled'] ?? true)) {
+        if (!($this->menuConfig['enabled'] ?? true)) {
             return false;
         }
         
-        $strategies = $this->cacheConfig['menu']['strategies'] ?? [];
+        $strategies = $this->menuConfig['strategies'] ?? [];
         return $strategies[$strategy]['enabled'] ?? true;
     }
 
@@ -779,21 +770,13 @@ class MenuTransformService
      */
     public function getCache(string $key)
     {
+        if ($this->cache === null) {
+            return null;
+        }
+
         try {
-            $cacheKey = $this->getCachePrefix() . $key;
-            
-            if ($this->cache instanceof \Redis) {
-                $data = $this->cache->get($cacheKey);
-                if ($data === false) {
-                    return null;
-                }
-                return json_decode($data, true);
-            } else {
-                // 使用文件缓存
-                return $this->getFileCache($cacheKey);
-            }
-        } catch (\Exception $e) {
-            // 缓存获取失败，返回null
+            return $this->cache->get($key);
+        } catch (\Throwable $e) {
             return null;
         }
     }
@@ -807,19 +790,14 @@ class MenuTransformService
      */
     public function setCache(string $key, $data, ?int $ttl = null): bool
     {
+        if ($this->cache === null) {
+            return false;
+        }
+
         try {
-            $cacheKey = $this->getCachePrefix() . $key;
             $ttl = $ttl ?? $this->getCacheTTL();
-            
-            if ($this->cache instanceof \Redis) {
-                $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE);
-                return $this->cache->setex($cacheKey, $ttl, $jsonData);
-            } else {
-                // 使用文件缓存
-                return $this->setFileCache($cacheKey, $data, $ttl);
-            }
-        } catch (\Exception $e) {
-            // 缓存设置失败
+            return $this->cache->tag($this->cacheTag)->set($key, $data, $ttl);
+        } catch (\Throwable $e) {
             return false;
         }
     }
@@ -831,16 +809,13 @@ class MenuTransformService
      */
     public function deleteCache(string $key): bool
     {
+        if ($this->cache === null) {
+            return false;
+        }
+
         try {
-            $cacheKey = $this->getCachePrefix() . $key;
-            
-            if ($this->cache instanceof \Redis) {
-                return $this->cache->del($cacheKey) > 0;
-            } else {
-                // 删除文件缓存
-                return $this->deleteFileCache($cacheKey);
-            }
-        } catch (\Exception $e) {
+            return $this->cache->delete($key);
+        } catch (\Throwable $e) {
             return false;
         }
     }
@@ -851,130 +826,15 @@ class MenuTransformService
      */
     public function clearAllCache(): bool
     {
-        try {
-            if ($this->cache instanceof \Redis) {
-                $pattern = $this->getCachePrefix() . '*';
-                $keys = $this->cache->keys($pattern);
-                if (!empty($keys)) {
-                    return $this->cache->del($keys) > 0;
-                }
-                return true;
-            } else {
-                // 清空文件缓存
-                return $this->clearAllFileCache();
-            }
-        } catch (\Exception $e) {
+        if ($this->cache === null) {
             return false;
         }
-    }
 
-    /**
-     * 获取文件缓存
-     * @param string $key 缓存键
-     * @return mixed|null
-     */
-    private function getFileCache(string $key)
-    {
-        $cacheFile = $this->getCacheFilePath($key);
-        
-        if (!file_exists($cacheFile)) {
-            return null;
+        try {
+            return $this->cache->tag($this->cacheTag)->clear();
+        } catch (\Throwable $e) {
+            return false;
         }
-
-        $cacheData = file_get_contents($cacheFile);
-        if ($cacheData === false) {
-            return null;
-        }
-
-        $cache = json_decode($cacheData, true);
-        if (!$cache || !isset($cache['expire_time'], $cache['data'])) {
-            return null;
-        }
-
-        // 检查是否过期
-        if (time() > $cache['expire_time']) {
-            unlink($cacheFile);
-            return null;
-        }
-
-        return $cache['data'];
-    }
-
-    /**
-     * 设置文件缓存
-     * @param string $key 缓存键
-     * @param mixed $data 缓存数据
-     * @param int $ttl 过期时间
-     * @return bool
-     */
-    private function setFileCache(string $key, $data, int $ttl): bool
-    {
-        $cacheFile = $this->getCacheFilePath($key);
-        $cacheDir = dirname($cacheFile);
-
-        // 确保缓存目录存在
-        if (!is_dir($cacheDir)) {
-            mkdir($cacheDir, 0755, true);
-        }
-
-        $cacheData = [
-            'expire_time' => time() + $ttl,
-            'data' => $data
-        ];
-
-        return file_put_contents($cacheFile, json_encode($cacheData, JSON_UNESCAPED_UNICODE)) !== false;
-    }
-
-    /**
-     * 删除文件缓存
-     * @param string $key 缓存键
-     * @return bool
-     */
-    private function deleteFileCache(string $key): bool
-    {
-        $cacheFile = $this->getCacheFilePath($key);
-        
-        if (file_exists($cacheFile)) {
-            return unlink($cacheFile);
-        }
-        
-        return true;
-    }
-
-    /**
-     * 清空所有文件缓存
-     * @return bool
-     */
-    private function clearAllFileCache(): bool
-    {
-        $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/nanoadmin/';
-        $prefix = $this->cacheConfig['file']['prefix'] ?? 'nanoadmin_';
-        
-        if (!is_dir($cachePath)) {
-            return true;
-        }
-
-        $files = glob($cachePath . $prefix . '*.json');
-        foreach ($files as $file) {
-            if (!unlink($file)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * 获取缓存文件路径
-     * @param string $key 缓存键
-     * @return string
-     */
-    private function getCacheFilePath(string $key): string
-    {
-        $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/nanoadmin/';
-        $prefix = $this->cacheConfig['file']['prefix'] ?? 'nanoadmin_';
-        $safeKey = md5($key);
-        return $cachePath . $prefix . $safeKey . '.json';
     }
 
     /**
@@ -992,7 +852,7 @@ class MenuTransformService
         }
 
         // 生成缓存键
-        $cacheKey = 'route_tree:' . md5(json_encode($menuTree) . implode(',', $userRoles));
+        $cacheKey = $this->buildKey('route_tree:' . md5(json_encode($menuTree) . implode(',', $userRoles)));
         
         // 尝试从缓存获取
         $cached = $this->getCache($cacheKey);
@@ -1024,7 +884,7 @@ class MenuTransformService
         }
 
         // 生成缓存键
-        $cacheKey = 'filtered_menu:' . md5(json_encode($menuTree) . implode(',', $userRoles));
+        $cacheKey = $this->buildKey('filtered_menu:' . md5(json_encode($menuTree) . implode(',', $userRoles)));
         
         // 尝试从缓存获取
         $cached = $this->getCache($cacheKey);
@@ -1056,7 +916,7 @@ class MenuTransformService
         }
 
         // 生成缓存键
-        $cacheKey = 'selector_data:' . md5(json_encode($menuTree) . ($includeButtons ? '1' : '0'));
+        $cacheKey = $this->buildKey('selector_data:' . md5(json_encode($menuTree) . ($includeButtons ? '1' : '0')));
         
         // 尝试从缓存获取
         $cached = $this->getCache($cacheKey);
@@ -1087,7 +947,7 @@ class MenuTransformService
         }
 
         // 生成缓存键
-        $cacheKey = 'permissions:' . md5(json_encode($menuTree));
+        $cacheKey = $this->buildKey('permissions:' . md5(json_encode($menuTree)));
         
         // 尝试从缓存获取
         $cached = $this->getCache($cacheKey);
@@ -1118,7 +978,7 @@ class MenuTransformService
         }
 
         // 生成缓存键
-        $cacheKey = 'statistics:' . md5(json_encode($menuTree));
+        $cacheKey = $this->buildKey('statistics:' . md5(json_encode($menuTree)));
         
         // 尝试从缓存获取
         $cached = $this->getCache($cacheKey);
@@ -1152,11 +1012,11 @@ class MenuTransformService
         // 由于缓存键包含了菜单数据的哈希，菜单变更后哈希会改变，旧缓存自然失效
         // 这里可以选择性地清理一些通用缓存
         $keysToDelete = [
-            'route_tree:*',
-            'filtered_menu:*',
-            'selector_data:*',
-            'permissions:*',
-            'statistics:*'
+            $this->buildKey('route_tree:*'),
+            $this->buildKey('filtered_menu:*'),
+            $this->buildKey('selector_data:*'),
+            $this->buildKey('permissions:*'),
+            $this->buildKey('statistics:*')
         ];
 
         $success = true;
@@ -1176,19 +1036,15 @@ class MenuTransformService
      */
     private function deleteCacheByPattern(string $pattern): bool
     {
+        if ($this->cache === null) {
+            return false;
+        }
+
         try {
-            if ($this->cache instanceof \Redis) {
-                $fullPattern = self::CACHE_PREFIX . $pattern;
-                $keys = $this->cache->keys($fullPattern);
-                if (!empty($keys)) {
-                    return $this->cache->del($keys) > 0;
-                }
-                return true;
-            } else {
-                // 文件缓存模式下，清理所有缓存
-                return $this->clearAllFileCache();
-            }
-        } catch (\Exception $e) {
+            // 对于模式匹配，使用 clearAllCache 简化处理
+            // 实际上在 tag 模式下，菜单变更后应该清空所有菜单缓存
+            return $this->clearAllCache();
+        } catch (\Throwable $e) {
             return false;
         }
     }
@@ -1200,37 +1056,24 @@ class MenuTransformService
     public function getCacheStats(): array
     {
         $stats = [
-            'cache_type' => $this->cache instanceof \Redis ? 'redis' : 'file',
+            'cache_type' => $this->cache !== null ? 'enabled' : 'disabled',
             'total_keys' => 0,
             'cache_size' => 0,
             'hit_rate' => 0.0
         ];
 
+        if ($this->cache === null) {
+            return $stats;
+        }
+
         try {
-            if ($this->cache instanceof \Redis) {
-                $pattern = self::CACHE_PREFIX . '*';
-                $keys = $this->cache->keys($pattern);
+            // 获取 tag 下的 key 数量
+            $taggedCache = $this->cache->tag($this->cacheTag);
+            if (method_exists($taggedCache, 'getKeys')) {
+                $keys = $taggedCache->getKeys();
                 $stats['total_keys'] = count($keys);
-                
-                // 计算缓存大小（近似值）
-                foreach ($keys as $key) {
-                    $stats['cache_size'] += strlen($this->cache->get($key) ?: '');
-                }
-            } else {
-                // 文件缓存统计
-                $cachePath = $this->cacheConfig['file']['path'] ?? runtime_path() . '/cache/nanoadmin/';
-                $prefix = $this->cacheConfig['file']['prefix'] ?? 'nanoadmin_';
-                
-                if (is_dir($cachePath)) {
-                    $files = glob($cachePath . $prefix . '*.json');
-                    $stats['total_keys'] = count($files);
-                    
-                    foreach ($files as $file) {
-                        $stats['cache_size'] += filesize($file);
-                    }
-                }
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // 统计失败，返回默认值
         }
 
@@ -1248,7 +1091,7 @@ class MenuTransformService
         try {
             // 如果没有提供角色列表，使用配置中的角色
             if (empty($commonRoles)) {
-                $commonRoles = $this->cacheConfig['menu']['warmup_roles'] ?? [
+                $commonRoles = $this->menuConfig['warmup_roles'] ?? [
                     ['admin'],
                     ['user'],
                     ['admin', 'user']

@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace plugin\nanoadmin\app\common\cache;
 
+use plugin\nanoadmin\app\common\Cache;
 use plugin\nanoadmin\app\model\Admin;
 use plugin\nanoadmin\app\model\Permission;
-use support\Redis;
+use Webman\ThinkCache\Driver;
 
 /**
  * 管理员权限缓存
@@ -14,17 +15,48 @@ use support\Redis;
  * 设计要点：
  * - MD5 自动失效：权限/角色表变更时，所有缓存自动清空
  * - 单个用户权限列表缓存
- * - 底层使用 webman/redis（项目已有依赖），不走 webman/think-cache
+ * - 使用 webman/think-cache（通过 plugin\nanoadmin\app\common\Cache 门面）
  *
- * LikeAdmin 风格：保证权限表一有变化，下次请求立即失效所有缓存
+ * 保证权限表一有变化，下次请求立即失效所有缓存
  */
 class AdminAuthCache
 {
-    protected string $prefix = 'nanoadmin:auth:';
+    protected string $prefix = 'auth:';
+    protected string $tag = 'auth';
     protected int $ttl = 3600;
 
     // 是否已经做过 MD5 失效检测
     protected bool $cacheValidChecked = false;
+
+    // 缓存驱动实例
+    protected ?Driver $cache = null;
+
+    public function __construct()
+    {
+        $this->initializeCache();
+    }
+
+    /**
+     * 初始化缓存驱动
+     */
+    protected function initializeCache(): void
+    {
+        $config = config('nanoadmin.cache.auth', []);
+        if (!($config['enabled'] ?? true)) {
+            $this->cache = null;
+            return;
+        }
+        try {
+            $store = $config['store'] ?? null;
+            $this->prefix = $config['prefix'] ?? $this->prefix;
+            $this->ttl = (int) ($config['ttl'] ?? $this->ttl);
+            $this->cache = ($store !== null && $store !== '')
+                ? Cache::store($store)
+                : Cache::store();
+        } catch (\Throwable $e) {
+            $this->cache = null;
+        }
+    }
 
     /**
      * MD5 自动失效：检测权限表是否变更
@@ -47,14 +79,14 @@ class AdminAuthCache
             sort($allPermissions);
             $currentMd5 = md5(json_encode($allPermissions));
 
-            $cachedMd5 = Redis::get($this->prefix . 'md5');
+            $cachedMd5 = $this->cache?->get($this->prefix . 'md5');
 
             if ($cachedMd5 !== $currentMd5) {
                 $this->clearAllCaches();
-                Redis::setEx($this->prefix . 'md5', 86400 * 365, $currentMd5);
+                $this->cache?->set($this->prefix . 'md5', $currentMd5, 86400 * 365);
             }
         } catch (\Throwable $e) {
-            // Redis 不可用 / 安装阶段尚未配置 Redis → 不阻断请求
+            // 缓存不可用 / 安装阶段尚未配置 Redis → 不阻断请求
             error_log('[AdminAuthCache] cache md5 refresh skipped: ' . $e->getMessage());
         }
     }
@@ -73,17 +105,10 @@ class AdminAuthCache
             ->toArray();
     }
 
-    // 清空所有权限缓存
+    // 清空所有权限缓存（使用 tag 批量失效）
     protected function clearAllCaches(): void
     {
-        $pattern = $this->prefix . 'admin_perms_*';
-        $cursor = null;
-        do {
-            [$cursor, $keys] = Redis::scan($cursor ?? 0, ['match' => $pattern, 'count' => 100]);
-            if (!empty($keys)) {
-                Redis::del(...$keys);
-            }
-        } while ((int) $cursor !== 0);
+        $this->cache?->tag($this->tag)->clear();
     }
 
     /**
@@ -98,16 +123,15 @@ class AdminAuthCache
         $cacheKey = $this->prefix . 'admin_perms_' . $adminId;
 
         try {
-            $cached = Redis::get($cacheKey);
-            if ($cached !== null && $cached !== false) {
-                $decoded = json_decode($cached, true);
-                if (is_array($decoded)) {
-                    return $decoded;
+            if ($this->cache) {
+                $cached = $this->cache->get($cacheKey);
+                if ($cached !== null) {
+                    return $cached;
                 }
             }
         } catch (\Throwable $e) {
-            // Redis 不可用 / 未安装阶段 → 继续走 DB 兜底
-            error_log('[AdminAuthCache] redis read skipped: ' . $e->getMessage());
+            // 缓存不可用 / 未安装阶段 → 继续走 DB 兜底
+            error_log('[AdminAuthCache] cache read skipped: ' . $e->getMessage());
         }
 
         try {
@@ -119,10 +143,12 @@ class AdminAuthCache
         }
 
         try {
-            Redis::setEx($cacheKey, $this->ttl, json_encode($permissions));
+            if ($this->cache) {
+                $this->cache->tag($this->tag)->set($cacheKey, $permissions, $this->ttl);
+            }
         } catch (\Throwable $e) {
             // 写缓存失败不影响返回
-            error_log('[AdminAuthCache] redis write skipped: ' . $e->getMessage());
+            error_log('[AdminAuthCache] cache write skipped: ' . $e->getMessage());
         }
 
         return $permissions;
@@ -166,7 +192,8 @@ class AdminAuthCache
      */
     public function clearAdminCache(int $adminId): void
     {
-        Redis::del($this->prefix . 'admin_perms_' . $adminId);
+        $cacheKey = $this->prefix . 'admin_perms_' . $adminId;
+        $this->cache?->delete($cacheKey);
     }
 
     /**
@@ -175,6 +202,6 @@ class AdminAuthCache
     public function clearAll(): void
     {
         $this->clearAllCaches();
-        Redis::del($this->prefix . 'md5');
+        $this->cache?->delete($this->prefix . 'md5');
     }
 }

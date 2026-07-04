@@ -3,6 +3,7 @@
 namespace plugin\nanoadmin\app\service;
 
 use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\cache\AdminRouteCache;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\model\Admin;
 use plugin\nanoadmin\app\model\Menu;
@@ -26,6 +27,11 @@ class MenuService
     private Admin $adminModel;
 
     /**
+     * 路由数据缓存
+     */
+    private AdminRouteCache $routeCache;
+
+    /**
      * 构造函数
      * @param Menu $model 菜单模型实例
      */
@@ -33,6 +39,22 @@ class MenuService
     {
         $this->model = $model;
         $this->adminModel = new Admin();
+        $this->routeCache = new AdminRouteCache();
+    }
+
+    /**
+     * 主动失效菜单缓存（用于不走 $menu->save() 的查询构造器批量更新场景）
+     *
+     * 走 $menu->save() / delete() / restore() 的变更由 Menu 模型事件自动失效缓存，
+     * 只有查询构造器 update() 跳过事件，此处补位。
+     */
+    private function invalidateMenuCacheFromService(): void
+    {
+        try {
+            MenuTransformService::getInstance()->invalidateCache();
+        } catch (\Throwable $e) {
+            error_log('[MenuService] invalidateMenuCacheFromService failed: ' . $e->getMessage());
+        }
     }
     /**
      * 获取菜单列表
@@ -148,7 +170,7 @@ class MenuService
     public function getMenuFormData(int $id): array
     {
         $menu = $this->getMenuById($id);
-        $transformService = new MenuTransformService();
+        $transformService = MenuTransformService::getInstance();
         return $transformService->toFormData($menu->toArray());
     }
 
@@ -212,13 +234,13 @@ class MenuService
         
         // 创建菜单（默认值由 Model 层处理）
         $menu = $this->model->create($data);
-        
+
         if (!$menu) {
             throw new ApiException(Code::SYSTEM_ERROR, '创建菜单失败');
         }
-        
+
         // 返回格式化后的数据
-        $transformService = new MenuTransformService();
+        $transformService = MenuTransformService::getInstance();
         return $transformService->formatForApi($menu->toArray());
     }
 
@@ -330,9 +352,9 @@ class MenuService
         
         // 获取更新后的菜单数据
         $updatedMenu = $this->model->find($id);
-        
+
         // 返回格式化后的数据
-        $transformService = new MenuTransformService();
+        $transformService = MenuTransformService::getInstance();
         return $transformService->formatForApi($updatedMenu->toArray());
     }
 
@@ -362,11 +384,11 @@ class MenuService
         
         // 软删除
         $result = $this->model->destroy($id);
-        
+
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '删除菜单失败');
         }
-        
+
         return true;
     }
 
@@ -384,14 +406,17 @@ class MenuService
         if (!$menu) {
             throw new ApiException(Code::MENU_NOT_FOUND, '菜单不存在');
         }
-        
+
         // 更新状态（updated_at 由 Model 层自动处理）
         $result = $this->model->where('id', $id)->update(['status' => $status]);
-        
+
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '更新菜单状态失败');
         }
-        
+
+        // 走查询构造器 update()，模型事件不会触发，由 Service 主动失效缓存
+        $this->invalidateMenuCacheFromService();
+
         return true;
     }
 
@@ -413,20 +438,24 @@ class MenuService
      */
     public function getAdminRoutes(int $adminId): array
     {
-        $menuTree = $this->model->getAdminMenuTree($adminId);
+        $menuTree = $this->routeCache->getAdminMenuTree($adminId);
         if (empty($menuTree)) {
             return [];
         }
 
-        $buttonPermissionScope = $this->getAdminButtonPermissionScope($adminId);
+        $buttonPermissionScope = $this->routeCache->getAdminButtonPermissionScope($adminId);
         $menuTree = $this->attachRouteAuthList($menuTree, $buttonPermissionScope);
 
-        $transformService = new MenuTransformService();
-        return $transformService->toRouteConfigTree($menuTree);
+        $transformService = MenuTransformService::getInstance();
+        return $transformService->toRouteConfigTreeWithCache($menuTree, $buttonPermissionScope['codes']);
     }
 
     /**
      * 获取管理员可访问的按钮权限范围
+     *
+     * 缓存由 AdminRouteCache::getAdminButtonPermissionScope() 提供，此处保留方法
+     * 以便其他模块直接复用（走 DB 实时路径），但 /sys/menu/route 链路已切到缓存。
+     *
      * @param int $adminId 管理员ID
      * @return array{allowAll:bool,codes:array<int,string>}
      */
@@ -570,11 +599,13 @@ class MenuService
         
         // 批量更新
         $result = $this->model->batchUpdateSort($sortData);
-        
+
         if (!$result) {
             throw new ApiException(Code::SYSTEM_ERROR, '批量更新排序失败');
         }
-        
+
+        $this->invalidateMenuCacheFromService();
+
         return true;
     }
 
@@ -768,16 +799,18 @@ class MenuService
             $sort = $this->getNextSort($parentId);
         }
         
-        // 更新菜单层级（updated_at 由 Model 层自动处理）
+        // 更新菜单层级
         $result = $this->model->where('id', $menuId)->update([
             'parent_id' => $parentId,
             'sort' => $sort
         ]);
-        
+
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '调整菜单层级失败');
         }
-        
+
+        $this->invalidateMenuCacheFromService();
+
         return true;
     }
 

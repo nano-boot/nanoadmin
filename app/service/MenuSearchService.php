@@ -3,7 +3,7 @@
 namespace plugin\nanoadmin\app\service;
 
 use plugin\nanoadmin\app\model\Menu;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 
 /**
  * 菜单搜索和过滤服务

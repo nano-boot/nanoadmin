@@ -6,17 +6,11 @@ use plugin\nanoadmin\app\model\DictType;
 use plugin\nanoadmin\app\model\DictData;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
-use think\facade\Cache;
-use think\cache\Driver;
+use plugin\nanoadmin\app\common\Cache;
+use Webman\ThinkCache\Driver;
 
 /**
  * 字典类型服务类
- *
- * 缓存基于 webman/think-cache：
- *   - 通过 think\facade\Cache 调用，默认走 config/think-cache.php 中 default 指定的 store
- *   - 缓存键使用 ":" 分隔（Redis 命名空间惯例）；think-cache 仅禁用 ";"
- *   - 用 Cache::tag('dict_type') 给所有类型键打标，clear() 即可批量失效
- *   - ttl=0 表示无过期（依赖 CRUD 末尾 clearCache 维护一致性）
  */
 class DictTypeService extends BaseService
 {
@@ -27,7 +21,7 @@ class DictTypeService extends BaseService
     private DictData $dictDataModel;
 
     /**
-     * 字典类型缓存配置（plugin/nanoadmin/config/cache.php 中的 dict 子树）
+     * 字典类型缓存配置
      * @var array
      */
     private array $dictConfig = [];
@@ -57,7 +51,7 @@ class DictTypeService extends BaseService
     }
 
     /**
-     * 加载字典缓存配置（通过 webman config() 助手读取 plugin/nanoadmin/config/nanoadmin.php）
+     * 加载字典缓存配置
      */
     private function loadCacheConfig(): void
     {
@@ -85,7 +79,7 @@ class DictTypeService extends BaseService
     }
 
     /**
-     * 构造缓存键（保留 ":" 分隔，与 Redis 命名空间惯例一致）
+     * 构造缓存键
      */
     private function buildKey(string $suffix): string
     {
@@ -186,9 +180,6 @@ class DictTypeService extends BaseService
      * @param int|null $id 字典类型ID
      * @param string|null $code 字典编码
      *
-     * 行为：
-     *   - 传 (id, code) → 删除 id 和 code 两个 key
-     *   - 都不传        → 借 tag 一次清掉所有 type 键（替换原来"先 delete all + 逐个 delete id"的多次 IO）
      */
     public function clearCache(?int $id = null, ?string $code = null): void
     {

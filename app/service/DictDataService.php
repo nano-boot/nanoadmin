@@ -5,8 +5,8 @@ namespace plugin\nanoadmin\app\service;
 use plugin\nanoadmin\app\model\DictData;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
-use think\facade\Cache;
-use think\cache\Driver;
+use plugin\nanoadmin\app\common\Cache;
+use Webman\ThinkCache\Driver;
 
 /**
  * 字典数据服务类
@@ -48,7 +48,7 @@ class DictDataService extends BaseService
     }
 
     /**
-     * 加载字典缓存配置（通过 webman config() 助手读取 plugin/nanoadmin/config/nanoadmin.php）
+     * 加载字典缓存配置
      */
     private function loadCacheConfig(): void
     {
@@ -76,7 +76,7 @@ class DictDataService extends BaseService
     }
 
     /**
-     * 构造缓存键（保留 ":" 分隔，与 Redis 命名空间惯例一致）
+     * 构造缓存键
      */
     private function buildKey(string $suffix): string
     {
@@ -194,7 +194,7 @@ class DictDataService extends BaseService
                 return;
             }
 
-            // 全量清理：借助 tag 一次清掉所有字典键（不再需要枚举 dict_type）
+            // 全量清理：借助 tag 一次清掉所有字典键
             $this->cache->tag($this->cacheTag)->clear();
         } catch (\Throwable $e) {
             // 静默失败：缓存清理失败不应阻塞业务流程
@@ -359,7 +359,7 @@ class DictDataService extends BaseService
     }
 
     /**
-     * 写入缓存（写入时给 key 打上 "dict" 标签，方便批量清理）
+     * 写入缓存
      */
     private function setCache(string $key, $data): bool
     {

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use plugin\nanoadmin\app\service\MenuTransformService;
 
 /**
  * 菜单模型
@@ -143,6 +144,28 @@ class Menu extends BaseModel
         parent::boot();
 
         // 搜索字段已通过静态属性声明，无需重复设置
+
+        // 任何菜单变更（save/update/create 后）触发缓存失效
+        static::saved(function (self $menu): void {
+            self::invalidateMenuCache();
+        });
+
+        // 删除后触发缓存失效
+        static::deleted(function (self $menu): void {
+            self::invalidateMenuCache();
+        });
+    }
+
+    /**
+     * 清理菜单相关缓存
+     */
+    protected static function invalidateMenuCache(): void
+    {
+        try {
+            MenuTransformService::getInstance()->invalidateCache();
+        } catch (\Throwable $e) {
+            error_log('[Menu] invalidateMenuCache failed: ' . $e->getMessage());
+        }
     }
 
     /**
