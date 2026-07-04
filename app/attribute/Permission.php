@@ -15,23 +15,23 @@ namespace plugin\nanoadmin\app\attribute;
  * 字段说明：
  *  - title    必填：权限中文名（写入 th_sys_menu.title）
  *  - code     必填：权限码（运行时校验唯一标识）
- *  - module   选填：所属模块（菜单分组、Phase 3 扫描命令分类轴）
- *  - action   选填：page/create/update/delete/export
+ *  - module   选填：所属模块（Phase 3 扫描命令分类轴，暂不推荐使用）
+ *  - action   选填：query/create/update/delete/export
  *  - log      选填：是否记录操作日志（默认 true）
  *
  * 使用示例：
  *
  *   // 方法级注解（最常用）
- *   #[Permission(title: '管理员列表', code: 'sys:admin:page', module: 'system')]
+ *   #[Permission(title: '管理员列表', code: 'sys:admin:page')]
  *   public function index(Request $request): Response { ... }
  *
  *   // 类级注解（兜底，方法未声明时使用）
- *   #[Permission(title: '管理员管理', code: 'sys:admin', module: 'system')]
+ *   #[Permission(title: '管理员管理', code: 'sys:admin')]
  *   class AdminController { ... }
  *
  *   // 多权限码（任一即可访问，Phase 3 支持 OR 语义）
- *   #[Permission(title: '导出', code: 'sys:admin:export', module: 'system')]
- *   #[Permission(title: '列表', code: 'sys:admin:page', module: 'system')]
+ *   #[Permission(title: '导出', code: 'sys:admin:export')]
+ *   #[Permission(title: '列表', code: 'sys:admin:page')]
  *   public function export(Request $request): Response { ... }
  *
  * 关系：
@@ -44,8 +44,8 @@ class Permission
     /**
      * @param string $title  权限中文名（写入 th_sys_menu.title）
      * @param string $code   权限码（运行时校验唯一标识）
-     * @param string $module 所属模块（菜单分组用）
-     * @param string $action 操作类型（page/create/update/delete/export）
+     * @param string $module 所属模块（Phase 3 预留，暂不推荐使用）
+     * @param string $action 操作类型（query/create/update/delete/export）
      * @param bool   $log    是否记录操作日志（默认 true）
      */
     public function __construct(

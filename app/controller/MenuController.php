@@ -32,15 +32,9 @@ use support\Response;
  *  PUT    /sys/menu/{id}    update 更新菜单
  *  DELETE /sys/menu/{id}    destroy 删除菜单
  *  POST   /sys/menu/sort    sort   批量更新菜单排序
- *
- * Phase 2 注解化（来源：authorization-refactoring-plan.md §2.4）：
- *  - 类级 #[Permission] 提供兜底权限码 sys:menu（方法级未声明时用）
- *  - 方法级 #[Permission] 精确声明每个方法的权限码（与 config/nanoadmin.php route_permissions 对齐）
- *  - route() 方法用 #[AllowAnonymous(requirePermission: false)] 声明免权限
- *    （前端路由接口，已登录但不能要求权限，否则新用户登录后无法获取自己的菜单）
  */
 #[OA\Tag(name: '菜单管理', description: '系统菜单管理（树形结构 + 排序）')]
-#[Permission(title: '菜单管理', code: 'sys:menu', module: 'system')]
+#[Permission(title: '菜单管理', code: 'sys:menu')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class MenuController extends BaseController
 {
@@ -63,7 +57,7 @@ class MenuController extends BaseController
         tags: ['菜单管理'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => MenuQuery::class]
     )]
-    #[Permission(title: '菜单列表', code: 'sys:menu:query', module: 'system', action: 'page')]
+    #[Permission(title: '菜单列表', code: 'sys:menu:tree', action: 'query')]
     #[DataResponse(example: [
         ['id' => 1, 'parent_id' => 0, 'name' => '系统管理', 'type' => 'D', 'children' => []],
     ])]
@@ -82,7 +76,7 @@ class MenuController extends BaseController
         tags: ['菜单管理'],
         x: [OpenApiModifier::X_REQUEST_BODY => MenuRequest::class]
     )]
-    #[Permission(title: '创建菜单', code: 'sys:menu:create', module: 'system', action: 'create')]
+    #[Permission(title: '创建菜单', code: 'sys:menu:create', action: 'create')]
     #[DataResponse(schema: MenuResponse::class)]
     public function store(Request $request): Response
     {
@@ -123,7 +117,7 @@ class MenuController extends BaseController
             'id' => ['type' => 'integer', 'description' => '菜单ID'],
         ]]
     )]
-    #[Permission(title: '菜单详情', code: 'sys:menu:query', module: 'system', action: 'page')]
+    #[Permission(title: '菜单详情', code: 'sys:menu:query', action: 'query')]
     #[DataResponse(schema: MenuResponse::class)]
     public function show(int $id): Response
     {
@@ -145,7 +139,7 @@ class MenuController extends BaseController
             OpenApiModifier::X_REQUEST_BODY => MenuRequest::class,
         ]
     )]
-    #[Permission(title: '更新菜单', code: 'sys:menu:update', module: 'system', action: 'update')]
+    #[Permission(title: '更新菜单', code: 'sys:menu:update', action: 'update')]
     #[DataResponse(schema: MenuResponse::class)]
     public function update(Request $request, int $id): Response
     {
@@ -164,7 +158,7 @@ class MenuController extends BaseController
             'id' => ['type' => 'integer', 'description' => '菜单ID'],
         ]]
     )]
-    #[Permission(title: '删除菜单', code: 'sys:menu:delete', module: 'system', action: 'delete')]
+    #[Permission(title: '删除菜单', code: 'sys:menu:delete', action: 'delete')]
     #[DataResponse()]
     public function destroy(int $id): Response
     {
@@ -182,7 +176,7 @@ class MenuController extends BaseController
         tags: ['菜单管理'],
         x: [OpenApiModifier::X_REQUEST_BODY => MenuSortRequest::class]
     )]
-    #[Permission(title: '菜单排序', code: 'sys:menu:update', module: 'system', action: 'update')]
+    #[Permission(title: '菜单排序', code: 'sys:menu:sort', action: 'update')]
     #[DataResponse()]
     public function sort(Request $request): Response
     {

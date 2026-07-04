@@ -25,12 +25,9 @@ use support\Response;
 /**
  * 系统配置控制器
  *
- * Phase 2 注解化（来源：authorization-refactoring-plan.md §1）：
- *  - 类级 #[Permission] 提供兜底权限码 sys:config
- *  - 方法级 #[Permission] 精确声明每个方法的权限码（与 route_permissions 对齐）
  */
 #[OA\Tag(name: '系统配置', description: '系统配置管理')]
-#[Permission(title: '系统配置', code: 'sys:config', module: 'system')]
+#[Permission(title: '系统配置', code: 'sys:config')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class ConfigController extends BaseController
 {
@@ -49,7 +46,6 @@ class ConfigController extends BaseController
         tags: ['系统配置'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => ConfigQuery::class]
     )]
-    #[Permission(title: '配置列表', code: 'sys:config:query', module: 'system', action: 'page')]
     #[PageResponse(schema: ConfigResponse::class)]
     public function page(Request $request): Response
     {
@@ -73,7 +69,6 @@ class ConfigController extends BaseController
         required: false,
         schema: new OA\Schema(type: 'string', example: 'basic')
     )]
-    #[Permission(title: '按分组获取配置', code: 'sys:config:query', module: 'system', action: 'page')]
     #[DataResponse(schema: ConfigItemResponse::class)]
     public function getByGroup(Request $request): Response
     {
@@ -90,7 +85,6 @@ class ConfigController extends BaseController
             'id' => ['type' => 'integer', 'description' => '配置ID'],
         ]]
     )]
-    #[Permission(title: '配置详情', code: 'sys:config:query', module: 'system', action: 'page')]
     #[DataResponse(schema: ConfigResponse::class)]
     public function show(int $id): Response
     {
@@ -104,7 +98,6 @@ class ConfigController extends BaseController
         tags: ['系统配置'],
         x: [OpenApiModifier::X_REQUEST_BODY => ConfigRequest::class]
     )]
-    #[Permission(title: '创建配置', code: 'sys:config:create', module: 'system', action: 'create')]
     #[DataResponse()]
     public function create(Request $request): Response
     {
@@ -123,7 +116,6 @@ class ConfigController extends BaseController
             OpenApiModifier::X_REQUEST_BODY => ConfigRequest::class,
         ]
     )]
-    #[Permission(title: '更新配置', code: 'sys:config:update', module: 'system', action: 'update')]
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
@@ -141,26 +133,13 @@ class ConfigController extends BaseController
         tags: ['系统配置'],
         x: [OpenApiModifier::X_REQUEST_BODY => ConfigBatchUpdateRequest::class]
     )]
-    #[Permission(title: '批量更新配置', code: 'sys:config:update', module: 'system', action: 'update')]
+    #[Permission(title: '批量更新配置', code: 'sys:config:batch-update', action: 'update')]
     #[DataResponse()]
     public function batchUpdate(Request $request): Response
     {
         $data = $this->validator->scene('batchUpdate')->setPost()->check();
         $count = $this->service->batchUpdateValues($data['items'] ?? []);
         return R::success(['updated' => $count], '保存成功');
-    }
-
-    #[OA\Delete(
-        path: '/sys/config/batch',
-        summary: '批量删除配置',
-        tags: ['系统配置']
-    )]
-    #[Permission(title: '批量删除配置', code: 'sys:config:delete', module: 'system', action: 'delete')]
-    #[DataResponse()]
-    public function batchDestroy(Request $request): Response
-    {
-        $data = $this->validator->scene('batchDestroy')->setPost()->check();
-        return R::success(['count' => $this->service->batchDelete($data['ids'])], '批量删除成功');
     }
 
     #[OA\Delete(
@@ -171,12 +150,24 @@ class ConfigController extends BaseController
             'id' => ['type' => 'integer', 'description' => '配置ID'],
         ]]
     )]
-    #[Permission(title: '删除配置', code: 'sys:config:delete', module: 'system', action: 'delete')]
     #[DataResponse()]
     public function destroy(int $id): Response
     {
         $params = $this->validator->scene('destroy')->setPath()->check();
         $this->service->delete($params['id']);
         return R::success(null, '删除成功');
+    }
+
+    #[OA\Delete(
+        path: '/sys/config/batch',
+        summary: '批量删除配置',
+        tags: ['系统配置']
+    )]
+    #[Permission(title: '批量删除配置', code: 'sys:config:batch-delete', action: 'delete')]
+    #[DataResponse()]
+    public function batchDestroy(Request $request): Response
+    {
+        $data = $this->validator->scene('batchDestroy')->setPost()->check();
+        return R::success(['count' => $this->service->batchDelete($data['ids'])], '批量删除成功');
     }
 }

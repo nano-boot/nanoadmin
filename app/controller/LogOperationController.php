@@ -28,7 +28,7 @@ use support\Response;
  *  - route_permissions 中操作日志只读，全部映射到 sys:log:query（与登录日志共用权限族）
  */
 #[OA\Tag(name: '操作日志', description: '系统操作日志管理')]
-#[Permission(title: '操作日志', code: 'sys:log', module: 'system')]
+#[Permission(title: '操作日志', code: 'sys:log')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class LogOperationController extends BaseController
 {
@@ -47,7 +47,7 @@ class LogOperationController extends BaseController
         tags: ['操作日志'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => LogOperationQuery::class]
     )]
-    #[Permission(title: '操作日志列表', code: 'sys:log:query', module: 'system', action: 'page')]
+    #[Permission(title: '操作日志列表', code: 'sys:log:query', action: 'query')]
     #[PageResponse(schema: LogOperationResponse::class)]
     public function page(Request $request): Response
     {
@@ -63,7 +63,7 @@ class LogOperationController extends BaseController
             'id' => ['type' => 'integer', 'description' => '日志ID'],
         ]]
     )]
-    #[Permission(title: '操作日志详情', code: 'sys:log:query', module: 'system', action: 'page')]
+    #[Permission(title: '操作日志详情', code: 'sys:log:query', action: 'query')]
     #[DataResponse(schema: LogOperationResponse::class)]
     public function show(int $id): Response
     {

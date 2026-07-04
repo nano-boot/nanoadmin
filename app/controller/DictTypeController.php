@@ -36,7 +36,7 @@ use support\Response;
  *  - 方法级 #[Permission] 精确声明每个方法的权限码（与 route_permissions 对齐）
  */
 #[OA\Tag(name: '字典类型', description: '字典类型管理')]
-#[Permission(title: '字典类型管理', code: 'sys:dict:type', module: 'system')]
+#[Permission(title: '字典类型管理', code: 'sys:dict:type')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class DictTypeController extends BaseController
 {
@@ -55,7 +55,6 @@ class DictTypeController extends BaseController
         tags: ['字典类型'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => DictTypeQuery::class]
     )]
-    #[Permission(title: '字典类型列表', code: 'sys:dict:type:query', module: 'system', action: 'page')]
     #[PageResponse(schema: DictTypeResponse::class)]
     public function page(Request $request): Response
     {
@@ -71,7 +70,6 @@ class DictTypeController extends BaseController
             'id' => ['type' => 'integer', 'description' => '字典类型ID'],
         ]]
     )]
-    #[Permission(title: '字典类型详情', code: 'sys:dict:type:query', module: 'system', action: 'page')]
     #[DataResponse(schema: DictTypeResponse::class)]
     public function show(int $id): Response
     {
@@ -85,7 +83,6 @@ class DictTypeController extends BaseController
         tags: ['字典类型'],
         x: [OpenApiModifier::X_REQUEST_BODY => DictTypeRequest::class]
     )]
-    #[Permission(title: '创建字典类型', code: 'sys:dict:type:create', module: 'system', action: 'create')]
     #[DataResponse()]
     public function create(Request $request): Response
     {
@@ -105,7 +102,6 @@ class DictTypeController extends BaseController
             OpenApiModifier::X_REQUEST_BODY => DictTypeRequest::class,
         ]
     )]
-    #[Permission(title: '更新字典类型', code: 'sys:dict:type:update', module: 'system', action: 'update')]
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
@@ -122,7 +118,6 @@ class DictTypeController extends BaseController
             'id' => ['type' => 'integer', 'description' => '字典类型ID'],
         ]]
     )]
-    #[Permission(title: '删除字典类型', code: 'sys:dict:type:delete', module: 'system', action: 'delete')]
     #[DataResponse()]
     public function destroy(int $id): Response
     {
@@ -136,7 +131,7 @@ class DictTypeController extends BaseController
         summary: '批量删除字典类型',
         tags: ['字典类型']
     )]
-    #[Permission(title: '批量删除字典类型', code: 'sys:dict:type:delete', module: 'system', action: 'delete')]
+    #[Permission(title: '批量删除字典类型', code: 'sys:dict:type:batch-delete', action: 'delete')]
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {

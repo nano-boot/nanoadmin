@@ -35,7 +35,7 @@ use support\annotation\Middleware;
  *    迁移时保持兼容，§2.6 重命名（:list → :query）属于 M2.5 工作。
  */
 #[OA\Tag(name: '文件管理', description: '文件上传、下载、管理')]
-#[Permission(title: '文件管理', code: 'sys:file', module: 'system')]
+#[Permission(title: '文件管理', code: 'sys:file')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class FileController extends BaseController
 {
@@ -68,7 +68,6 @@ class FileController extends BaseController
         tags: ['文件管理'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => FileQuery::class]
     )]
-    #[Permission(title: '文件列表', code: 'sys:file:list', module: 'system', action: 'page')]
     #[PageResponse(schema: FileResponse::class)]
     public function page(Request $request): Response
     {
@@ -88,7 +87,6 @@ class FileController extends BaseController
             'id' => ['type' => 'integer', 'description' => '文件ID'],
         ]]
     )]
-    #[Permission(title: '文件详情', code: 'sys:file:list', module: 'system', action: 'page')]
     #[DataResponse(schema: FileResponse::class)]
     public function show(int $id): Response
     {
@@ -105,7 +103,7 @@ class FileController extends BaseController
         description: '上传单个文件，支持本地存储和云存储',
         tags: ['文件管理']
     )]
-    #[Permission(title: '上传文件', code: 'sys:file:create', module: 'system', action: 'create')]
+    #[Permission(title: '上传文件', code: 'sys:file:upload', action: 'create')]
     #[DataResponse(schema: FileUploadResponse::class)]
     public function upload(Request $request): Response
     {
@@ -134,7 +132,7 @@ class FileController extends BaseController
         description: '批量上传多个文件',
         tags: ['文件管理']
     )]
-    #[Permission(title: '批量上传文件', code: 'sys:file:create', module: 'system', action: 'create')]
+    #[Permission(title: '批量上传文件', code: 'sys:file:upload', action: 'create')]
     #[DataResponse(schema: FileUploadResponse::class)]
     public function batchUpload(Request $request): Response
     {
@@ -168,7 +166,6 @@ class FileController extends BaseController
             OpenApiModifier::X_REQUEST_BODY => FileRequest::class
         ]
     )]
-    #[Permission(title: '更新文件信息', code: 'sys:file:update', module: 'system', action: 'update')]
     #[DataResponse(schema: FileResponse::class)]
     public function update(Request $request, int $id): Response
     {
@@ -190,7 +187,6 @@ class FileController extends BaseController
             'id' => ['type' => 'integer', 'description' => '文件ID'],
         ]]
     )]
-    #[Permission(title: '删除文件', code: 'sys:file:delete', module: 'system', action: 'delete')]
     #[DataResponse()]
     public function destroy(int $id): Response
     {
@@ -209,7 +205,7 @@ class FileController extends BaseController
         tags: ['文件管理'],
         x: [OpenApiModifier::X_REQUEST_BODY => FileBatchDeleteRequest::class]
     )]
-    #[Permission(title: '批量删除文件', code: 'sys:file:delete', module: 'system', action: 'delete')]
+    #[Permission(title: '批量删除文件', code: 'sys:file:batch-delete', action: 'delete')]
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
@@ -230,7 +226,7 @@ class FileController extends BaseController
             'id' => ['type' => 'integer', 'description' => '文件ID'],
         ]]
     )]
-    #[Permission(title: '下载文件', code: 'sys:file:list', module: 'system', action: 'page')]
+    #[Permission(title: '下载文件', code: 'sys:file:download', action: 'query')]
     #[DataResponse()]
     public function download(Request $request, int $id): Response
     {
@@ -257,7 +253,7 @@ class FileController extends BaseController
         description: '获取文件数量、存储大小等统计信息',
         tags: ['文件管理']
     )]
-    #[Permission(title: '文件统计', code: 'sys:file:list', module: 'system', action: 'page')]
+    #[Permission(title: '文件统计', code: 'sys:file:stats', action: 'query')]
     #[DataResponse(schema: FileStatsResponse::class)]
     public function stats(Request $request): Response
     {

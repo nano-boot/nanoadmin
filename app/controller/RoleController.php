@@ -24,13 +24,9 @@ use support\Response;
 
 /**
  * 角色控制器
- *
- * Phase 2 注解化（来源：authorization-refactoring-plan.md §1）：
- *  - 类级 #[Permission] 提供兜底权限码 sys:role
- *  - 方法级 #[Permission] 精确声明每个方法的权限码（与 route_permissions 对齐）
  */
 #[OA\Tag(name: '角色', description: '角色管理')]
-#[Permission(title: '角色管理', code: 'sys:role', module: 'system')]
+#[Permission(title: '角色管理', code: 'sys:role')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class RoleController extends BaseController
 {
@@ -59,7 +55,6 @@ class RoleController extends BaseController
         tags: ['角色'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => RoleQuery::class]
     )]
-    #[Permission(title: '角色列表', code: 'sys:role:query', module: 'system', action: 'page')]
     #[PageResponse(schema: RoleResponse::class)]
     public function page(Request $request): Response
     {
@@ -72,7 +67,7 @@ class RoleController extends BaseController
         summary: '角色下拉列表',
         tags: ['角色']
     )]
-    #[Permission(title: '角色下拉列表', code: 'sys:role:query', module: 'system', action: 'page')]
+    #[Permission(title: '角色下拉列表', code: 'sys:role:select-list', action: 'query')]
     #[DataResponse(schema: RoleResponse::class)]
     public function selectList(): Response
     {
@@ -84,7 +79,7 @@ class RoleController extends BaseController
         summary: '角色详情',
         tags: ['角色']
     )]
-    #[Permission(title: '角色详情', code: 'sys:role:query', module: 'system', action: 'page')]
+    #[Permission(title: '角色详情', code: 'sys:role:show', action: 'query')]
     #[DataResponse(schema: RoleResponse::class)]
     public function show(int $id): Response
     {
@@ -99,7 +94,7 @@ class RoleController extends BaseController
         tags: ['角色'],
         x: [OpenApiModifier::X_REQUEST_BODY => RoleRequest::class]
     )]
-    #[Permission(title: '创建角色', code: 'sys:role:create', module: 'system', action: 'create')]
+    #[Permission(title: '创建角色', code: 'sys:role:create', action: 'create')]
     #[DataResponse()]
     public function create(Request $request): Response
     {
@@ -114,7 +109,6 @@ class RoleController extends BaseController
         tags: ['角色'],
         x: [OpenApiModifier::X_REQUEST_BODY => RoleRequest::class]
     )]
-    #[Permission(title: '更新角色', code: 'sys:role:update', module: 'system', action: 'update')]
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
@@ -131,9 +125,9 @@ class RoleController extends BaseController
         summary: '删除角色',
         tags: ['角色']
     )]
-    #[Permission(title: '删除角色', code: 'sys:role:delete', module: 'system', action: 'delete')]
+    #[Permission(title: '删除角色', code: 'sys:role:delete', action: 'delete')]
     #[DataResponse()]
-    public function destroy(int $id): Response
+    public function delete(int $id): Response
     {
         $this->validator->scene('destroy')->setPath()->check();
         $this->roleService->deleteRole($id);
@@ -145,7 +139,7 @@ class RoleController extends BaseController
         summary: '批量删除角色',
         tags: ['角色']
     )]
-    #[Permission(title: '批量删除角色', code: 'sys:role:delete', module: 'system', action: 'delete')]
+    #[Permission(title: '批量删除角色', code: 'sys:role:batch-delete', action: 'delete')]
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
@@ -162,7 +156,7 @@ class RoleController extends BaseController
         tags: ['角色'],
         x: [OpenApiModifier::X_REQUEST_BODY => RolePermissionResponse::class]
     )]
-    #[Permission(title: '分配角色权限', code: 'sys:role:assign-permission', module: 'system', action: 'update')]
+    #[Permission(title: '分配角色权限', code: 'sys:role:assign-permission', action: 'update')]
     #[DataResponse()]
     public function assignPermissions(int $id, Request $request): Response
     {
@@ -183,7 +177,7 @@ class RoleController extends BaseController
         summary: '获取角色权限',
         tags: ['角色']
     )]
-    #[Permission(title: '查看角色权限', code: 'sys:role:query', module: 'system', action: 'page')]
+    #[Permission(title: '查看角色权限', code: 'sys:role:get-permissions', action: 'query')]
     #[DataResponse(schema: RolePermissionResponse::class)]
     public function getPermissions(int $id): Response
     {
@@ -198,7 +192,7 @@ class RoleController extends BaseController
         description: '为角色分配菜单',
         tags: ['角色']
     )]
-    #[Permission(title: '分配角色菜单', code: 'sys:role:assign-menu', module: 'system', action: 'update')]
+    #[Permission(title: '分配角色菜单', code: 'sys:role:assign-menu', action: 'update')]
     #[DataResponse()]
     public function assignMenus(int $id, Request $request): Response
     {
@@ -216,7 +210,7 @@ class RoleController extends BaseController
         summary: '获取角色菜单',
         tags: ['角色']
     )]
-    #[Permission(title: '查看角色菜单', code: 'sys:role:query', module: 'system', action: 'page')]
+    #[Permission(title: '查看角色菜单', code: 'sys:role:get-menus', action: 'query')]
     #[DataResponse(schema: RoleMenuResponse::class)]
     public function getMenus(int $id): Response
     {

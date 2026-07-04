@@ -31,7 +31,7 @@ use support\Response;
  * 历史原因，迁移时保持一致。
  */
 #[OA\Tag(name: '权限', description: '权限管理')]
-#[Permission(title: '权限管理', code: 'sys:permission', module: 'system')]
+#[Permission(title: '权限管理', code: 'sys:permission')]
 #[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
 class PermissionController extends BaseController
 {
@@ -53,7 +53,6 @@ class PermissionController extends BaseController
         tags: ['权限'],
         x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => PermissionQuery::class]
     )]
-    #[Permission(title: '权限列表', code: 'sys:permission:query', module: 'system', action: 'page')]
     #[PageResponse(schema: PermissionResponse::class)]
     public function page(Request $request): Response
     {
@@ -72,7 +71,7 @@ class PermissionController extends BaseController
             'id' => ['type' => 'integer', 'description' => '权限ID'],
         ]]
     )]
-    #[Permission(title: '权限详情', code: 'sys:permission:query', module: 'system', action: 'page')]
+    #[Permission(title: '权限详情', code: 'sys:permission:show', action: 'query')]
     #[DataResponse(schema: PermissionResponse::class)]
     public function show(int $id): Response
     {
@@ -89,9 +88,8 @@ class PermissionController extends BaseController
         tags: ['权限'],
         x: [OpenApiModifier::X_REQUEST_BODY => PermissionRequest::class]
     )]
-    #[Permission(title: '创建权限', code: 'sys:permission:create', module: 'system', action: 'create')]
     #[DataResponse()]
-    public function store(Request $request): Response
+    public function create(Request $request): Response
     {
         $data = $this->validator->scene('store')->setPost()->check();
         return R::created($this->service->createPermission($data), '创建成功');
@@ -111,7 +109,6 @@ class PermissionController extends BaseController
             OpenApiModifier::X_REQUEST_BODY => PermissionRequest::class
         ]
     )]
-    #[Permission(title: '更新权限', code: 'sys:permission:update', module: 'system', action: 'update')]
     #[DataResponse()]
     public function update(Request $request, int $id): Response
     {
@@ -130,7 +127,6 @@ class PermissionController extends BaseController
             'id' => ['type' => 'integer', 'description' => '权限ID'],
         ]]
     )]
-    #[Permission(title: '删除权限', code: 'sys:permission:delete', module: 'system', action: 'delete')]
     #[DataResponse()]
     public function destroy(int $id): Response
     {
@@ -147,7 +143,7 @@ class PermissionController extends BaseController
         summary: '批量删除权限',
         tags: ['权限']
     )]
-    #[Permission(title: '批量删除权限', code: 'sys:permission:delete', module: 'system', action: 'delete')]
+    #[Permission(title: '批量删除权限', code: 'sys:permission:batch-delete', action: 'delete')]
     #[DataResponse()]
     public function batchDestroy(Request $request): Response
     {
