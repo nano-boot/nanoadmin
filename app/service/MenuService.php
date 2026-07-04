@@ -438,7 +438,30 @@ class MenuService
      */
     public function getAdminRoutes(int $adminId): array
     {
-        $menuTree = $this->routeCache->getAdminMenuTree($adminId);
+        // DB 层（最耗时）：菜单树、按钮权限范围都从 AdminRouteCache 读
+        // 转换层（轻量）：toRouteConfigTree 保留在 MenuTransformService 内部缓存中
+
+        // 超管走专线：所有超管共享同一份全菜单缓存，避免重复 DB 查询
+        if ($this->routeCache->isSuperAdmin($adminId)) {
+            $menuTree = $this->routeCache->getSuperAdminMenuTree();
+            if (empty($menuTree)) {
+                return [];
+            }
+            $buttonPermissionScope = $this->routeCache->getSuperAdminButtonPermissionScope();
+            $menuTree = $this->attachRouteAuthList($menuTree, $buttonPermissionScope);
+
+            $transformService = MenuTransformService::getInstance();
+            return $transformService->toRouteConfigTreeWithCache($menuTree, $buttonPermissionScope['codes']);
+        }
+
+        // 普通管理员走"角色集合"粒度的菜单缓存
+        // 同一组角色的所有 admin 共享一份菜单树缓存（route:rolemenu_{hash}）
+        $roleIds = $this->routeCache->getAdminRoleIds($adminId);
+        if (empty($roleIds)) {
+            return [];
+        }
+
+        $menuTree = $this->routeCache->getMenuTreeByRoleIds($roleIds);
         if (empty($menuTree)) {
             return [];
         }

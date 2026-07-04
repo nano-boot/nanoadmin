@@ -4,6 +4,7 @@ namespace plugin\nanoadmin\app\service;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\cache\AdminRouteCache;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\model\ModelFactory;
 use plugin\nanoadmin\app\model\Role;
@@ -14,12 +15,18 @@ use plugin\nanoadmin\app\model\Role;
 class RoleService extends BaseService
 {
     /**
+     * 路由数据缓存
+     */
+    private AdminRouteCache $routeCache;
+
+    /**
      * 构造函数
      * @param Role $model
      */
     public function __construct(Role $model)
     {
         parent::__construct($model);
+        $this->routeCache = new AdminRouteCache();
     }
 
     /**
@@ -166,7 +173,13 @@ class RoleService extends BaseService
 
             \support\Db::commit();
 
-            return parent::delete($id);
+            $result = parent::delete($id);
+
+            // 角色删除（即使没绑 admin）也会让持有它的 admin 缓存失效；这里保险起见
+            // 调用一次（role 此前如果仍有 admin 残留，路由缓存会变成孤儿）
+            $this->routeCache->clearAdminsByRoleIds([$id]);
+
+            return $result;
         } catch (\Exception $e) {
             \support\Db::rollBack();
             throw new ApiException(Code::SYSTEM_ERROR, '删除角色失败：' . $e->getMessage());
@@ -187,17 +200,20 @@ class RoleService extends BaseService
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
-        
+
         // 更新状态
         $result = $this->model->where('id', $id)->update([
             'status' => $status,
             'updated_at' => date('Y-m-d H:i:s')
         ]);
-        
+
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '更新角色状态失败');
         }
-        
+
+        // 角色状态变化影响其下管理员可访问的菜单/按钮，路由缓存失效
+        $this->routeCache->clearAdminsByRoleIds([$id]);
+
         return true;
     }
 
@@ -258,17 +274,20 @@ class RoleService extends BaseService
         
         try {
             \support\Db::beginTransaction();
-            
+
             if (method_exists($role, 'assignMenus')) {
                 $role->assignMenus($menuIds);
             }
-            
+
             if (method_exists($role, 'assignPermissions')) {
                 $role->assignPermissions($permissionIds);
             }
-            
+
             \support\Db::commit();
-            
+
+            // 角色权限/菜单变更，清理所有持有该角色的管理员路由缓存
+            $this->routeCache->clearAdminsByRoleIds([$roleId]);
+
             return true;
         } catch (\Exception $e) {
             \support\Db::rollBack();
@@ -307,11 +326,14 @@ class RoleService extends BaseService
         
         // 分配菜单
         $result = $role->assignMenus($menuIds);
-        
+
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '分配菜单失败');
         }
-        
+
+        // 角色菜单变更，清理所有持有该角色的管理员路由缓存
+        $this->routeCache->clearAdminsByRoleIds([$roleId]);
+
         return true;
     }
 
@@ -428,11 +450,14 @@ class RoleService extends BaseService
         
         // 复制权限
         $result = $sourceRole->copyPermissionsTo($targetRoleId);
-        
+
         if (!$result) {
             throw new ApiException(Code::SYSTEM_ERROR, '复制角色权限失败');
         }
-        
+
+        // 目标角色权限/菜单发生变化，清理目标角色下管理员的路由缓存
+        $this->routeCache->clearAdminsByRoleIds([$targetRoleId]);
+
         return true;
     }
 
@@ -450,20 +475,23 @@ class RoleService extends BaseService
         if (!$sourceRole) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '源角色不存在');
         }
-        
+
         // 检查目标角色是否存在
         $targetRole = $this->model->find($targetRoleId);
         if (!$targetRole) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '目标角色不存在');
         }
-        
+
         // 复制菜单
         $result = $sourceRole->copyMenusTo($targetRoleId);
-        
+
         if (!$result) {
             throw new ApiException(Code::SYSTEM_ERROR, '复制角色菜单失败');
         }
-        
+
+        // 目标角色菜单发生变化，清理目标角色下管理员的路由缓存
+        $this->routeCache->clearAdminsByRoleIds([$targetRoleId]);
+
         return true;
     }
 
@@ -563,7 +591,12 @@ class RoleService extends BaseService
 
             \support\Db::commit();
 
-            return parent::batchDelete($ids);
+            $result = parent::batchDelete($ids);
+
+            // 批量删除角色，清理所有这些角色下管理员的路由缓存
+            $this->routeCache->clearAdminsByRoleIds($ids);
+
+            return $result;
         } catch (\Exception $e) {
             \support\Db::rollBack();
             throw new ApiException(Code::SYSTEM_ERROR, '批量删除角色失败：' . $e->getMessage());

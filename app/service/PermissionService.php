@@ -3,9 +3,11 @@
 namespace plugin\nanoadmin\app\service;
 
 use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\cache\AdminRouteCache;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\model\ModelFactory;
 use plugin\nanoadmin\app\model\Permission;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
@@ -13,6 +15,15 @@ use Illuminate\Pagination\LengthAwarePaginator;
  */
 class PermissionService
 {
+    /**
+     * 路由数据缓存
+     */
+    private AdminRouteCache $routeCache;
+
+    public function __construct()
+    {
+        $this->routeCache = new AdminRouteCache();
+    }
     /**
      * 获取权限列表
      * @param array $params 查询参数
@@ -99,7 +110,7 @@ class PermissionService
         $permissionModel = ModelFactory::permission();
         
         // 检查权限代码是否已存在
-        if ($permissionModel->where('code', $data['code'])->find()) {
+        if ($permissionModel->where('code', $data['code'])->exists()) {
             throw new ApiException(Code::DUPLICATE_NAME, '权限代码已存在');
         }
         
@@ -146,11 +157,10 @@ class PermissionService
         
         // 检查权限代码是否已被其他权限使用
         if (!empty($data['code'])) {
-            $existingPermission = $permissionModel->where('code', $data['code'])
-                
+            $codeInUse = $permissionModel->where('code', $data['code'])
                 ->where('id', '<>', $id)
-                ->find();
-            if ($existingPermission) {
+                ->exists();
+            if ($codeInUse) {
                 throw new ApiException(Code::DUPLICATE_NAME, '权限代码已存在');
             }
         }
@@ -160,11 +170,14 @@ class PermissionService
         
         // 更新权限
         $result = $permissionModel->updatePermission($id, $data);
-        
+
         if (!$result) {
             throw new ApiException(Code::SYSTEM_ERROR, '更新权限失败');
         }
-        
+
+        // 权限的 code/status 变更会通过 role 中间表影响管理员的按钮权限
+        $this->routeCache->clearAdminsByPermissionIds([$id]);
+
         return true;
     }
 
@@ -177,25 +190,28 @@ class PermissionService
     public function deletePermission(int $id): bool
     {
         $permissionModel = ModelFactory::permission();
-        
+
         // 检查权限是否存在
         $permission = $permissionModel->find($id);
         if (!$permission) {
             throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在');
         }
-        
+
         // 检查权限是否被使用
         if ($permission->isUsed($id)) {
             throw new ApiException(Code::DATA_IN_USE, '权限正在使用中，无法删除');
         }
-        
+
         // 软删除
         $result = $permissionModel->destroy($id);
-        
+
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '删除权限失败');
         }
-        
+
+        // 删除未使用的权限，理论上没人受影响，但保守起见清一下
+        $this->routeCache->clearAdminsByPermissionIds([$id]);
+
         return true;
     }
 
@@ -209,23 +225,26 @@ class PermissionService
     public function togglePermissionStatus(int $id, bool $status): bool
     {
         $permissionModel = ModelFactory::permission();
-        
+
         // 检查权限是否存在
         $permission = $permissionModel->find($id);
         if (!$permission) {
             throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在');
         }
-        
+
         // 更新状态
         $result = $permissionModel->where('id', $id)->update([
             'status' => $status,
             'updated_at' => date('Y-m-d H:i:s')
         ]);
-        
+
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '更新权限状态失败');
         }
-        
+
+        // 权限状态变化，影响所有通过 role 持有该权限的管理员
+        $this->routeCache->clearAdminsByPermissionIds([$id]);
+
         return true;
     }
 
@@ -457,28 +476,32 @@ class PermissionService
         $permissionModel = ModelFactory::permission();
         
         // 检查权限是否存在
+        /** @var EloquentCollection<int, Permission> $existingPermissions */
         $existingPermissions = $permissionModel->whereIn('id', $ids)->get();
         $existingIds = $existingPermissions->pluck('id')->toArray();
         $invalidIds = array_diff($ids, $existingIds);
-        
+
         if (!empty($invalidIds)) {
             throw new ApiException(Code::PERMISSION_NOT_FOUND, '权限不存在: ' . implode(',', $invalidIds));
         }
-        
+
         // 检查是否有权限正在使用
         foreach ($existingPermissions as $permission) {
-            if ($permission->isUsed($permission->id)) {
+            if ($permission->isUsed((int) $permission->id)) {
                 throw new ApiException(Code::DATA_IN_USE, "权限 '{$permission->name}' 正在使用中，无法删除");
             }
         }
         
         // 批量软删除
         $result = $permissionModel->destroy($ids);
-        
+
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '批量删除权限失败');
         }
-        
+
+        // 批量删除会清理"持有这些权限的 role 下的 admin"路由缓存
+        $this->routeCache->clearAdminsByPermissionIds($ids);
+
         return true;
     }
 

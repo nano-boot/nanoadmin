@@ -553,7 +553,7 @@ class Menu extends BaseModel
      * @param array $menuIds 菜单ID数组
      * @return array
      */
-    private function buildTreeFromIds(array $menuIds): array
+    public function buildTreeFromIds(array $menuIds): array
     {
         if (empty($menuIds)) {
             return [];
@@ -561,7 +561,8 @@ class Menu extends BaseModel
         
         // 获取所有相关菜单
         $menus = $this->whereIn('id', $menuIds)
-                     ->enabled()
+                     ->where('status', 1)
+                     ->where('deleted', false)
                      ->orderBy('sort', 'desc')
                      ->orderBy('id', 'asc')
                      ->get();

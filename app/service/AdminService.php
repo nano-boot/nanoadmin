@@ -4,6 +4,7 @@ namespace plugin\nanoadmin\app\service;
 
 use Illuminate\Pagination\LengthAwarePaginator;
 use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\cache\AdminRouteCache;
 use plugin\nanoadmin\app\common\Code;
 use plugin\nanoadmin\app\model\ModelFactory;
 use plugin\nanoadmin\app\model\Admin;
@@ -14,12 +15,18 @@ use plugin\nanoadmin\app\model\Admin;
 class AdminService extends BaseService
 {
     /**
+     * 路由数据缓存
+     */
+    private AdminRouteCache $routeCache;
+
+    /**
      * 构造函数
      * @param Admin $model 管理员模型实例
      */
     public function __construct(Admin $model)
     {
         parent::__construct($model);
+        $this->routeCache = new AdminRouteCache();
     }
 
     /**
@@ -119,6 +126,8 @@ class AdminService extends BaseService
         // 处理角色更新
         if ($roleIds !== null) {
             $this->validateAndAssignRoles($admin, $roleIds);
+            // 角色绑定发生变化，路由/按钮权限缓存失效
+            $this->routeCache->clearAdminCache((int) $id);
         }
 
         // 重新加载管理员信息，包括角色关联
@@ -133,6 +142,8 @@ class AdminService extends BaseService
      */
     public function delete(int $id): bool
     {
+        // 删除前先清缓存（adminId 之后无法再回查）
+        $this->routeCache->clearAdminCache($id);
         return parent::delete($id);
     }
 
@@ -162,7 +173,10 @@ class AdminService extends BaseService
         if ($result === false) {
             throw new ApiException(Code::SYSTEM_ERROR, '更新管理员状态失败');
         }
-        
+
+        // 启用/禁用管理员会影响其能访问的菜单/按钮权限，路由缓存失效
+        $this->routeCache->clearAdminCache($id);
+
         return true;
     }
 
@@ -176,16 +190,19 @@ class AdminService extends BaseService
     public function assignRoles(int $adminId, array $roleIds): bool
     {
         $adminModel = $this->model;
-        
+
         // 检查管理员是否存在
         $admin = $adminModel->find($adminId);
         if (!$admin) {
             throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
         }
-        
+
         // 使用统一的验证和分配方法
         $this->validateAndAssignRoles($admin, $roleIds);
-        
+
+        // 角色绑定发生变化，路由/按钮权限缓存失效
+        $this->routeCache->clearAdminCache((int) $adminId);
+
         return true;
     }
 
