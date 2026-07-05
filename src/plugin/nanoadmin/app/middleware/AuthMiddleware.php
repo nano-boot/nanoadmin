@@ -25,7 +25,7 @@ use plugin\nanoadmin\app\service\LogLoginService;
  *  - Layer 1 平台路由自动注入（BaseMiddleware::resolveExcludeRoutes 已处理）
  *  - Layer 2 共享池配置（auth.exclude_routes）
  *  - Layer 3 #[AllowAnonymous(requireToken: false)] 注解（强类型，IDE 提示）
- *  - Layer 4 $noNeedLogin 属性（saiadmin 兼容兜底，注解优先）
+ *  - Layer 4 $noNeedLogin 属性（注解优先）
  *  - Layer 5 正常 token 校验
  */
 class AuthMiddleware extends BaseMiddleware
@@ -132,7 +132,7 @@ class AuthMiddleware extends BaseMiddleware
      * 优先级（命中即返回）：
      *  1. 路由前缀白名单（auth.exclude_routes + 平台级自动注入）
      *  2. #[AllowAnonymous(requireToken: false)] 注解
-     *  3. $noNeedLogin 属性（saiadmin 兼容）
+     *  3. $noNeedLogin 属性
      *  4. 不跳过，进入正常 token 校验
      *
      * @param Request $request
@@ -157,7 +157,7 @@ class AuthMiddleware extends BaseMiddleware
                 return true; // 注解声明放行 token
             }
 
-            // Layer 3：$noNeedLogin 属性（saiadmin 兼容兜底）
+            // Layer 3：$noNeedLogin 属性
             $noNeed = ReflectionCache::getNoNeedLogin($controller);
             if (in_array($action, $noNeed, true)) {
                 return true;

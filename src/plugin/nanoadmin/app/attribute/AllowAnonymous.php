@@ -9,13 +9,10 @@ namespace plugin\nanoadmin\app\attribute;
  *
  * 用于声明某个 Controller 方法（也支持类级）允许"免登录"或"免权限"访问。
  *
- * 设计来源：authorization-refactoring-plan.md §2.2.2
- *   - 借鉴 madong-admin/vendor/madong/swagger/src/attribute/AllowAnonymous.php
- *   - 改进点：双参数 requireToken / requirePermission，对齐 madong 的语义
  *
  * 与 BaseController 的 $noNeedLogin / $noNeedPermission 属性关系：
  *   - #[AllowAnonymous] 是类型安全的强声明，IDE 可提示
- *   - $noNeedLogin / $noNeedPermission 属性是字符串方法名列表（saiadmin 风格，向后兼容）
+ *   - $noNeedLogin / $noNeedPermission 属性是字符串方法名列表
  *   - 两者共存，注解优先级更高（详见 ReflectionCache::getAllowAnonymous 实现）
  *
  * 四种典型场景：

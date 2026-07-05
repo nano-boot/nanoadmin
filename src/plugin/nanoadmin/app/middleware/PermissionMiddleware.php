@@ -34,7 +34,7 @@ use plugin\nanoadmin\app\library\annotation\ReflectionCache;
  * 放行检测（shouldSkipPermissionCheck）4 层：
  *  1. 路由前缀白名单（permission.exclude_routes + 平台级自动注入）
  *  2. #[AllowAnonymous(requirePermission: false)] 注解
- *  3. $noNeedPermission 属性（saiadmin 兼容兜底，见 ReflectionCache::getNoNeedPermission）
+ *  3. $noNeedPermission 属性（见 ReflectionCache::getNoNeedPermission）
  *  4. 不跳过，进入权限校验
  */
 class PermissionMiddleware extends BaseMiddleware
@@ -144,7 +144,7 @@ class PermissionMiddleware extends BaseMiddleware
      * 优先级（命中即返回）：
      *  1. 路由前缀白名单（permission.exclude_routes + 平台级自动注入）
      *  2. #[AllowAnonymous(requirePermission: false)] 注解
-     *  3. $noNeedPermission 属性（saiadmin 兼容兜底）
+     *  3. $noNeedPermission 属性
      *  4. 不跳过，进入权限校验
      *
      * @param Request $request
@@ -169,7 +169,7 @@ class PermissionMiddleware extends BaseMiddleware
                 return true; // 注解声明放行权限
             }
 
-            // Layer 3：$noNeedPermission 属性（saiadmin 兼容兜底）
+            // Layer 3：$noNeedPermission 属性
             $noNeed = ReflectionCache::getNoNeedPermission($controller);
             if (in_array($action, $noNeed, true)) {
                 return true;

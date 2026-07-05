@@ -29,7 +29,7 @@ class InstallService
 
     private string $envPath;
     private string $lockPath;
-    /** storage 目录，由 Webman\nanoadmin\Install 在 install/update 时创建 */
+    /** storage 目录，由 plugin\nanoadmin\Install 在 install/update 时创建 */
     private string $storagePath;
     private string $sqlPath;
     private string $menuInitSqlPath;

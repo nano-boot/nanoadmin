@@ -13,8 +13,6 @@ use Webman\Http\Response;
  *
  * 在请求链最早阶段实例化控制器对象，挂到 $request->controllerObject。
  * 后续中间件（PermissionMiddleware）直接调用，避免重复反射，提高性能。
- *
- * 设计参考：likeadmin_php
  */
 class InitMiddleware implements MiddlewareInterface
 {

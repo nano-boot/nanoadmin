@@ -10,22 +10,36 @@ composer require nano-boot/nanoadmin
 
 ## 目录结构
 
+本包结构包内 `src/plugin/nanoadmin/` 镜像"装到主项目后的样子"，由 `src/Install.php` 用 `copy_dir` 落地。
+
 ```
-plugin/nanoadmin/
-├── app/                    # 应用代码
-│   ├── common/            # 公共类
-│   ├── config/            # 配置目录
-│   ├── controller/        # 控制器
-│   ├── middleware/        # 中间件
-│   ├── model/             # 数据模型
-│   ├── route/             # 路由
-│   ├── service/           # 服务层
-│   ├── validator/         # 验证器
-│   └── functions.php      # 公共函数
-├── config/                 # 插件配置
-├── database/               # 数据库迁移
-├── sql/                    # SQL 脚本
-└── tests/                  # 单元测试
+nanoadmin/                                # 本仓库根 = 包根
+├── README.md
+├── composer.json                         # 单 PSR-4: Webman\nanoadmin\ => src/
+├── .gitignore
+└── src/
+    ├── Install.php                       # webman 插件入口（命名空间 Webman\nanoadmin）
+    └── plugin/
+        └── nanoadmin/                    # 镜像"安装到主项目后的样子"
+            ├── app/                      # 业务核心
+            │   ├── common/               # 公共类（R、ApiException、Code、JwtUtil 等）
+            │   ├── controller/           # 控制器
+            │   ├── service/              # 服务层
+            │   ├── model/                # 数据模型
+            │   ├── validator/            # 验证器
+            │   ├── middleware/           # 中间件
+            │   ├── schema/               # OpenAPI Schema
+            │   ├── attribute/            # 注解属性
+            │   ├── library/              # 公共库（swagger、annotation）
+            │   ├── route/                # 路由
+            │   ├── command/              # 自定义命令
+            │   ├── crontab/              # 定时任务
+            │   ├── view/                 # 视图
+            │   └── functions.php         # 公共函数（autoload files 自动加载）
+            ├── config/                   # 插件配置
+            ├── api/                      # 业务 API 辅助类（如 Webman\nanoadmin\api\Install）
+            ├── sql/                      # SQL 脚本（install.sql / uninstall.sql / menu_init.sql）
+            └── public/                   # 主项目 public/ 下要暴露的静态资源
 ```
 
 ## 开发
@@ -81,7 +95,7 @@ composer require nano-boot/nanoadmin:1.0.1
 
 1. **主项目 composer.json** 的 `post-package-install/update` 触发 `support\\Plugin::install`
 2. **webman 框架**通过 psr-4 autoload 找到 `Webman\nanoadmin\Install`（识别条件：`WEBMAN_PLUGIN = true`）
-3. **Install::install()** 把仓库根下的 `app/`、`config/`、`database/`、`sql/`、`api/` 复制到主项目 `plugin/nanoadmin/`
+3. **Install::installByRelation()** 把 `src/plugin/nanoadmin/` 复制到主项目 `plugin/nanoadmin/`
 4. 复制使用 webman 的 `copy_dir()`，默认**不覆盖已有文件**，用户本地修改的配置会保留
 5. `composer remove nano-boot/nanoadmin` 时 `Install::uninstall()` 会删除主项目 `plugin/nanoadmin/`
 
@@ -104,8 +118,21 @@ composer require nano-boot/nanoadmin:1.0.1
 
 ### 命名空间约定
 
-| 命名空间 | 路径 | 用途 |
-|---------|------|------|
-| `Webman\nanoadmin\` | 仓库根 | 仅 `Install.php`（webman 插件入口） |
-| `plugin\nanoadmin\app\` | `app/` | 业务代码（主项目通过 `plugin\` 命名空间加载） |
-| `plugin\nanoadmin\api\` | `api/` | 业务 API 辅助类 |
+| 命名空间 | 包内路径 | 用途 |
+|---------|---------|------|
+| `Webman\nanoadmin\` | `src/` | 仅 `Install.php`（webman 插件入口） |
+| `Webman\nanoadmin\app\` | `src/plugin/nanoadmin/app/` | 业务代码（控制器、服务、模型、验证器、中间件、Schema 等） |
+| `Webman\nanoadmin\api\` | `src/plugin/nanoadmin/api/` | 业务 API 辅助类 |
+
+**单一 PSR-4 入口**：
+
+```json
+"autoload": {
+    "psr-4": {
+        "Webman\\nanoadmin\\": "src/"
+    },
+    "files": [
+        "src/plugin/nanoadmin/app/functions.php"
+    ]
+}
+```

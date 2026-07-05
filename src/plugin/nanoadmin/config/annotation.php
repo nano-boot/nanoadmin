@@ -15,7 +15,7 @@
  *  - permission    方法级 #[Permission] 注解 key 前缀
  *  - class         类级 #[Permission] 注解 key 前缀
  *  - anonymous     #[AllowAnonymous] 注解 key 前缀
- *  - no_need_login 兼容 saiadmin $noNeedLogin 属性 key 前缀
+ *  - no_need_login $noNeedLogin 属性 key 前缀
  *
  * 来源：authorization-refactoring-plan.md §2.9.3
  */

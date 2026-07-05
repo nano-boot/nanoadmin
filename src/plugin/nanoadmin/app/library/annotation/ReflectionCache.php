@@ -16,7 +16,7 @@ use plugin\nanoadmin\app\attribute\AllowAnonymous;
  *  - getAllowAnonymous(controller, action)   → 读取 #[AllowAnonymous] 注解
  *  - getPermissionAttributes(controller, action) → 读取方法级 #[Permission] 注解列表
  *  - getClassAttributes(controller)         → 读取类级 #[Permission] 注解列表
- *  - getNoNeedLogin(controller)             → 读取 $noNeedLogin 属性（saiadmin 兼容）
+ *  - getNoNeedLogin(controller)             → 读取 $noNeedLogin 属性
  *  - resolvePermissions(controller, action) → 方法级 + 类级合并的权限码列表
  *  - clear()                                → 一键清空所有反射缓存（部署时调用）
  *
@@ -28,15 +28,6 @@ use plugin\nanoadmin\app\attribute\AllowAnonymous;
  *  5. 沿继承链追溯：子类继承父类 controller 时注解不丢
  *  6. 环境隔离：tag / key 加 env 前缀，避免 dev/staging/prod 共用 Redis 串扰
  *
- * 关键差异（与 saiadmin 对比）：
- *  - Cache facade 用 support\think\Cache（webman/think-cache 提供的 Facade，
- *    计划文档原写 think\facade\Cache 是 topthink/think-cache 的路径，
- *    与本仓库实际 composer.json 中的 webman/think-cache ^2.1 不一致 → 纠正）
- *  - 配置文件 plugin.nanoadmin.annotation（saiadmin 用 plugin.saiadmin.saithink.reflection_cache）
- *  - 加环境前缀（避免多环境串扰，saiadmin 全局 tag）
- *  - 处理继承链（saiadmin 不处理）
- *  - 支持 AllowAnonymous 双参数（saiadmin 只支持 $noNeedLogin）
- *  - 缓存字段名对齐 madong（requireToken / requirePermission）
  */
 class ReflectionCache
 {
@@ -261,7 +252,7 @@ class ReflectionCache
     }
 
     /**
-     * 获取控制器 $noNeedLogin 属性（兼容 saiadmin，Phase 2 过渡期）
+     * 获取控制器 $noNeedLogin 属性（Phase 2 过渡期）
      *
      * 用途：在 AllowAnonymous 注解落地前，老代码用 $noNeedLogin 属性仍可工作
      * Phase 3 后可移除（所有 controller 改为 AllowAnonymous 注解）
@@ -295,7 +286,7 @@ class ReflectionCache
     }
 
     /**
-     * 获取控制器 $noNeedPermission 属性（兼容 saiadmin，M2 补全）
+     * 获取控制器 $noNeedPermission 属性（M2 补全）
      *
      * 设计来源：authorization-refactoring-plan.md §一 "Phase 1 收尾" + §五 行动清单
      *  - 与 AuthMiddleware 的 $noNeedLogin 对应，PermissionMiddleware 同样需要兜底读取

@@ -34,11 +34,11 @@
     },
     "autoload": {
         "psr-4": {
-            "Webman\\nanoadmin\\": "./",
-            "plugin\\nanoadmin\\": "app/"
+            "Webman\\nanoadmin\\": "src/",
+            "plugin\\nanoadmin\\": "src/plugin/nanoadmin/"
         },
         "files": [
-            "app/functions.php"
+            "src/plugin/nanoadmin/app/functions.php"
         ]
     },
     "minimum-stability": "stable",
