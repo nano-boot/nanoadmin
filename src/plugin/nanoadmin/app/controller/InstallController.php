@@ -68,6 +68,37 @@ class InstallController
     }
 
     /**
+     * AJAX: 测试 Redis 连接
+     *
+     * 只需要 host / port / password 三个字段，database 不影响连通性
+     */
+    public function testRedis(Request $request): Response
+    {
+        $redis = [
+            'host'     => trim((string) $request->post('redis_host', '')),
+            'port'     => (int) $request->post('redis_port', 6379),
+            'password' => (string) $request->post('redis_password', ''),
+            'database' => (int) $request->post('redis_database', 0),
+        ];
+
+        if ($redis['host'] === '') {
+            return json([
+                'code'    => 40000,
+                'message' => '请填写 Redis 主机',
+                'data'    => ['success' => false],
+            ]);
+        }
+
+        $result = $this->service->testRedisConnection($redis);
+
+        return json([
+            'code'    => $result['success'] ? 20000 : 40000,
+            'message' => $result['message'],
+            'data'    => $result,
+        ]);
+    }
+
+    /**
      * AJAX: 执行安装
      */
     public function run(Request $request): Response
@@ -132,11 +163,47 @@ class InstallController
      */
     private function extractInstallParams(Request $request): array
     {
+        $redis = $this->extractRedisParams($request);
+
         return $this->extractDbParams($request) + [
             'admin_user'             => trim((string) $request->post('admin_user', 'admin')),
             'admin_password'         => (string) $request->post('admin_password', ''),
             'admin_password_confirm' => (string) $request->post('admin_password_confirm', ''),
             'admin_nickname'         => trim((string) $request->post('admin_nickname', '超级管理员')),
+            'redis'                  => $redis,
+        ];
+    }
+
+    /**
+     * 提取 Redis 配置参数。
+     *
+     * 仅当 host 非空时才视为填写了 Redis 配置；未填写返回空数组，
+     * 由 InstallService 据此跳过 .env 中 REDIS_* 的写入，但仍会生成 env() 形式的 config/redis.php。
+     *
+     * @return array{host:string,port:int,password:string,database:int}|array{}
+     */
+    private function extractRedisParams(Request $request): array
+    {
+        $host = trim((string) $request->post('redis_host', ''));
+        if ($host === '') {
+            return [];
+        }
+
+        $port = (int) $request->post('redis_port', 6379);
+        if ($port < 1 || $port > 65535) {
+            $port = 6379;
+        }
+
+        $database = (int) $request->post('redis_database', 0);
+        if ($database < 0) {
+            $database = 0;
+        }
+
+        return [
+            'host'     => $host,
+            'port'     => $port,
+            'password' => (string) $request->post('redis_password', ''),
+            'database' => $database,
         ];
     }
 

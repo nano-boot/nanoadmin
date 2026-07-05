@@ -15,7 +15,8 @@ use plugin\nanoadmin\app\controller\InstallController;
 // 安装向导（独立子应用，不进入插件鉴权中间件栈）
 Route::group('/install', function () {
     Route::get('',           [InstallController::class, 'index']);
-    Route::post('/check-env', [InstallController::class, 'checkEnv']);
-    Route::post('/test-db',   [InstallController::class, 'testDatabase']);
-    Route::post('/run',       [InstallController::class, 'run']);
+    Route::post('/check-env',  [InstallController::class, 'checkEnv']);
+    Route::post('/test-db',    [InstallController::class, 'testDatabase']);
+    Route::post('/test-redis', [InstallController::class, 'testRedis']);
+    Route::post('/run',        [InstallController::class, 'run']);
 });

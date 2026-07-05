@@ -263,6 +263,20 @@ class InstallService
             $this->writeEnv($params);
             $this->writeDatabaseConfig($params);
 
+            // Redis 测试结果决定 think-cache.php 的 default：redis 连接成功 → 'redis'，否则 → 'file'
+            $redis = $this->extractRedisParams($params);
+            $redisOk = false;
+            if ($redis !== []) {
+                // 服务端再校验一次 redis 是否真的可达，避免前端被绕过提交无效配置
+                $redisTest = $this->testRedisConnection($redis);
+                $redisOk = $redisTest['success'];
+            }
+            $this->writeThinkCacheConfig($redisOk);
+
+            // 无论 Redis 测试是否通过、是否填写，都统一把 config/redis.php 改写为 env() 形式；
+            // 未填写 / 失败时 .env 不会写入 REDIS_*，运行时走 fallback；填写成功时 .env 写入真实值覆盖 fallback。
+            $this->writeRedisConfig();
+
             $this->runInstallSql($pdo, $params['name']);
             $this->runMenuInitSql($pdo);
             $this->bindSuperRoleMenus($pdo);
@@ -276,11 +290,49 @@ class InstallService
                     'username' => $params['admin_user'],
                     'nickname' => $params['admin_nickname'] ?? '超级管理员',
                 ],
+                'redis'   => $redisOk ? $redis : [],
+                'cache'   => $redisOk ? 'redis' : 'file',
             ];
         } finally {
             flock($fp, LOCK_UN);
             fclose($fp);
         }
+    }
+
+    /**
+     * 从安装参数中读取 Redis 配置；未填写时返回空数组。
+     *
+     * Controller 已经把 redis 配置归一化（trim / 范围矫正），这里再
+     * 二次过滤一次 "host 为空" 的边界值，避免 service 被外部直接调用时漏判。
+     *
+     * @return array{host:string,port:int,password:string,database:int}|array{}
+     */
+    private function extractRedisParams(array $params): array
+    {
+        if (!isset($params['redis']) || !is_array($params['redis'])) {
+            return [];
+        }
+        $redis = $params['redis'];
+        $host = trim((string) ($redis['host'] ?? ''));
+        if ($host === '') {
+            return [];
+        }
+
+        $port = (int) ($redis['port'] ?? 6379);
+        if ($port < 1 || $port > 65535) {
+            $port = 6379;
+        }
+        $database = (int) ($redis['database'] ?? 0);
+        if ($database < 0) {
+            $database = 0;
+        }
+
+        return [
+            'host'     => $host,
+            'port'     => $port,
+            'password' => (string) ($redis['password'] ?? ''),
+            'database' => $database,
+        ];
     }
 
     private function validateDbParams(array $db): void
@@ -358,6 +410,15 @@ class InstallService
             'DB_PREFIX'     => $db['prefix'] ?? '',
             'DB_CHARSET'    => 'utf8mb4',
         ];
+
+        // Redis 是可选配置：仅当 host 非空时把 REDIS_* 段写进 .env
+        $redis = $this->extractRedisParams($db);
+        if ($redis !== []) {
+            $map['REDIS_HOST']     = $redis['host'];
+            $map['REDIS_PORT']     = (string) $redis['port'];
+            $map['REDIS_PASSWORD'] = $redis['password'];
+            $map['REDIS_DATABASE'] = (string) $redis['database'];
+        }
 
         foreach ($map as $key => $value) {
             $pattern = '/^' . preg_quote($key, '/') . '\s*=.*$/m';
@@ -447,7 +508,7 @@ return [
             'password'    => env('DB_PASSWORD', ''),
             'charset'     => env('DB_CHARSET', 'utf8mb4'),
             'collation'   => 'utf8mb4_general_ci',
-            'prefix'      => env('DB_PREFIX', ''),
+            'prefix'      => env('DB_PREFIX', 'na:'),
             'strict'      => true,
             'engine'      => null,
             'options'     => [
@@ -483,7 +544,265 @@ DB_USERNAME=root
 DB_PASSWORD=
 DB_PREFIX=
 DB_CHARSET=utf8mb4
+
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DATABASE=0
 EOF;
+    }
+
+    /**
+     * 把插件内的 config/think-cache.php 拷贝/覆盖到主项目 config/think-cache.php
+     *
+     * 设计要点：
+     * - 源文件必须是已安装的插件路径 `plugin/nanoadmin/config/think-cache.php`
+     *   （install 时已经由 webman Install 类的 pathRelation 同步到位）
+     * - 文件不存在时创建，存在时按现有 redis.php 一样"备份 → 覆盖 → 删备份"流程做安全写入
+     * - 与 redis.php / database.php 一样，回滚失败保留备份供运维处理
+     *
+     * `$useRedis` 决定覆盖后的 'default'：
+     * - true  → 'redis'（已通过连通性测试）
+     * - false → 'file'（未填写 Redis / 测试失败）
+     *
+     * 实现方式：保留插件原文件结构 + 'stores' 段，仅把动态判断那行替换为字面量。
+     */
+    public function writeThinkCacheConfig(bool $useRedis = false): void
+    {
+        $src = base_path() . '/plugin/nanoadmin/config/think-cache.php';
+        $dst = base_path() . '/config/think-cache.php';
+
+        if (!is_file($src)) {
+            throw new \RuntimeException('插件内 think-cache.php 不存在，无法同步：' . $src);
+        }
+
+        $payload = (string) file_get_contents($src);
+        if ($payload === '') {
+            throw new \RuntimeException('插件内 think-cache.php 内容为空：' . $src);
+        }
+
+        // 把 `'$redisDefault ? 'redis' : 'file'` 动态分支替换为根据测试结果定下的字面量
+        // 匹配的是 plugin 文件里的字面 $redisDefault，PCRE 里 $ 需要 \\\$（PHP 单引号里 \\\$ 也是 \\$，最终交给 PCRE 是 \\\$——这里用 \\\$）
+        $payload = preg_replace(
+            "/'default'\s*=>\s*\\\$redisDefault\s*\?\s*'redis'\s*:\s*'file'/",
+            "'default' => '" . ($useRedis ? 'redis' : 'file') . "'",
+            $payload,
+            1
+        );
+
+        $dstDir = dirname($dst);
+
+        if (!is_file($dst)) {
+            if (!is_dir($dstDir)) {
+                if (!@mkdir($dstDir, 0755, true) && !is_dir($dstDir)) {
+                    throw new \RuntimeException('无法创建 config 目录：' . $dstDir);
+                }
+            }
+            if (!is_writable($dstDir)) {
+                throw new \RuntimeException('config 目录不可写，无法创建 think-cache.php：' . $dstDir);
+            }
+
+            $bytes = @file_put_contents($dst, $payload, LOCK_EX);
+            if ($bytes === false) {
+                throw new \RuntimeException('config/think-cache.php 创建失败：' . $dst);
+            }
+            return;
+        }
+
+        if (!is_writable($dst)) {
+            throw new \RuntimeException('config/think-cache.php 不可写，请手动赋予写权限');
+        }
+
+        $backup = $dst . '.bak';
+        if (is_file($backup)) {
+            @unlink($backup);
+        }
+        if (!@copy($dst, $backup)) {
+            throw new \RuntimeException('config/think-cache.php 备份失败，无法继续');
+        }
+
+        $bytes = @file_put_contents($dst, $payload, LOCK_EX);
+        if ($bytes === false) {
+            throw new \RuntimeException('config/think-cache.php 写入失败，原文件已备份至 ' . $backup);
+        }
+
+        @unlink($backup);
+    }
+
+    /**
+     * 测试 Redis 连通性
+     *
+     * 优先使用 phpredis 扩展（支持 AUTH 验证 + PING），
+     * 扩展不可用时回落到 fsockopen TCP 连通性检查（AUTH 不验证）。
+     *
+     * @param array{host:string,port:int,password:string,database:int} $redis
+     * @return array{success:bool, message:string}
+     */
+    public function testRedisConnection(array $redis): array
+    {
+        $host = trim((string) ($redis['host'] ?? ''));
+        if ($host === '') {
+            return ['success' => false, 'message' => 'Redis 主机不能为空'];
+        }
+        $port = (int) ($redis['port'] ?? 6379);
+        if ($port < 1 || $port > 65535) {
+            return ['success' => false, 'message' => 'Redis 端口范围必须是 1-65535'];
+        }
+        $password = (string) ($redis['password'] ?? '');
+
+        if (class_exists('\Redis')) {
+            try {
+                $client = new \Redis();
+                if (!$client->connect($host, $port, 2.0)) {
+                    return ['success' => false, 'message' => "Redis 连接失败：无法连接到 {$host}:{$port}"];
+                }
+                if ($password !== '' && !$client->auth($password)) {
+                    $client->close();
+                    return ['success' => false, 'message' => 'Redis 认证失败，请检查密码'];
+                }
+                $pong = $client->ping();
+                $client->close();
+                // 不同 phpredis 版本 PING 返回 '+PONG' / true / 'PONG' 都算成功
+                $ok = $pong === true || $pong === '+PONG' || $pong === 'PONG' || $pong === 1;
+                if (!$ok) {
+                    return ['success' => false, 'message' => 'Redis PING 未返回 PONG'];
+                }
+                return ['success' => true, 'message' => "Redis 连接成功（{$host}:{$port}）"];
+            } catch (\Throwable $e) {
+                return ['success' => false, 'message' => 'Redis 连接失败：' . $this->translateRedisError($e->getMessage())];
+            }
+        }
+
+        // 退化路径：仅做 TCP 端口连通性检查
+        $errno = 0;
+        $errstr = '';
+        $sock = @fsockopen($host, $port, $errno, $errstr, 2.0);
+        if (!$sock) {
+            $detail = $errstr !== '' ? "{$errstr} ({$errno})" : "无法连接到 {$host}:{$port}";
+            return ['success' => false, 'message' => 'Redis 连接失败：' . $detail];
+        }
+        fclose($sock);
+        return [
+            'success' => true,
+            'message' => "Redis 端口可达（{$host}:{$port}，未安装 phpredis 扩展，仅做 TCP 连通性测试）",
+        ];
+    }
+
+    /** 翻译 phpredis 异常为友好中文 */
+    private function translateRedisError(string $message): string
+    {
+        if (stripos($message, 'Connection refused') !== false) {
+            return '连接被拒绝，请确认 Redis 已启动，主机和端口正确';
+        }
+        if (stripos($message, 'timed out') !== false || stripos($message, 'timeout') !== false) {
+            return '连接超时，请确认主机、端口正确，防火墙已放行';
+        }
+        if (stripos($message, 'getaddrinfo failed') !== false || stripos($message, 'Name or service not known') !== false) {
+            return '无法解析 Redis 主机地址';
+        }
+        if (stripos($message, 'NOAUTH') !== false || stripos($message, 'WRONGPASS') !== false || stripos($message, 'AUTH') !== false) {
+            return '认证失败，请检查 Redis 密码';
+        }
+        return $message;
+    }
+
+    /**
+     * 写入/更新主项目 config/redis.php
+     *
+     * 始终使用 env() 形式（无论 Redis 是否填写、测试是否通过），让 .env 中 REDIS_* 在运行时被读取；
+     * fallback 用 webman 默认值（127.0.0.1:6379，无密码，db=0）。
+     * 与 writeDatabaseConfig 一致，文件已存在时先备份再覆盖，失败回滚。
+     */
+    public function writeRedisConfig(): void
+    {
+        $configPath = base_path() . '/config/redis.php';
+        $configDir = dirname($configPath);
+
+        $payload = $this->renderRedisConfigPhp();
+
+        if (!is_file($configPath)) {
+            if (!is_dir($configDir)) {
+                if (!@mkdir($configDir, 0755, true) && !is_dir($configDir)) {
+                    throw new \RuntimeException('无法创建 config 目录：' . $configDir);
+                }
+            }
+            if (!is_writable($configDir)) {
+                throw new \RuntimeException('config 目录不可写，无法创建 redis.php：' . $configDir);
+            }
+
+            $bytes = @file_put_contents($configPath, $payload, LOCK_EX);
+            if ($bytes === false) {
+                throw new \RuntimeException('config/redis.php 创建失败：' . $configPath);
+            }
+            return;
+        }
+
+        if (!is_writable($configPath)) {
+            throw new \RuntimeException('config/redis.php 不可写，请手动赋予写权限');
+        }
+
+        $backup = $configPath . '.bak';
+        if (is_file($backup)) {
+            @unlink($backup);
+        }
+        if (!@copy($configPath, $backup)) {
+            throw new \RuntimeException('config/redis.php 备份失败，无法继续');
+        }
+
+        $bytes = @file_put_contents($configPath, $payload, LOCK_EX);
+        if ($bytes === false) {
+            throw new \RuntimeException('config/redis.php 写入失败，原文件已备份至 ' . $backup);
+        }
+
+        @unlink($backup);
+    }
+
+    /**
+     * 渲染 config/redis.php 内容模板：
+     *
+     * - 与 webman 默认 redis.php 完全同构（保留 webman 文档头注释、单层 'default' 结构、连接池节点）
+     * - 把 host / port / password / database 全部替换为 env() 调用，
+     *   让 .env 中 REDIS_* 的值在运行时被读取；fallback 用 webman 默认值
+     * - 不引入 `stores` 等额外节点，保持源码与 webman 升级兼容
+     * - 'prefix' 默认 'nanoadmin:'（所有 Redis key 自动加上此前缀，便于多应用共享同一 Redis 实例），
+     *   用户可在 .env 中通过 REDIS_PREFIX= 覆盖；留空字符串 '' 表示不加前缀
+     */
+    private function renderRedisConfigPhp(): string
+    {
+        // 无论用户是否填写 Redis，都统一生成 env() 形式的 config/redis.php；
+        // fallback 用 webman 默认值（host=127.0.0.1 等），运行时 .env 中 REDIS_* 覆盖即可。
+        return <<<'PHP'
+<?php
+/**
+ * This file is part of webman.
+ *
+ * Licensed under The MIT License
+ * For full copyright and license information, please see the MIT-LICENSE.txt
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @author    walkor<walkor@workerman.net>
+ * @copyright walkor<workerman.net>
+ * @link      http://www.workerman.net/
+ * @license   http://www.opensource.org/licenses/mit-license.php MIT License
+ */
+
+return [
+    'default' => [
+        'password' => env('REDIS_PASSWORD', ''),
+        'host'     => env('REDIS_HOST', '127.0.0.1'),
+        'port'     => (int) env('REDIS_PORT', 6379),
+        'database' => (int) env('REDIS_DATABASE', 0),
+        'prefix'   => env('REDIS_PREFIX', 'nanoadmin:'),
+        'pool' => [
+            'max_connections' => 5,
+            'min_connections' => 1,
+            'wait_timeout' => 3,
+            'idle_timeout' => 60,
+            'heartbeat_interval' => 50,
+        ],
+    ]
+];
+PHP;
     }
 
     /**
