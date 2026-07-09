@@ -26,6 +26,7 @@ class InstallService
     private const RECOMMENDED_EXTENSIONS = ['curl', 'gd', 'fileinfo', 'zip'];
     private const MIN_PHP_VERSION = '8.1.0';
     private const MIN_COMPOSER_VERSION = '2.0.0';
+    private const COMPOSER_CHECK_TIMEOUT = 2;
 
     private string $envPath;
     private string $lockPath;
@@ -150,40 +151,114 @@ class InstallService
     /** 依次尝试 composer / composer.phar / php composer.phar，返回版本号或 null */
     private function detectComposerVersion(): ?string
     {
-        $candidates = ['composer', 'composer.phar'];
+        $commands = [
+            ['composer', '--version'],
+            ['composer.phar', '--version'],
+            ['php', 'composer.phar', '--version'],
+        ];
 
-        foreach ($candidates as $bin) {
-            $output = @shell_exec(escapeshellcmd($bin) . ' --version 2>&1');
-            if (is_string($output) && $output !== '' && stripos($output, 'composer') !== false) {
-                $v = $this->parseComposerVersion($output);
-                if ($v !== null) {
-                    return $v;
-                }
+        foreach ($commands as $command) {
+            $output = $this->runCommandWithTimeout($command, self::COMPOSER_CHECK_TIMEOUT);
+            if ($output === null || stripos($output, 'composer') === false) {
+                continue;
             }
 
-            $path = @shell_exec('command -v ' . escapeshellarg($bin) . ' 2>/dev/null');
-            if (is_string($path) && trim($path) !== '') {
-                $output2 = @shell_exec(escapeshellcmd(trim($path)) . ' --version 2>&1');
-                if (is_string($output2) && $output2 !== '') {
-                    $v = $this->parseComposerVersion($output2);
-                    if ($v !== null) {
-                        return $v;
-                    }
-                }
-            }
-
-            if ($bin === 'composer.phar') {
-                $output3 = @shell_exec('php ' . escapeshellarg($bin) . ' --version 2>&1');
-                if (is_string($output3) && $output3 !== '') {
-                    $v = $this->parseComposerVersion($output3);
-                    if ($v !== null) {
-                        return $v;
-                    }
-                }
+            $version = $this->parseComposerVersion($output);
+            if ($version !== null) {
+                return $version;
             }
         }
 
         return null;
+    }
+
+    /**
+     * 在 webman worker 里运行外部命令必须限制执行时间，并关闭 stdin。
+     * 旧版 Composer 在 root / 非交互环境下可能挂起，导致 /install 请求一直不返回。
+     *
+     * @param string[] $command
+     */
+    private function runCommandWithTimeout(array $command, int $timeoutSeconds): ?string
+    {
+        if (!function_exists('proc_open')) {
+            return null;
+        }
+
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = @proc_open($command, $descriptors, $pipes, base_path(), $this->composerProcessEnv());
+        if (!is_resource($process)) {
+            return null;
+        }
+
+        fclose($pipes[0]);
+        stream_set_blocking($pipes[1], false);
+        stream_set_blocking($pipes[2], false);
+
+        $output = '';
+        $deadline = microtime(true) + max(1, $timeoutSeconds);
+        $timedOut = false;
+
+        while (true) {
+            foreach ([1, 2] as $index) {
+                $chunk = stream_get_contents($pipes[$index]);
+                if (is_string($chunk) && $chunk !== '') {
+                    $output .= $chunk;
+                }
+            }
+
+            $status = proc_get_status($process);
+            if (!$status['running']) {
+                break;
+            }
+
+            if (microtime(true) >= $deadline) {
+                $timedOut = true;
+                break;
+            }
+
+            usleep(100000);
+        }
+
+        if ($timedOut) {
+            @proc_terminate($process);
+            usleep(100000);
+            $status = proc_get_status($process);
+            if ($status['running']) {
+                @proc_terminate($process, 9);
+            }
+        }
+
+        foreach ([1, 2] as $index) {
+            $chunk = stream_get_contents($pipes[$index]);
+            if (is_string($chunk) && $chunk !== '') {
+                $output .= $chunk;
+            }
+            fclose($pipes[$index]);
+        }
+        @proc_close($process);
+
+        return trim($output) !== '' ? $output : null;
+    }
+
+    /** @return array<string, string> */
+    private function composerProcessEnv(): array
+    {
+        $env = getenv();
+        if (!is_array($env)) {
+            $env = [];
+        }
+
+        $env['COMPOSER_ALLOW_SUPERUSER'] = '1';
+        $env['COMPOSER_NO_INTERACTION'] = '1';
+        $env['PATH'] = $env['PATH'] ?? '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
+        $env['HOME'] = $env['HOME'] ?? base_path();
+
+        return array_map(static fn ($value) => (string) $value, $env);
     }
 
     /** 从 composer --version 输出中提取版本号，如 "2.6.5" */
