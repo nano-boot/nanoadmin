@@ -3,10 +3,12 @@
     "description": "Nano Admin 后台管理系统核心插件，基于 Workerman/Webman",
     "type": "webman-plugin",
     "license": "MIT",
+    "keywords": ["admin", "webman", "backend", "php", "thinkphp", "laravel"],  
+    "homepage": "https://github.com/nano-boot/nanoadmin",
     "authors": [
         {
             "name": "Nano Admin",
-            "email": "admin@example.com"
+            "email": "ooing300@gmail.com"
         }
     ],
     "require": {
@@ -34,12 +36,8 @@
     },
     "autoload": {
         "psr-4": {
-            "Webman\\nanoadmin\\": "src/",
-            "plugin\\nanoadmin\\": "src/plugin/nanoadmin/"
-        },
-        "files": [
-            "src/plugin/nanoadmin/app/functions.php"
-        ]
+            "Webman\\nanoadmin\\": "src/"
+        }
     },
     "minimum-stability": "stable",
     "prefer-stable": true,

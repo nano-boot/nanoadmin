@@ -16,7 +16,7 @@ use Throwable;
  *
  * 设计原则：
  * - 安装阶段不走 webman 框架（配置可能不完整），用原生 PDO 直连
- * - SQL 表前缀 `th_` 统一替换为用户填写的 prefix
+ * - SQL 表前缀 `na_` 统一替换为用户填写的 prefix
  * - .env/database.php 用 env() 读取，无需在 PHP 文件里塞入运行时值
  * - 所有失败抛 \RuntimeException，由 Controller 转友好提示
  */
@@ -27,6 +27,7 @@ class InstallService
     private const MIN_PHP_VERSION = '8.1.0';
     private const MIN_COMPOSER_VERSION = '2.0.0';
     private const COMPOSER_CHECK_TIMEOUT = 2;
+    private const SQL_TABLE_PREFIX = 'na_';
 
     private string $envPath;
     private string $lockPath;
@@ -35,7 +36,7 @@ class InstallService
     private string $sqlPath;
     private string $menuInitSqlPath;
     /** 当前安装使用的表前缀（用户在向导中填写，与 database.php prefix 一致） */
-    private string $prefix = 'th_';
+    private string $prefix = self::SQL_TABLE_PREFIX;
 
     public function __construct()
     {
@@ -309,9 +310,9 @@ class InstallService
         $this->validateDbParams($params);
         $this->validateAdminParams($params);
 
-        $prefix = $params['prefix'] ?? 'na_';
+        $prefix = $params['prefix'] ?? self::SQL_TABLE_PREFIX;
         $prefix = preg_replace('/[^a-zA-Z0-9_]/', '', (string) $prefix);
-        $this->prefix = $prefix ?: 'na_';
+        $this->prefix = $prefix ?: self::SQL_TABLE_PREFIX;
 
         if ($this->isInstalled()) {
             throw new \RuntimeException('系统已安装，无需重复安装');
@@ -583,7 +584,7 @@ return [
             'password'    => env('DB_PASSWORD', ''),
             'charset'     => env('DB_CHARSET', 'utf8mb4'),
             'collation'   => 'utf8mb4_general_ci',
-            'prefix'      => env('DB_PREFIX', 'na:'),
+            'prefix'      => env('DB_PREFIX', 'na_'),
             'strict'      => true,
             'engine'      => null,
             'options'     => [
@@ -988,11 +989,19 @@ PHP;
         }
     }
 
-    /** 把 SQL 中的硬编码 `th_` 前缀替换为当前 prefix（处理反引号和裸写两种形态） */
+    /** 把 SQL 中的硬编码 `na_` 前缀替换为当前 prefix（处理反引号和裸写两种形态） */
     private function replaceTablePrefix(string $statement): string
     {
-        $statement = str_replace('`th_', '`' . $this->prefix, $statement);
-        return preg_replace('/(^|[\s,()])th_/i', '$1' . $this->prefix, $statement);
+        if ($this->prefix === self::SQL_TABLE_PREFIX) {
+            return $statement;
+        }
+
+        $statement = str_replace('`' . self::SQL_TABLE_PREFIX, '`' . $this->prefix, $statement);
+        return (string) preg_replace(
+            '/(^|[\s,().])' . preg_quote(self::SQL_TABLE_PREFIX, '/') . '/i',
+            '$1' . $this->prefix,
+            $statement
+        );
     }
 
     /** 按 ; 切分 SQL，跳过注释和 USE/CREATE DATABASE */
