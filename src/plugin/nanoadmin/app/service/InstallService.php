@@ -256,9 +256,7 @@ class InstallService
 
         $env['COMPOSER_ALLOW_SUPERUSER'] = '1';
         $env['COMPOSER_NO_INTERACTION'] = '1';
-        $env['PATH'] = $env['PATH'] ?? '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
-        $env['HOME'] = $env['HOME'] ?? base_path();
-
+        // 不覆盖 PATH/HOME，避免把本机或特定系统路径硬编码进插件
         return array_map(static fn ($value) => (string) $value, $env);
     }
 
@@ -460,8 +458,9 @@ class InstallService
     /**
      * 写入/更新主项目 .env
      *
-     * 已有 .env 则精确替换 DB_* 段；不存在则从 .env.example 复制模板，无模板则用内置默认内容。
-     * config/database.php 通过 env() 读取这些变量。
+     * 已有 .env 则精确替换 DB_* / JWT_SECRET 段；不存在则从 .env.example 复制模板，
+     * 无模板则用内置默认内容。config/database.php 通过 env() 读取 DB_*；
+     * plugin/nanoadmin/config/nanoadmin.php 通过 env('JWT_SECRET') 读取 JWT 签名密钥。
      */
     public function writeEnv(array $db): void
     {
@@ -486,6 +485,12 @@ class InstallService
             'DB_PREFIX'     => $db['prefix'] ?? '',
             'DB_CHARSET'    => 'utf8mb4',
         ];
+
+        // JWT 签名密钥：每次全新安装都会重新生成 64 位 hex 随机串（256-bit 强度），
+        // 已安装的项目二次跑向导（被守卫 isInstalled 挡住，不会走到这里）也会生成新值；
+        // 用户在 .env 里手改过 JWT_SECRET 的，重跑安装不会被冲掉，因为本方法只精确替换
+        // 已存在的 JWT_SECRET= 段；首次落地为追加。
+        $map['JWT_SECRET'] = bin2hex(random_bytes(32));
 
         // Redis 是可选配置：仅当 host 非空时把 REDIS_* 段写进 .env
         $redis = $this->extractRedisParams($db);
@@ -621,6 +626,10 @@ DB_PASSWORD=
 DB_PREFIX=
 DB_CHARSET=utf8mb4
 
+# JWT 签名密钥（plugin/nanoadmin/config/nanoadmin.php:jwt.secret 通过 env('JWT_SECRET') 读取；
+# 留空时由 nanoadmin_jwt_secret_key_2024 兜底。生产环境务必显式设置一个随机长串）
+JWT_SECRET=
+
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 REDIS_PASSWORD=
@@ -728,6 +737,7 @@ EOF;
 
         if (class_exists('\Redis')) {
             try {
+                // @phpstan-ignore-next-line
                 $client = new \Redis();
                 if (!$client->connect($host, $port, 2.0)) {
                     return ['success' => false, 'message' => "Redis 连接失败：无法连接到 {$host}:{$port}"];

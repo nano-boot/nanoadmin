@@ -76,9 +76,10 @@ class AuthMiddleware extends BaseMiddleware
                 return $handler($request);
             }
 
-            // 获取Token
-            $token = $this->extractToken($request);
-            if (empty($token)) {
+            // 获取Token（与 JwtUtil::extractFromRequest 保持一致的提取链）
+            try {
+                $token = JwtUtil::extractFromRequest();
+            } catch (ApiException $e) {
                 throw new ApiException(Code::UNAUTHORIZED, '缺少认证Token');
             }
 
@@ -165,29 +166,6 @@ class AuthMiddleware extends BaseMiddleware
         }
 
         return false;
-    }
-
-    /**
-     * 从请求中提取Token
-     *
-     * @param Request $request
-     * @return string|null
-     */
-    protected function extractToken(Request $request): ?string
-    {
-        // 1. Authorization: Bearer {token}
-        $authHeader = $request->header('Authorization', '');
-        if (!empty($authHeader)) {
-            return JwtUtil::extractTokenFromHeader($authHeader);
-        }
-
-        // 2. X-Token 自定义 header（部分前端框架用）
-        $token = $request->header('X-Token', '');
-        if (!empty($token)) {
-            return $token;
-        }
-
-        return null;
     }
 
     /**

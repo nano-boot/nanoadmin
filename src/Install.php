@@ -63,7 +63,7 @@ class Install
             if (!is_dir($sourcePath)) {
                 continue;
             }
-            copy_dir($sourcePath, $destPath);
+            copy_dir($sourcePath, $destPath, true);
             echo "Create $dest\n";
         }
     }

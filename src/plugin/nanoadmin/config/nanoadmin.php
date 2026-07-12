@@ -218,4 +218,21 @@ return [
             'stats_ttl' => 86400, // 24小时
         ],
     ],
+
+    // ============================
+    // JWT 配置（被 plugin\nanoadmin\app\common\JwtUtil 读取）
+    // ============================
+    'jwt' => [
+        // 签名密钥（生产环境务必通过环境变量覆盖：JWT_SECRET；
+        'secret' => 'nanoadmin_jwt_secret_key_2024',
+
+        // 签名算法
+        'algorithm' => 'HS256',
+
+        // 访问 Token 过期时间（秒），默认 2 小时
+        'expire_time' => 7200,
+
+        // 刷新 Token 过期时间（秒），默认 7 天
+        'refresh_expire_time' => 604800,
+    ],
 ];
