@@ -49,9 +49,12 @@ class TheHandler extends Handler
     private function handleApiException(ApiException $exception, int $status = 200): Response
     {
         // 记录错误日志（非系统错误）
-        if ($exception->getErrorCode() >= Code::SYSTEM_ERROR) {
+        if ($exception->getApiCode() >= Code::SYSTEM_ERROR) {
             $this->logException($exception, 'API异常');
         }
+
+        // 优先使用 ApiException 自身的 HTTP 状态码（如 401/403/422），与 CommonHandler 保持一致
+        $status = $exception->getHttpCode() ?: $status;
 
         return $this->buildResponse($exception, $exception->getMessage(), $status);
     }
@@ -117,7 +120,7 @@ class TheHandler extends Handler
     private function buildJsonResponse(Throwable $exception, string $defaultMessage): array
     {
         $json = $exception instanceof ApiException ? [
-            'code' => $exception->getErrorCode(),
+            'code' => $exception->getApiCode(),
             'msg' => $exception->getMessage(),
             'data' => $exception->getData(),
         ] : [

@@ -132,7 +132,7 @@ class PermissionMiddleware extends BaseMiddleware
             return $handler($request);
 
         } catch (ApiException $e) {
-            return $this->forbiddenResponse($e->getMessage(), $e->getErrorCode());
+            return $this->forbiddenResponse($e->getMessage(), $e->getApiCode());
         } catch (\Exception $e) {
             return $this->forbiddenResponse('权限验证失败', Code::FORBIDDEN->value);
         }

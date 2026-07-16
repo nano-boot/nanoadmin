@@ -22,7 +22,7 @@ use plugin\nanoadmin\app\middleware\PermissionMiddleware;
  */
 return [
     // 全局中间件
-    '@' => [
+    '' => [
         InstallGuard::class,
         CorsMiddleware::class,
         InitMiddleware::class,             // ← Phase 2 P0：提前实例化控制器

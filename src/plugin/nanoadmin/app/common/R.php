@@ -164,4 +164,23 @@ class R
     {
         return self::error($msg, Code::SYSTEM_ERROR->value);
     }
+
+    /**
+     * 抛出异常的 JSON 响应
+     * 用于把异常信息包装成统一格式返回。
+     *
+     * @param array $json    ['code' => 错误码, 'msg' => 错误信息, 'data' => 数据] 数组
+     * @param int   $httpCode HTTP 状态码（默认 400）
+     */
+    public static function exception(array $json, int $httpCode = 400): Response
+    {
+        $body = array_merge([
+            'code' => Code::SYSTEM_ERROR->value,
+            'msg'  => '系统错误',
+            'data' => null,
+            'timestamp' => time(),
+        ], $json);
+
+        return $httpCode === 400 ? json($body) : json($body)->withStatus($httpCode);
+    }
 }

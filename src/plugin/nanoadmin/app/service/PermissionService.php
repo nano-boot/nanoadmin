@@ -417,7 +417,7 @@ class PermissionService
                 $createdPermissions[] = $permission;
             } catch (ApiException $e) {
                 // 如果权限已存在，跳过
-                if ($e->getErrorCode() !== Code::DUPLICATE_NAME->value) {
+                if ($e->getApiCode() !== Code::DUPLICATE_NAME->value) {
                     throw $e;
                 }
             }

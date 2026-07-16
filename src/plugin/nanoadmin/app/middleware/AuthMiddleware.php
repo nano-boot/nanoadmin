@@ -118,12 +118,12 @@ class AuthMiddleware extends BaseMiddleware
             if ($this->recordFailedLogin) {
                 $this->recordFailedLogin($request, $e->getMessage());
             }
-            return $this->unauthorizedResponse($e->getMessage(), $e->getErrorCode());
+            return R::exception(['code' => $e->getApiCode(), 'msg' => $e->getMessage()]);
         } catch (\Exception $e) {
             if ($this->recordFailedLogin) {
                 $this->recordFailedLogin($request, '认证失败');
             }
-            return $this->unauthorizedResponse('认证失败', Code::UNAUTHORIZED->value);
+            return R::exception(['code' => Code::UNAUTHORIZED->value, 'msg' => '认证失败']);
         }
     }
 
