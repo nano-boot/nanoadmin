@@ -235,7 +235,6 @@ class RoleService extends BaseService
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
         
-        var_dump($data);
 
         $menuIds = $data['menuIds'] ?? [];
         $authCodes = $data['authCodes'] ?? [];
