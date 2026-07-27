@@ -1,0 +1,100 @@
+<template>
+  <NaDialog
+    v-model="visible"
+    :title="isEdit ? '编辑' : '新增'"
+    width="600px"
+    :confirm-loading="loading"
+    @confirm="handleConfirm"
+    @cancel="visible = false"
+  >
+    <el-form
+      ref="formRef"
+      :model="formData"
+      :rules="rules"
+      label-width="100px"
+    >
+{%- for column in formColumns %}
+      <el-form-item label="{{ column.column_comment }}" prop="{{ column.column_name }}">
+{% if column.view_type == 'input' %}
+        <el-input v-model="formData.{{ column.column_name }}" placeholder="请输入{{ column.column_comment }}" />
+{% elseif column.view_type == 'textarea' %}
+        <el-input v-model="formData.{{ column.column_name }}" type="textarea" placeholder="请输入{{ column.column_comment }}" />
+{% elseif column.view_type == 'select' %}
+        <el-select v-model="formData.{{ column.column_name }}" placeholder="请选择{{ column.column_comment }}">
+          <el-option label="选项1" value="1" />
+          <el-option label="选项2" value="2" />
+        </el-select>
+{% elseif column.view_type == 'date' %}
+        <el-date-picker v-model="formData.{{ column.column_name }}" type="date" placeholder="请选择{{ column.column_comment }}" />
+{% elseif column.view_type == 'datetime' %}
+        <el-date-picker v-model="formData.{{ column.column_name }}" type="datetime" placeholder="请选择{{ column.column_comment }}" />
+{% else %}
+        <el-input v-model="formData.{{ column.column_name }}" placeholder="请输入{{ column.column_comment }}" />
+{% endif %}
+      </el-form-item>
+{%- endfor %}
+    </el-form>
+  </NaDialog>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import NaDialog from '@/components/nano/dialog/na-dialog/NaDialog.vue'
+import type { Api.{{ namespace }}.{{ className }}Item } from '@/types/api'
+
+const props = defineProps<{
+  modelValue: boolean
+  data?: Api.{{ namespace }}.{{ className }}Item | null
+  loading?: boolean
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  confirm: [data: Record<string, any>]
+  cancel: []
+}>()
+
+const formRef = ref()
+const formData = ref<Record<string, any>>({})
+
+const visible = computed({
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val)
+})
+
+const isEdit = computed(() => !!props.data?.id)
+
+const rules = {
+{%- for column in formColumns %}
+{% if column.required == 2 %}
+  {{ column.column_name }}: [{ required: true, message: '请输入{{ column.column_comment }}', trigger: 'blur' }],
+{% endif %}
+{%- endfor %}
+}
+
+watch(() => props.modelValue, (val) => {
+  if (val) {
+    if (props.data) {
+      formData.value = { ...props.data }
+    } else {
+      formData.value = {
+{%- for column in columns %}
+{% if column.default_value %}
+        {{ column.column_name }}: '{{ column.default_value }}',
+{% endif %}
+{%- endfor %}
+      }
+    }
+  }
+})
+
+const handleConfirm = async () => {
+  try {
+    await formRef.value?.validate()
+    emit('confirm', formData.value)
+  } catch (error) {
+    console.error(error)
+  }
+}
+</script>

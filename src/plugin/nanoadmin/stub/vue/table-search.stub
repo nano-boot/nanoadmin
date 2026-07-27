@@ -1,0 +1,62 @@
+<template>
+  <ArtSearchBar
+    v-model="searchParams"
+    @reset="handleReset"
+    @search="handleSearch"
+  >
+    <ArtSearchBarItem label="关键词" prop="keyword">
+      <el-input v-model="searchParams.keyword" placeholder="请输入关键词" clearable />
+    </ArtSearchBarItem>
+{%- for column in queryColumns %}
+    <ArtSearchBarItem label="{{ column.column_comment }}" prop="{{ column.column_name }}">
+{% if column.view_type == 'select' %}
+      <el-select v-model="searchParams.{{ column.column_name }}" placeholder="请选择" clearable>
+        <el-option label="选项1" value="1" />
+        <el-option label="选项2" value="2" />
+      </el-select>
+{% else %}
+      <el-input v-model="searchParams.{{ column.column_name }}" placeholder="请输入{{ column.column_comment }}" clearable />
+{% endif %}
+    </ArtSearchBarItem>
+{%- endfor %}
+  </ArtSearchBar>
+</template>
+
+<script setup lang="ts">
+import { reactive } from 'vue'
+import ArtSearchBar from '@/components/art/ArtSearchBar.vue'
+import ArtSearchBarItem from '@/components/art/ArtSearchBarItem.vue'
+
+const props = defineProps<{
+  modelValue?: Record<string, any>
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [value: Record<string, any>]
+  reset: []
+  search: []
+}>()
+
+const searchParams = reactive({
+  keyword: props.modelValue?.keyword || '',
+{%- for column in queryColumns %}
+  {{ column.column_name }}: props.modelValue?.{{ column.column_name }} || '',
+{%- endfor %}
+})
+
+const handleReset = () => {
+  Object.assign(searchParams, {
+    keyword: '',
+{%- for column in queryColumns %}
+    {{ column.column_name }}: '',
+{%- endfor %}
+  })
+  emit('reset')
+  emit('search')
+}
+
+const handleSearch = () => {
+  emit('update:modelValue', { ...searchParams })
+  emit('search')
+}
+</script>

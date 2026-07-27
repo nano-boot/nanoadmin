@@ -1,0 +1,31 @@
+-- =====================================================
+-- {{ businessName|default(tableComment) }} 菜单SQL
+-- 生成时间: {{ date }}
+-- 作者: {{ author }}
+-- =====================================================
+
+-- 菜单SQL（请根据实际菜单结构调整）
+-- INSERT INTO `na_sys_menu`(`parent_id`, `name`, `icon`, `path`, `component`, `type`, `sort`, `hide`, `hide_tab`, `cache`, `fixed_tab`, `full_page`, `status`, `created_at`, `updated_at`)
+-- VALUES (0, '{{ menuName|default(businessName) }}', 'ri:file-list-line', '{{ namespace }}/{{ lowerClassName }}', '/plugin/{{ namespace }}/{{ lowerClassName }}/index', 'M', 100, 0, 0, 1, 0, 0, 1, NOW(), NOW());
+
+-- 权限SQL
+{% for menu in generateMenus %}
+{% if menu == 'index' or menu == 'query' %}
+-- INSERT INTO `na_sys_permission`(`code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`)
+-- VALUES ('{{ namespace }}:{{ lowerClassName }}:index', '{{ businessName|default(tableComment) }}列表', '{{ lowerClassName }}', 'index', '查看{{ businessName|default(tableComment) }}列表', 1, 100, 0);
+{% elseif menu == 'store' or menu == 'create' %}
+-- INSERT INTO `na_sys_permission`(`code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`)
+-- VALUES ('{{ namespace }}:{{ lowerClassName }}:store', '创建{{ businessName|default(tableComment) }}', '{{ lowerClassName }}', 'store', '创建{{ businessName|default(tableComment) }}', 1, 101, 0);
+{% elseif menu == 'read' %}
+-- INSERT INTO `na_sys_permission`(`code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`)
+-- VALUES ('{{ namespace }}:{{ lowerClassName }}:show', '查看{{ businessName|default(tableComment) }}详情', '{{ lowerClassName }}', 'show', '查看{{ businessName|default(tableComment) }}详情', 1, 102, 0);
+{% elseif menu == 'update' %}
+-- INSERT INTO `na_sys_permission`(`code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`)
+-- VALUES ('{{ namespace }}:{{ lowerClassName }}:update', '更新{{ businessName|default(tableComment) }}', '{{ lowerClassName }}', 'update', '更新{{ businessName|default(tableComment) }}', 1, 103, 0);
+{% elseif menu == 'destroy' %}
+-- INSERT INTO `na_sys_permission`(`code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`)
+-- VALUES ('{{ namespace }}:{{ lowerClassName }}:destroy', '删除{{ businessName|default(tableComment) }}', '{{ lowerClassName }}', 'destroy', '删除{{ businessName|default(tableComment) }}', 1, 104, 0);
+{% endif %}
+{% endfor %}
+
+-- 请执行以上SQL后，将菜单ID绑定到角色权限中

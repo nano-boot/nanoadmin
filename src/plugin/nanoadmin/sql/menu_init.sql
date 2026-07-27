@@ -18,14 +18,14 @@
 
 -- 插入默认菜单数据，匹配前端路由结构
 -- 字段顺序: id, name, title, path, component, icon, redirect, permission,
---           parent_id, sort, type, status, hide, hide_tab, cache, fixed_tab, active_path, deleted
+--           parent_id, sort, type, status, hide, hide_tab, cache, fixed_tab, active_path, deleted_at
 -- 字段顺序: id, name(中文标题), path, component, icon, redirect, permission,
---           parent_id, sort, type, status, hide, hide_tab, cache, fixed_tab, active_path, deleted
+--           parent_id, sort, type, status, hide, hide_tab, cache, fixed_tab, active_path, deleted_at
 -- 注意：na_sys_menu 表没有独立的 title 列，菜单标题直接存在 name 字段
 REPLACE INTO `na_sys_menu` (
     `id`, `name`, `path`, `component`, `icon`, `redirect`, `permission`,
     `parent_id`, `sort`, `type`, `status`,
-    `hide`, `hide_tab`, `cache`, `fixed_tab`, `active_path`, `deleted`
+    `hide`, `hide_tab`, `cache`, `fixed_tab`, `active_path`, `deleted_at`
 ) VALUES
 -- === 一级菜单
 (1, '数据面板', '/dashboard', '', 'ri:pie-chart-line', '', '',
@@ -68,7 +68,7 @@ REPLACE INTO `na_sys_menu` (
 -- 按钮节点的 name 存中文按钮名；permission 字段同时承担动作权限标识
 REPLACE INTO `na_sys_menu` (
     `id`, `name`, `path`, `component`, `permission`, `parent_id`,
-    `sort`, `type`, `status`, `hide`, `deleted`
+    `sort`, `type`, `status`, `hide`, `deleted_at`
 ) VALUES
 -- 用户管理按钮（parent_id=200 -> 用户管理，path 只写自己那一段）
 (2000, '用户列表', 'list',      '', 'sys:admin:query',           200,  100, 'B', 1, 1, 0),

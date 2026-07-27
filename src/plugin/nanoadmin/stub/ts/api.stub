@@ -1,0 +1,118 @@
+/**
+ * {{ businessName|default(tableComment) }} API
+{% if tableComment %}
+ * {{ tableComment }}相关接口
+{% endif %}
+ */
+import { request } from '@/utils/request'
+
+{%- for column in columns %}
+{% if column.dict_type %}
+import { getDictData } from '@/hooks/useDict'
+{% break %}
+{% endif %}
+{%- endfor %}
+
+{%- set requestMethod = "export" %}
+{% for menu in generateMenus %}
+{% if menu == 'index' or menu == 'query' %}
+{% set requestMethod = "get" %}
+{% elseif menu == 'store' or menu == 'create' %}
+{% set requestMethod = "post" %}
+{% elseif menu == 'update' %}
+{% set requestMethod = "put" %}
+{% elseif menu == 'destroy' or menu == 'delete' %}
+{% set requestMethod = "delete" %}
+{% endif %}
+{% endfor %}
+
+{%- set hasPage = false %}
+{% for menu in generateMenus %}
+{% if menu == 'index' %}
+{% set hasPage = true %}
+{% endif %}
+{% endfor %}
+
+{%- set hasStore = false %}
+{% for menu in generateMenus %}
+{% if menu == 'store' %}
+{% set hasStore = true %}
+{% endif %}
+{% endfor %}
+
+{%- set hasUpdate = false %}
+{% for menu in generateMenus %}
+{% if menu == 'update' %}
+{% set hasUpdate = true %}
+{% endif %}
+{% endfor %}
+
+{%- set hasDestroy = false %}
+{% for menu in generateMenus %}
+{% if menu == 'destroy' %}
+{% set hasDestroy = true %}
+{% endif %}
+{% endfor %}
+
+{%- set hasShow = false %}
+{% for menu in generateMenus %}
+{% if menu == 'read' %}
+{% set hasShow = true %}
+{% endif %}
+{% endfor %}
+
+{% if hasPage %}
+/**
+ * 获取{{ businessName|default(tableComment) }}列表
+ */
+export function getPage(params: Record<string, any>) {
+  return request.get<Api.Response<Api.PageResult<Api.{{ namespace }}.{{ className }}Item>>>(
+    '/{{ namespace }}/{{ lowerClassName }}',
+    { params }
+  )
+}
+{% endif %}
+
+{% if hasShow %}
+/**
+ * 获取{{ businessName|default(tableComment) }}详情
+ */
+export function show(id: number) {
+  return request.get<Api.Response<Api.{{ namespace }}.{{ className }}Item>>(
+    `/{{ namespace }}/{{ lowerClassName }}/${id}`
+  )
+}
+{% endif %}
+
+{% if hasStore %}
+/**
+ * 创建{{ businessName|default(tableComment) }}
+ */
+export function store(data: Record<string, any>) {
+  return request.post<Api.Response<Api.{{ namespace }}.{{ className }}Item>>(
+    '/{{ namespace }}/{{ lowerClassName }}',
+    data
+  )
+}
+{% endif %}
+
+{% if hasUpdate %}
+/**
+ * 更新{{ businessName|default(tableComment) }}
+ */
+export function update(id: number, data: Record<string, any>) {
+  return request.put<Api.Response<Api.{{ namespace }}.{{ className }}Item>>(
+    `/{{ namespace }}/{{ lowerClassName }}/${id}`,
+    data
+  )
+}
+{% endif %}
+
+{% if hasDestroy %}
+/**
+ * 删除{{ businessName|default(tableComment) }}
+ */
+export function destroy(id: number) {
+  return request.delete<Api.Response<null>>(`/{{ namespace }}/{{ lowerClassName }}/${id}`)
+}
+{% endif %}

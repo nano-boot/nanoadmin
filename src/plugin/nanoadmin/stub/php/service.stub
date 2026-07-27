@@ -1,0 +1,45 @@
+<?php
+
+namespace {{ namespace }}\{{ packageName }}\Service;
+
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\model\{{ packageName }}\{{ className }};
+use plugin\nanoadmin\app\service\BaseService;
+
+/**
+ * {{ businessName|default(tableComment) }}服务
+ */
+class {{ className }}Service extends BaseService
+{
+    public function __construct({{ className }} $model)
+    {
+        parent::__construct($model);
+    }
+
+    protected function getNotFoundCode(): Code
+    {
+        return Code::NOT_FOUND;
+    }
+
+    protected function getNotFoundMessage(): string
+    {
+        return '{{ businessName|default(tableComment) }}不存在';
+    }
+
+    /**
+     * 创建
+     */
+    public function create(array $data): {{ className }}
+    {
+        return parent::create($data);
+    }
+
+    /**
+     * 更新
+     */
+    public function update(int $id, array $data): {{ className }}
+    {
+        return parent::update($id, $data);
+    }
+}

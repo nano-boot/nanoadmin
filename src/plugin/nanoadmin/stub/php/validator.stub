@@ -1,0 +1,98 @@
+<?php
+declare(strict_types=1);
+
+namespace {{ namespace }}\{{ packageName }}\Validator;
+
+use plugin\nanoadmin\app\model\{{ packageName }}\{{ className }};
+use plugin\nanoadmin\app\validator\ValidatorBase;
+use support\validation\Rule;
+
+/**
+ * {{ businessName|default(tableComment) }}验证器
+ */
+class {{ className }}Validator extends ValidatorBase
+{
+    protected ?string $model = {{ className }}::class;
+    protected string $primaryKey = '{{ primaryKey }}';
+
+    public function rules(): array
+    {
+        return [
+{%- for column in columns %}
+{% if column.required == 2 %}
+            '{{ column.column_name }}' => [
+                'required',
+{% if column.php_type == 'int' or column.php_type == 'integer' %}
+                'integer',
+{% elseif column.php_type == 'float' or column.php_type == 'double' %}
+                'numeric',
+{% else %}
+                'string',
+{% if column.view_type == 'input' and '255' in column.column_type %}
+                'max:255',
+{% elseif column.view_type == 'textarea' %}
+                'max:2000',
+{% endif %}
+{% endif %}
+            ],
+{% endif %}
+{%- endfor %}
+            'id' => [
+                'required',
+                'integer',
+                'gt:0',
+            ],
+            'ids' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+            'ids.*' => [
+                'required',
+                'integer',
+                'gt:0',
+            ],
+            'page' => [
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+            'limit' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:100',
+            ],
+            'keyword' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+        ];
+    }
+
+    public function scenes(): array
+    {
+        return [
+            'page' => ['page', 'limit', 'keyword'],
+            'show' => ['id'],
+            'store' => [
+{%- for column in columns %}
+{% if column.insertable == 2 and column.required == 2 %}
+                '{{ column.column_name }}',
+{% endif %}
+{%- endfor %}
+            ],
+            'update' => [
+                'id',
+{%- for column in columns %}
+{% if column.editable == 2 %}
+                '{{ column.column_name }}',
+{% endif %}
+{%- endfor %}
+            ],
+            'destroy' => ['id'],
+            'batchDestroy' => ['ids'],
+        ];
+    }
+}

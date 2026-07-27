@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS na_sys_role (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
 
 -- 3. 权限表
+DROP TABLE IF EXISTS `na_sys_permission`;
 CREATE TABLE IF NOT EXISTS na_sys_permission (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '权限ID',
     code VARCHAR(100) NOT NULL UNIQUE COMMENT '权限代码',
@@ -87,12 +88,13 @@ CREATE TABLE IF NOT EXISTS na_sys_permission (
     `sort` int(11) DEFAULT 100 COMMENT '排序',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+    deleted_at int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
     
     INDEX idx_permission_code (code),
     INDEX idx_resource_action (resource, action),
     INDEX idx_status (status),
-    INDEX idx_deleted (deleted)
+    INDEX idx_updated_at (updated_at),
+    INDEX idx_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';
 
 -- 4. 菜单表
@@ -143,7 +145,7 @@ CREATE TABLE IF NOT EXISTS na_sys_menu (
     -- 审计字段
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+    deleted_at int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
     
     -- 索引
     INDEX idx_parent_id (parent_id),
@@ -153,7 +155,7 @@ CREATE TABLE IF NOT EXISTS na_sys_menu (
     INDEX idx_type (type),
     INDEX idx_sort (sort),
     INDEX idx_status (status),
-    INDEX idx_deleted (deleted)
+    INDEX idx_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='菜单表';
 
 
@@ -205,7 +207,7 @@ CREATE TABLE IF NOT EXISTS na_sys_file (
     status TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+    deleted_at int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
 
     INDEX idx_original_name (original_name),
     INDEX idx_file_hash (file_hash),
@@ -213,7 +215,7 @@ CREATE TABLE IF NOT EXISTS na_sys_file (
     INDEX idx_storage_type (storage_type),
     INDEX idx_status (status),
     INDEX idx_created_at (created_at),
-    INDEX idx_deleted (deleted)
+    INDEX idx_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件表';
 
 -- 9. 字典类型表
@@ -226,12 +228,12 @@ CREATE TABLE IF NOT EXISTS na_sys_dict_type (
     sort INT(11) DEFAULT 100 COMMENT '排序',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+    deleted_at int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
 
     INDEX idx_code (code),
     INDEX idx_status (status),
     INDEX idx_sort (sort),
-    INDEX idx_deleted (deleted)
+    INDEX idx_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典类型表';
 
 -- 10. 字典数据表
@@ -244,11 +246,11 @@ CREATE TABLE IF NOT EXISTS na_sys_dict_data (
     status TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+    deleted_at int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
 
     INDEX idx_dict_type_id (dict_type_id),
     INDEX idx_status (status),
-    INDEX idx_deleted (deleted)
+    INDEX idx_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典数据表';
 
 
@@ -300,14 +302,14 @@ CREATE TABLE IF NOT EXISTS `na_sys_config` (
     `status` TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    `deleted` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+    `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
 
     INDEX idx_key (`key`),
     INDEX idx_group (`group`),
     INDEX idx_type (`type`),
     INDEX idx_sort (`sort`),
     INDEX idx_status (`status`),
-    INDEX idx_deleted (`deleted`)
+    INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统配置表';
 
 -- =====================================================
@@ -397,7 +399,7 @@ ON DUPLICATE KEY UPDATE
 `description` = VALUES(`description`),
 `status` = VALUES(`status`),
 `sort` = VALUES(`sort`),
-`deleted` = VALUES(`deleted`);
+`deleted_at` = VALUES(`deleted_at`);
 
 INSERT INTO `na_sys_admin` (`id`, `username`, `password`, `nickname`, `gender`, `status`, `deleted`) VALUES
 (1, 'admin', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '超级管理员', 1,1, 0),
@@ -406,14 +408,14 @@ ON DUPLICATE KEY UPDATE
 `password` = VALUES(`password`),
 `nickname` = VALUES(`nickname`),
 `status` = VALUES(`status`),
-`deleted` = VALUES(`deleted`);
+`deleted_at` = VALUES(`deleted_at`);
 
 INSERT INTO `na_sys_admin_role` (`admin_id`, `role_id`) VALUES
 (1, 1),
 (2, 2)
 ON DUPLICATE KEY UPDATE `role_id` = VALUES(`role_id`);
 
-INSERT INTO `na_sys_permission` (`id`, `code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted`) VALUES
+INSERT INTO `na_sys_permission` (`id`, `code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`) VALUES
 (1, 'sys:admin:query', '管理员列表', 'admin', 'query', '查看管理员列表', 1, 100, 0),
 (2, 'sys:admin:create', '创建管理员', 'admin', 'create', '创建新管理员', 1, 101, 0),
 (3, 'sys:admin:query', '查看管理员', 'admin', 'query', '查看管理员详情', 1, 102, 0),
@@ -461,7 +463,7 @@ ON DUPLICATE KEY UPDATE
 `description` = VALUES(`description`),
 `status` = VALUES(`status`),
 `sort` = VALUES(`sort`),
-`deleted` = VALUES(`deleted`);
+`updated_at` = VALUES(`updated_at`);
 
 INSERT INTO `na_sys_role_permission` (`role_id`, `permission_id`) VALUES
 (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
@@ -482,3 +484,78 @@ ON DUPLICATE KEY UPDATE `permission_id` = VALUES(`permission_id`);
 -- 2. 页面节点（type='M' 或 'D'）不设置 permission
 -- 3. 同级按钮节点 permission 不可重复
 -- =====================================================
+
+-- =====================================================
+-- 代码生成器表
+-- =====================================================
+
+-- 代码生成配置表
+CREATE TABLE IF NOT EXISTS `na_sys_generate_tables` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `table_name` varchar(100) NOT NULL DEFAULT '' COMMENT '表名称',
+  `table_comment` varchar(500) NOT NULL DEFAULT '' COMMENT '表描述',
+  `class_name` varchar(100) NOT NULL DEFAULT '' COMMENT '类名称',
+  `business_name` varchar(100) NOT NULL DEFAULT '' COMMENT '业务名称',
+  `namespace` varchar(100) NOT NULL DEFAULT 'tool' COMMENT '命名空间',
+  `package_name` varchar(100) NOT NULL DEFAULT 'tool' COMMENT '包名称',
+  `template` varchar(20) NOT NULL DEFAULT 'plugin' COMMENT '应用类型：plugin/app',
+  `tpl_category` varchar(20) NOT NULL DEFAULT 'single' COMMENT '生成类型：single(单表)/tree(树表)',
+  `menu_name` varchar(100) NOT NULL DEFAULT '' COMMENT '菜单名称',
+  `belong_menu_id` bigint NOT NULL DEFAULT 0 COMMENT '所属菜单ID',
+  `generate_menus` varchar(255) NOT NULL DEFAULT 'index,save,update,read,destroy' COMMENT '生成的菜单',
+  `options` text COMMENT '扩展选项(JSON)',
+  `source` varchar(50) NOT NULL DEFAULT '' COMMENT '数据源',
+  `deleted_at` int NOT NULL DEFAULT 0 COMMENT '删除时间（0未删除，时间戳为已删除）',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  INDEX idx_table_name (`table_name`),
+  INDEX idx_deleted_at (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='代码生成配置表';
+
+-- 代码生成字段表
+CREATE TABLE IF NOT EXISTS `na_sys_generate_columns` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `table_id` bigint NOT NULL DEFAULT 0 COMMENT '所属表ID',
+  `column_name` varchar(100) NOT NULL DEFAULT '' COMMENT '字段名称',
+  `column_comment` varchar(500) NOT NULL DEFAULT '' COMMENT '字段描述',
+  `column_type` varchar(50) NOT NULL DEFAULT '' COMMENT '字段类型',
+  `php_type` varchar(50) NOT NULL DEFAULT 'string' COMMENT 'PHP类型',
+  `primary_key` tinyint(1) NOT NULL DEFAULT 1 COMMENT '主键：1-否 2-是',
+  `required` tinyint(1) NOT NULL DEFAULT 1 COMMENT '必填：1-否 2-是',
+  `insertable` tinyint(1) NOT NULL DEFAULT 1 COMMENT '可新增：1-否 2-是',
+  `editable` tinyint(1) NOT NULL DEFAULT 1 COMMENT '可编辑：1-否 2-是',
+  `show_list` tinyint(1) NOT NULL DEFAULT 1 COMMENT '列表显示：1-否 2-是',
+  `queriable` tinyint(1) NOT NULL DEFAULT 1 COMMENT '可查询：1-否 2-是',
+  `query_type` varchar(20) NOT NULL DEFAULT 'eq' COMMENT '查询方式',
+  `view_type` varchar(50) NOT NULL DEFAULT 'input' COMMENT '视图类型',
+  `dict_type` varchar(100) NOT NULL DEFAULT '' COMMENT '字典类型',
+  `options` text COMMENT '扩展选项(JSON)',
+  `sort` int NOT NULL DEFAULT 0 COMMENT '排序',
+  `override` tinyint(1) NOT NULL DEFAULT 0 COMMENT '覆盖：0-否 1-是',
+  `default_value` varchar(255) NOT NULL DEFAULT '' COMMENT '默认值',
+  `deleted_at` int NOT NULL DEFAULT 0 COMMENT '删除时间（0未删除，时间戳为已删除）',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  INDEX idx_table_id (`table_id`),
+  INDEX idx_deleted_at (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='代码生成字段表';
+
+-- =====================================================
+-- 代码生成器菜单
+-- =====================================================
+INSERT INTO `na_sys_menu`(`id`, `parent_id`, `name`, `icon`, `path`, `component`, `type`, `sort`, `hide`, `hide_tab`, `cache`, `fixed_tab`, `full_page`, `status`) VALUES
+(100, 0, '代码生成', 'ri:code-box-line', 'tool/generate', '/plugin/tool/generate/index', 'M', 100, 0, 0, 1, 0, 0, 1)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `icon` = VALUES(`icon`), `path` = VALUES(`path`), `component` = VALUES(`component`);
+
+-- 代码生成器权限
+INSERT INTO `na_sys_permission`(`code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`) VALUES
+('tool:generate:index', '代码生成列表', 'generate', 'index', '查看代码生成列表', 1, 100, 0),
+('tool:generate:loadTable', '装载数据表', 'generate', 'loadTable', '装载数据表', 1, 101, 0),
+('tool:generate:sync', '同步表结构', 'generate', 'sync', '同步表结构', 1, 102, 0),
+('tool:generate:preview', '代码预览', 'generate', 'preview', '预览生成代码', 1, 103, 0),
+('tool:generate:generate', '生成代码', 'generate', 'generate', '生成代码', 1, 104, 0),
+('tool:generate:generateFile', '生成到项目', 'generate', 'generateFile', '生成代码到项目', 1, 105, 0)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `description` = VALUES(`description`);
+

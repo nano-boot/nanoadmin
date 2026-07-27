@@ -16,3 +16,4 @@
 /app/common/the-admin-service.code-workspace
 /app/validator/README.md
 composer.lock
+CODE_GENERATOR_DEV.md

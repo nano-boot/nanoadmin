@@ -1,0 +1,124 @@
+<?php
+
+namespace {{ namespace }}\{{ packageName }}\Controller;
+
+use OpenApi\Attributes as OA;
+use plugin\nanoadmin\app\attribute\Permission;
+use plugin\nanoadmin\app\common\R;
+use plugin\nanoadmin\app\common\ApiException;
+use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\middleware\AuthMiddleware;
+use plugin\nanoadmin\app\middleware\PermissionMiddleware;
+use plugin\nanoadmin\app\service\{{ packageName }}\{{ className }}Service;
+use plugin\nanoadmin\app\validator\{{ packageName }}\{{ className }}Validator;
+use support\annotation\Middleware;
+use support\Request;
+use support\Response;
+
+/**
+ * {{ businessName|default(tableComment) }}控制器
+ */
+#[OA\Tag(name: '{{ businessName|default(tableComment) }}', description: '{{ tableComment }}管理')]
+#[Permission(title: '{{ businessName|default(tableComment) }}管理', code: '{{ namespace }}:{{ lowerClassName }}')]
+#[Middleware(AuthMiddleware::class, PermissionMiddleware::class)]
+class {{ className }}Controller
+{
+    private {{ className }}Service $service;
+    private {{ className }}Validator $validator;
+
+    public function __construct(
+        {{ className }}Service $service,
+        {{ className }}Validator $validator
+    ) {
+        $this->service = $service;
+        $this->validator = $validator;
+    }
+
+    #[OA\Get(path: '/sys/{{ namespace }}/{{ lowerClassName }}', summary: '{{ businessName|default(tableComment) }}列表')]
+    #[OA\Response(response: '200', description: '成功')]
+    public function index(Request $request): Response
+    {
+        try {
+            $params = $this->validator->scene('page')->setGet()->check();
+            return R::paginate($this->service->getPage($params));
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('获取列表失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
+    }
+
+    #[OA\Get(path: '/sys/{{ namespace }}/{{ lowerClassName }}/{id}', summary: '{{ businessName|default(tableComment) }}详情')]
+    #[OA\Response(response: '200', description: '成功')]
+    public function show(int $id): Response
+    {
+        try {
+            $params = $this->validator->scene('show')->setPath()->check();
+            return R::success($this->service->getById($params['id']), '获取详情成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('获取详情失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
+    }
+
+    #[OA\Post(path: '/sys/{{ namespace }}/{{ lowerClassName }}', summary: '创建{{ businessName|default(tableComment) }}')]
+    #[OA\Response(response: '200', description: '成功')]
+    public function store(Request $request): Response
+    {
+        try {
+            $params = $this->validator->scene('store')->setPost()->check();
+            $data = $this->service->create($params);
+            return R::created($data, '创建成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('创建失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
+    }
+
+    #[OA\Put(path: '/sys/{{ namespace }}/{{ lowerClassName }}/{id}', summary: '更新{{ businessName|default(tableComment) }}')]
+    #[OA\Response(response: '200', description: '成功')]
+    public function update(Request $request, int $id): Response
+    {
+        try {
+            $params = $this->validator->scene('update')->withContext(['excludeId' => $id])->setAll()->check();
+            $data = $this->service->update($params['id'], $params);
+            return R::data($data, '更新成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('更新失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
+    }
+
+    #[OA\Delete(path: '/sys/{{ namespace }}/{{ lowerClassName }}/{id}', summary: '删除{{ businessName|default(tableComment) }}')]
+    #[OA\Response(response: '200', description: '成功')]
+    public function destroy(int $id): Response
+    {
+        try {
+            $params = $this->validator->scene('destroy')->setPath()->check();
+            $this->service->delete($params['id']);
+            return R::success(null, '删除成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('删除失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
+    }
+
+    #[OA\Post(path: '/sys/{{ namespace }}/{{ lowerClassName }}/batch-destroy', summary: '批量删除{{ businessName|default(tableComment) }}')]
+    #[OA\Response(response: '200', description: '成功')]
+    public function batchDestroy(Request $request): Response
+    {
+        try {
+            $params = $this->validator->scene('batchDestroy')->setPost()->check();
+            $result = $this->service->batchDelete($params['ids']);
+            return R::success($result, '批量删除成功');
+        } catch (ApiException $e) {
+            return R::error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return R::error('批量删除失败：' . $e->getMessage(), Code::SYSTEM_ERROR->value);
+        }
+    }
+}

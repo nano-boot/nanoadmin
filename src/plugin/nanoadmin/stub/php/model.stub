@@ -1,0 +1,66 @@
+<?php
+
+namespace {{ namespace }}\{{ packageName }}\Model;
+
+use plugin\nanoadmin\app\model\BaseModel;
+
+/**
+ * {{ businessName|default(tableComment) }}模型
+{% for column in columns %}
+ * @property {{ column.php_type }} ${{ column.column_name }} {{ column.column_comment }}
+{% endfor %}
+ */
+class {{ className }} extends BaseModel
+{
+    /**
+     * 表名
+     * @var string
+     */
+    protected $table = '{{ tableName }}';
+
+    /**
+     * 主键
+     * @var string
+     */
+    protected $primaryKey = '{{ primaryKey }}';
+
+    /**
+     * 可批量赋值的属性
+     * @var array
+     */
+    protected $fillable = [
+{%- for column in columns %}
+{% if column.insertable == 2 %}
+        '{{ column.column_name }}',
+{% endif %}
+{%- endfor %}
+    ];
+
+    /**
+     * 需要转换的属性类型
+     * @var array
+     */
+    protected $casts = [
+{%- for column in columns %}
+{% if column.php_type == 'int' or column.php_type == 'integer' %}
+        '{{ column.column_name }}' => 'integer',
+{% elseif column.php_type == 'float' or column.php_type == 'double' %}
+        '{{ column.column_name }}' => 'float',
+{% elseif column.php_type == 'bool' or column.php_type == 'boolean' %}
+        '{{ column.column_name }}' => 'boolean',
+{% endif %}
+{%- endfor %}
+    ];
+
+    /**
+     * 搜索字段配置
+     * @var array
+     */
+    protected static array $searchLikeFields = [
+{%- for column in columns %}
+{% if column.queriable == 2 %}
+        '{{ column.column_name }}',
+{% endif %}
+{%- endfor %}
+    ];
+}
