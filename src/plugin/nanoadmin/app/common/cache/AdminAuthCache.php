@@ -98,7 +98,7 @@ class AdminAuthCache
     protected function loadAllPermissions(): array
     {
         return Permission::where('status', 1)
-            ->where('deleted', false)
+            ->where('deleted_at', 0)
             ->whereNotNull('code')
             ->where('code', '<>', '')
             ->pluck('code')
@@ -163,7 +163,7 @@ class AdminAuthCache
     {
         $admin = Admin::with(['roles.permissions' => function ($query) {
             $query->where('status', 1)
-                  ->where('deleted', false)
+                  ->where('deleted_at', 0)
                   ->whereNotNull('code')
                   ->where('code', '<>', '');
         }])->find($adminId);

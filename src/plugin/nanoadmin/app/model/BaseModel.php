@@ -49,7 +49,7 @@ abstract class BaseModel extends Model
     protected $casts = [
         'status' => 'integer',
         'sort' => 'integer',
-        'deleted' => 'boolean',
+        'deleted_at' => 'integer',
         'created_at' => 'datetime:Y-m-d',
         'updated_at' => 'datetime:Y-m-d',
     ];

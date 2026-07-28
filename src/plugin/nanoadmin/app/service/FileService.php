@@ -77,7 +77,7 @@ class FileService extends BaseService
 
         // 检查文件是否已存在（通过哈希值）
         $existingFile = $this->model->where('file_hash', $fileInfo['file_hash'])
-            ->where('deleted', false)
+            ->where('deleted_at', 0)
             ->first();
 
         if ($existingFile) {
@@ -205,7 +205,7 @@ class FileService extends BaseService
             throw new ApiException(Code::PARAMETER_ERROR, '请选择要删除的文件');
         }
 
-        $files = $this->model->whereIn('id', $normalizedIds)->where('deleted', false)->get();
+        $files = $this->model->whereIn('id', $normalizedIds)->where('deleted_at', 0)->get();
 
         foreach ($files as $file) {
             /** @var File $file */

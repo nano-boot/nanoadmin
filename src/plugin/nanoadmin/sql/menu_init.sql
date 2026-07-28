@@ -36,6 +36,8 @@ REPLACE INTO `na_sys_menu` (
  0,  100, 'D', 1, 0, 0, 1, 0, '', 0),
 (4, '接口管理', '/interface', '', 'ri:code-view', '', '',
  0,  100, 'D', 1, 0, 0, 1, 0,  '', 0),
+(5, '代码生成', '/tool/generate', '/plugin/tool/generate/index', 'ri:code-box-line', '', '',
+ 0,  100, 'M', 1, 0, 0, 1, 0,  '', 0),
 
 -- === 二级页面（M 类型，permission 为空，path 只写自己那一段，由 buildFullPath 自动拼接父路径）===
 (100, '控制台', 'console', '/dashboard/console', 'ri:dashboard-2-line', '', '',
@@ -113,7 +115,15 @@ REPLACE INTO `na_sys_menu` (
 (3040, '登录日志列表', 'list',   '', 'sys:log:login:query',   304,  100, 'B', 1, 1, 0),
 (3041, '删除登录日志', 'delete', '', 'sys:log:login:delete', 304,  100, 'B', 1, 1, 0),
 (3050, '操作日志列表', 'list',   '', 'sys:log:operation:query',   305,  100, 'B', 1, 1, 0),
-(3051, '删除操作日志', 'delete', '', 'sys:log:operation:delete', 305,  100, 'B', 1, 1, 0);
+(3051, '删除操作日志', 'delete', '', 'sys:log:operation:delete', 305,  100, 'B', 1, 1, 0),
+
+-- 代码生成器按钮（parent_id=5 -> 代码生成器，path 只写自己那一段）
+(5000, '代码生成列表', 'list',       '', 'tool:generate:index',        5,  100, 'B', 1, 1, 0),
+(5001, '装载数据表', 'load-table',   '', 'tool:generate:loadTable',    5,  100, 'B', 1, 1, 0),
+(5002, '同步表结构', 'sync',         '', 'tool:generate:sync',          5,  100, 'B', 1, 1, 0),
+(5003, '代码预览',   'preview',      '', 'tool:generate:preview',       5,  100, 'B', 1, 1, 0),
+(5004, '生成代码',   'generate',    '', 'tool:generate:generate',      5,  100, 'B', 1, 1, 0),
+(5005, '生成到项目', 'generateFile','', 'tool:generate:generateFile',  5,  100, 'B', 1, 1, 0);
 
 -- =====================================================
 -- swagger 文档菜单特殊配置（link 字段不在上方批量插入的列定义中，单独 UPDATE）

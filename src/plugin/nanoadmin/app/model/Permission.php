@@ -54,7 +54,7 @@ class Permission extends BaseModel
         'id' => 'integer',
         'status' => 'integer',
         'sort' => 'integer',
-        'deleted' => 'boolean',
+        'deleted_at' => 'integer',
         'created_at' => 'string',
         'updated_at' => 'string'
     ];
@@ -283,7 +283,7 @@ class Permission extends BaseModel
     {
         return $this->where('resource', $resource)
             ->where('status', 1)
-            ->where('deleted', false)
+            ->where('deleted_at', 0)
             ->orderBy('sort', 'asc')
             ->orderBy('id', 'desc')
             ->get();
@@ -298,7 +298,7 @@ class Permission extends BaseModel
     {
         return $this->where('action', $action)
             ->where('status', 1)
-            ->where('deleted', false)
+            ->where('deleted_at', 0)
             ->orderBy('sort', 'asc')
             ->orderBy('id', 'desc')
             ->get();
@@ -311,7 +311,7 @@ class Permission extends BaseModel
     public function getAllResources(): array
     {
         return $this->where('status', 1)
-            ->where('deleted', false)
+            ->where('deleted_at', 0)
             ->groupBy('resource')
             ->pluck('resource')
             ->toArray();
@@ -324,7 +324,7 @@ class Permission extends BaseModel
     public function getAllActions(): array
     {
         return $this->where('status', 1)
-            ->where('deleted', false)
+            ->where('deleted_at', 0)
             ->groupBy('action')
             ->pluck('action')
             ->toArray();
@@ -337,7 +337,7 @@ class Permission extends BaseModel
     public function getPermissionTree(): array
     {
         $permissions = $this->where('status', 1)
-            ->where('deleted', false)
+            ->where('deleted_at', 0)
             ->orderBy('sort', 'asc')
             ->orderBy('id', 'desc')
             ->get();
@@ -383,7 +383,7 @@ class Permission extends BaseModel
 
             $permission = $this->where('code', $code)
                 ->where('status', 1)
-                ->where('deleted', false)
+                ->where('deleted_at', 0)
                 ->first();
 
             if (!$permission) {

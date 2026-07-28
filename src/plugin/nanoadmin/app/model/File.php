@@ -216,12 +216,12 @@ class File extends BaseModel
     public static function getFileStats(): array
     {
         $stats = [
-            'total_count' => self::where('deleted', false)->count(),
-            'total_size' => self::where('deleted', false)->sum('file_size'),
-            'image_count' => self::where('deleted', false)->whereIn('file_ext', ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'])->count(),
-            'document_count' => self::where('deleted', false)->whereIn('file_ext', ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'])->count(),
-            'video_count' => self::where('deleted', false)->whereIn('file_ext', ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv'])->count(),
-            'audio_count' => self::where('deleted', false)->whereIn('file_ext', ['mp3', 'wav', 'flac', 'aac', 'ogg'])->count(),
+            'total_count' => self::where('deleted_at', 0)->count(),
+            'total_size' => self::where('deleted_at', 0)->sum('file_size'),
+            'image_count' => self::where('deleted_at', 0)->whereIn('file_ext', ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'])->count(),
+            'document_count' => self::where('deleted_at', 0)->whereIn('file_ext', ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'])->count(),
+            'video_count' => self::where('deleted_at', 0)->whereIn('file_ext', ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv'])->count(),
+            'audio_count' => self::where('deleted_at', 0)->whereIn('file_ext', ['mp3', 'wav', 'flac', 'aac', 'ogg'])->count(),
         ];
 
         return $stats;

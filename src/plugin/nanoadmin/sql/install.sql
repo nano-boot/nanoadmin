@@ -20,16 +20,16 @@ CREATE TABLE IF NOT EXISTS `na_sys_user` (
     `last_login_ip` VARCHAR(50) DEFAULT '' COMMENT '最后登录IP',
     `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
     `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
-    account_non_expired BOOLEAN NOT NULL DEFAULT TRUE COMMENT '账户是否未过期',
-    account_non_locked BOOLEAN NOT NULL DEFAULT TRUE COMMENT '账户是否未锁定',
-    credentials_non_expired BOOLEAN NOT NULL DEFAULT TRUE COMMENT '凭证是否未过期',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+    `account_non_expired` BOOLEAN NOT NULL DEFAULT TRUE COMMENT '账户是否未过期',
+    `account_non_locked` BOOLEAN NOT NULL DEFAULT TRUE COMMENT '账户是否未锁定',
+    `credentials_non_expired` BOOLEAN NOT NULL DEFAULT TRUE COMMENT '凭证是否未过期',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
     
-    INDEX idx_nickname (nickname),
-    INDEX idx_created_at (created_at),
-    INDEX idx_deleted (deleted)
+    INDEX idx_nickname (`nickname`),
+    INDEX idx_created_at (`created_at`),
+    INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 -- ----------------------------
@@ -48,31 +48,31 @@ CREATE TABLE `na_sys_admin` (
     `last_login_ip` varchar(50) DEFAULT NULL COMMENT '最后登录IP',
     `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
     `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
-    INDEX idx_nickname (nickname),
-    UNIQUE KEY `idx_username` (`username`),
-    INDEX idx_deleted (deleted)
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
+    INDEX idx_nickname (`nickname`),
+    UNIQUE KEY idx_username (`username`),
+    INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员表';
 
 
 -- 2. 角色表
-CREATE TABLE IF NOT EXISTS na_sys_role (
+CREATE TABLE IF NOT EXISTS `na_sys_role` (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '角色ID',
     code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色代码',
     name VARCHAR(100) NOT NULL COMMENT '角色名称',
     description VARCHAR(500) COMMENT '角色描述',
     `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
     `sort` int(11) DEFAULT 100 COMMENT '排序',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted BOOLEAN NOT NULL DEFAULT FALSE COMMENT '是否删除',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
     
-    INDEX idx_role_code (code),
-    INDEX idx_status (status),
-    INDEX idx_sort (sort),
-    INDEX idx_deleted (deleted)
+    INDEX idx_role_code (`code`),
+    INDEX idx_status (`status`),
+    INDEX idx_sort (`sort`),
+    INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
 
 -- 3. 权限表
@@ -86,81 +86,81 @@ CREATE TABLE IF NOT EXISTS na_sys_permission (
     description VARCHAR(500) COMMENT '权限描述',
     `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
     `sort` int(11) DEFAULT 100 COMMENT '排序',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted_at int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
     
-    INDEX idx_permission_code (code),
-    INDEX idx_resource_action (resource, action),
-    INDEX idx_status (status),
-    INDEX idx_updated_at (updated_at),
-    INDEX idx_deleted_at (deleted_at)
+    INDEX idx_permission_code (`code`),
+    INDEX idx_resource_action (`resource`, `action`),
+    INDEX idx_status (`status`),
+    INDEX idx_updated_at (`updated_at`),
+    INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';
 
 -- 4. 菜单表
-CREATE TABLE IF NOT EXISTS na_sys_menu (
+CREATE TABLE IF NOT EXISTS `na_sys_menu` (
     -- 基础字段
-    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '菜单ID',
-    parent_id BIGINT DEFAULT 0 COMMENT '父菜单ID，0为顶级菜单',
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '菜单ID',
+    `parent_id` BIGINT DEFAULT 0 COMMENT '父菜单ID，0为顶级菜单',
     
     -- 菜单显示信息（核心字段）
-    name VARCHAR(100) NOT NULL COMMENT '菜单名称（对应meta.title）',
-    icon VARCHAR(100) DEFAULT '' COMMENT '菜单图标（对应meta.icon）',
+    `name` VARCHAR(100) NOT NULL COMMENT '菜单名称（对应meta.title）',
+    `icon` VARCHAR(100) DEFAULT '' COMMENT '菜单图标（对应meta.icon）',
     
     -- 路由信息
-    path VARCHAR(200) DEFAULT '' COMMENT '路由路径',
-    component VARCHAR(200) DEFAULT '' COMMENT '组件路径',
-    redirect VARCHAR(200) DEFAULT '' COMMENT '重定向路径',
+    `path` VARCHAR(200) DEFAULT '' COMMENT '路由路径',
+    `component` VARCHAR(200) DEFAULT '' COMMENT '组件路径',
+    `redirect` VARCHAR(200) DEFAULT '' COMMENT '重定向路径',
     
     -- 菜单类型和权限
-    type CHAR(1) DEFAULT 'D' COMMENT '菜单类型（D目录 M菜单 B按钮 L外链 I内嵌）',
-    permission VARCHAR(100) DEFAULT '' COMMENT '权限标识（正式动作权限载体；当 type = ''B'' 时应与 na_sys_permission.code 保持同一值域）',
+    `type` CHAR(1) DEFAULT 'D' COMMENT '菜单类型（D目录 M菜单 B按钮 L外链 I内嵌）',
+    `permission` VARCHAR(100) DEFAULT '' COMMENT '权限标识（正式动作权限载体；当 type = ''B'' 时应与 na_sys_permission.code 保持同一值域）',
     -- roles / auth_list 为历史设计注释口径，当前正式动作权限模型以 B 类型按钮节点 + permission 为准
 
     -- === 显示控制 ===
-    hide tinyint(1) DEFAULT 0 COMMENT '是否在菜单中隐藏（对应meta.isHide）',
-    hide_tab tinyint(1) DEFAULT 0 COMMENT '是否在标签页中隐藏：1-隐藏，0-显示（对应meta.isHideTab）',
-    full_page tinyint(1) DEFAULT 0 COMMENT '是否全屏显示（对应meta.isFullPage）',
+    `hide` tinyint(1) DEFAULT 0 COMMENT '是否在菜单中隐藏（对应meta.isHide）',
+    `hide_tab` tinyint(1) DEFAULT 0 COMMENT '是否在标签页中隐藏：1-隐藏，0-显示（对应meta.isHideTab）',
+    `full_page` tinyint(1) DEFAULT 0 COMMENT '是否全屏显示（对应meta.isFullPage）',
 
     -- === 缓存和固定 ===
-    cache tinyint(1) DEFAULT 1 COMMENT '是否缓存（对应meta.keepAlive）',
-    fixed_tab tinyint(1) DEFAULT 0 COMMENT '是否固定标签（对应meta.fixedTab）',
+    `cache` tinyint(1) DEFAULT 1 COMMENT '是否缓存（对应meta.keepAlive）',
+    `fixed_tab` tinyint(1) DEFAULT 0 COMMENT '是否固定标签（对应meta.fixedTab）',
 
     
     -- 外链配置
-    link VARCHAR(500) DEFAULT '' COMMENT '外链地址（对应meta.link）',
-    iframe tinyint(1) DEFAULT 0 COMMENT '是否内嵌（对应meta.isIframe）',
+    `link` VARCHAR(500) DEFAULT '' COMMENT '外链地址（对应meta.link）',
+    `iframe` tinyint(1) DEFAULT 0 COMMENT '是否内嵌（对应meta.isIframe）',
     
     -- 徽章配置
-    show_badge tinyint(1) DEFAULT 0 COMMENT '是否显示徽章（对应meta.showBadge）',
-    badge_text VARCHAR(20) DEFAULT '' COMMENT '徽章文本（对应meta.showTextBadge）',
+    `show_badge` tinyint(1) DEFAULT 0 COMMENT '是否显示徽章（对应meta.showBadge）',
+    `badge_text` VARCHAR(20) DEFAULT '' COMMENT '徽章文本（对应meta.showTextBadge）',
 
     -- 其他属性
-    active_path VARCHAR(200) DEFAULT '' COMMENT '激活菜单路径（对应meta.activePath）',
+    `active_path` VARCHAR(200) DEFAULT '' COMMENT '激活菜单路径（对应meta.activePath）',
     
     -- 状态和排序
-    status TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
-    sort INT(11) DEFAULT 100 COMMENT '排序',
+    `status` TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
+    `sort` INT(11) DEFAULT 100 COMMENT '排序',
     
     -- 审计字段
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted_at int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
     
     -- 索引
-    INDEX idx_parent_id (parent_id),
-    INDEX idx_path (path),
-    INDEX idx_name (name),
-    INDEX idx_permission (permission),
-    INDEX idx_type (type),
-    INDEX idx_sort (sort),
+    INDEX idx_parent_id (`parent_id`),
+    INDEX idx_path (`path`),
+    INDEX idx_name (`name`),
+    INDEX idx_permission (`permission`),
+    INDEX idx_type (`type`),
+    INDEX idx_sort (`sort`),
     INDEX idx_status (status),
-    INDEX idx_deleted_at (deleted_at)
+    INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='菜单表';
 
 
 -- 5. 用户角色关联表
-CREATE TABLE IF NOT EXISTS na_sys_admin_role (
+CREATE TABLE IF NOT EXISTS `na_sys_admin_role` (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     admin_id BIGINT NOT NULL COMMENT '管理员ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
@@ -170,7 +170,7 @@ CREATE TABLE IF NOT EXISTS na_sys_admin_role (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员角色关联表';
 
 -- 6. 角色权限关联表
-CREATE TABLE IF NOT EXISTS na_sys_role_permission (
+CREATE TABLE IF NOT EXISTS `na_sys_role_permission` (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     permission_id BIGINT NOT NULL COMMENT '权限ID',
@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS na_sys_role_permission (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限关联表';
 
 -- 7. 角色菜单关联表
-CREATE TABLE IF NOT EXISTS na_sys_role_menu (
+CREATE TABLE IF NOT EXISTS `na_sys_role_menu` (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     menu_id BIGINT NOT NULL COMMENT '菜单ID',
@@ -190,67 +190,67 @@ CREATE TABLE IF NOT EXISTS na_sys_role_menu (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色菜单关联表';
 
 -- 8. 文件表
-CREATE TABLE IF NOT EXISTS na_sys_file (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '文件ID',
-    original_name VARCHAR(255) NOT NULL COMMENT '原始文件名',
-    file_name VARCHAR(255) NOT NULL COMMENT '存储文件名',
-    file_path VARCHAR(500) NOT NULL COMMENT '文件存储路径',
-    file_size BIGINT NOT NULL DEFAULT 0 COMMENT '文件大小（字节）',
-    file_ext VARCHAR(20) DEFAULT '' COMMENT '文件扩展名',
-    mime_type VARCHAR(100) DEFAULT '' COMMENT 'MIME类型',
-    file_hash VARCHAR(128) DEFAULT '' COMMENT '文件哈希值（MD5/SHA256）',
-    file_type ENUM('image', 'video', 'document', 'audio', 'archive', 'other') DEFAULT 'other' COMMENT '文件类型枚举',
-    storage_type VARCHAR(20) DEFAULT 'local' COMMENT '存储类型（local本地存储 cloud云存储）',
-    bucket_name VARCHAR(100) DEFAULT '' COMMENT '存储桶名称（云存储时使用）',
-    created_by BIGINT DEFAULT 0 COMMENT '创建者ID',
-    updated_by BIGINT DEFAULT 0 COMMENT '更新者ID',
-    status TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted_at int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
+CREATE TABLE IF NOT EXISTS `na_sys_file` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '文件ID',
+    `original_name` VARCHAR(255) NOT NULL COMMENT '原始文件名',
+    `file_name` VARCHAR(255) NOT NULL COMMENT '存储文件名',
+    `file_path` VARCHAR(500) NOT NULL COMMENT '文件存储路径',
+    `file_size` BIGINT NOT NULL DEFAULT 0 COMMENT '文件大小（字节）',
+    `file_ext` VARCHAR(20) DEFAULT '' COMMENT '文件扩展名',
+    `mime_type` VARCHAR(100) DEFAULT '' COMMENT 'MIME类型',
+    `file_hash` VARCHAR(128) DEFAULT '' COMMENT '文件哈希值（MD5/SHA256）',
+    `file_type` ENUM('image', 'video', 'document', 'audio', 'archive', 'other') DEFAULT 'other' COMMENT '文件类型枚举',
+    `storage_type` VARCHAR(20) DEFAULT 'local' COMMENT '存储类型（local本地存储 cloud云存储）',
+    `bucket_name` VARCHAR(100) DEFAULT '' COMMENT '存储桶名称（云存储时使用）',
+    `created_by` BIGINT DEFAULT 0 COMMENT '创建者ID',
+    `updated_by` BIGINT DEFAULT 0 COMMENT '更新者ID',
+    `status` TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
 
-    INDEX idx_original_name (original_name),
-    INDEX idx_file_hash (file_hash),
-    INDEX idx_file_type (file_type),
-    INDEX idx_storage_type (storage_type),
-    INDEX idx_status (status),
-    INDEX idx_created_at (created_at),
-    INDEX idx_deleted_at (deleted_at)
+    INDEX idx_original_name (`original_name`),
+    INDEX idx_file_hash (`file_hash`),
+    INDEX idx_file_type (`file_type`),
+    INDEX idx_storage_type (`storage_type`),
+    INDEX idx_status (`status`),
+    INDEX idx_created_at (`created_at`),
+    INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件表';
 
 -- 9. 字典类型表
-CREATE TABLE IF NOT EXISTS na_sys_dict_type (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典类型ID',
-    name VARCHAR(100) NOT NULL COMMENT '字典名称',
-    code VARCHAR(100) NOT NULL UNIQUE COMMENT '字典编码',
-    description VARCHAR(500) DEFAULT '' COMMENT '字典描述',
-    status TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
-    sort INT(11) DEFAULT 100 COMMENT '排序',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted_at int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
+CREATE TABLE IF NOT EXISTS `na_sys_dict_type` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典类型ID',
+    `name` VARCHAR(100) NOT NULL COMMENT '字典名称',
+    `code` VARCHAR(100) NOT NULL UNIQUE COMMENT '字典编码',
+    `description` VARCHAR(500) DEFAULT '' COMMENT '字典描述',
+    `status` TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
+    `sort` INT(11) DEFAULT 100 COMMENT '排序',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
 
-    INDEX idx_code (code),
-    INDEX idx_status (status),
-    INDEX idx_sort (sort),
-    INDEX idx_deleted_at (deleted_at)
+    INDEX idx_code (`code`),
+    INDEX idx_status (`status`),
+    INDEX idx_sort (`sort`),
+    INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典类型表';
 
 -- 10. 字典数据表
-CREATE TABLE IF NOT EXISTS na_sys_dict_data (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典数据ID',
-    dict_type_id BIGINT NOT NULL COMMENT '字典类型ID',
-    label VARCHAR(100) NOT NULL COMMENT '字典标签',
-    value VARCHAR(255) NOT NULL COMMENT '字典值',
-    sort INT(11) DEFAULT 100 COMMENT '排序',
-    status TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    deleted_at int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
+CREATE TABLE IF NOT EXISTS `na_sys_dict_data` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典数据ID',
+    `dict_type_id` BIGINT NOT NULL COMMENT '字典类型ID',
+    `label` VARCHAR(100) NOT NULL COMMENT '字典标签',
+    `value` VARCHAR(255) NOT NULL COMMENT '字典值',
+    `sort` INT(11) DEFAULT 100 COMMENT '排序',
+    `status` TINYINT(1) DEFAULT 1 COMMENT '状态（0禁用 1正常）',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
 
-    INDEX idx_dict_type_id (dict_type_id),
-    INDEX idx_status (status),
-    INDEX idx_deleted_at (deleted_at)
+    INDEX idx_dict_type_id (`dict_type_id`),
+    INDEX idx_status (`status`),
+    INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典数据表';
 
 
@@ -391,7 +391,7 @@ CREATE TABLE IF NOT EXISTS `na_sys_log_operation` (
 -- =====================================================
 -- 初始化角色、管理员与权限数据
 -- =====================================================
-INSERT INTO `na_sys_role` (`id`, `code`, `name`, `description`, `status`, `sort`, `deleted`) VALUES
+INSERT INTO `na_sys_role` (`id`, `code`, `name`, `description`, `status`, `sort`, `deleted_at`) VALUES
 (1, 'R_SUPER', '超级管理员', '系统超级管理员，拥有所有权限', 1, 1, 0),
 (2, 'R_SYSTEM', '系统管理员', '系统管理员，拥有系统管理核心权限', 1, 2, 0)
 ON DUPLICATE KEY UPDATE
@@ -401,7 +401,7 @@ ON DUPLICATE KEY UPDATE
 `sort` = VALUES(`sort`),
 `deleted_at` = VALUES(`deleted_at`);
 
-INSERT INTO `na_sys_admin` (`id`, `username`, `password`, `nickname`, `gender`, `status`, `deleted`) VALUES
+INSERT INTO `na_sys_admin` (`id`, `username`, `password`, `nickname`, `gender`, `status`, `deleted_at`) VALUES
 (1, 'admin', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '超级管理员', 1,1, 0),
 (2, 'system', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '系统管理员', 2, 1,0)
 ON DUPLICATE KEY UPDATE
@@ -414,76 +414,6 @@ INSERT INTO `na_sys_admin_role` (`admin_id`, `role_id`) VALUES
 (1, 1),
 (2, 2)
 ON DUPLICATE KEY UPDATE `role_id` = VALUES(`role_id`);
-
-INSERT INTO `na_sys_permission` (`id`, `code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`) VALUES
-(1, 'sys:admin:query', '管理员列表', 'admin', 'query', '查看管理员列表', 1, 100, 0),
-(2, 'sys:admin:create', '创建管理员', 'admin', 'create', '创建新管理员', 1, 101, 0),
-(3, 'sys:admin:query', '查看管理员', 'admin', 'query', '查看管理员详情', 1, 102, 0),
-(4, 'sys:admin:update', '更新管理员', 'admin', 'update', '更新管理员信息', 1, 103, 0),
-(5, 'sys:admin:assign-role', '分配管理员角色', 'admin', 'assign-role', '为管理员分配角色', 1, 104, 0),
-(6, 'sys:admin:delete', '删除管理员', 'admin', 'delete', '删除管理员', 1, 105, 0),
-(7, 'sys:role:query', '角色列表', 'role', 'query', '查看角色列表', 1, 200, 0),
-(8, 'sys:role:create', '创建角色', 'role', 'create', '创建新角色', 1, 201, 0),
-(9, 'sys:role:query', '查看角色', 'role', 'query', '查看角色详情', 1, 202, 0),
-(10, 'sys:role:update', '更新角色', 'role', 'update', '更新角色信息', 1, 203, 0),
-(11, 'sys:role:assign-permission', '分配角色权限', 'role', 'assign-permission', '为角色分配权限', 1, 204, 0),
-(12, 'sys:role:assign-menu', '分配角色菜单', 'role', 'assign-menu', '为角色分配菜单', 1, 205, 0),
-(13, 'sys:role:delete', '删除角色', 'role', 'delete', '删除角色', 1, 206, 0),
-(14, 'sys:permission:query', '权限列表', 'permission', 'query', '查看权限列表', 1, 300, 0),
-(15, 'sys:permission:create', '创建权限', 'permission', 'create', '创建新权限', 1, 301, 0),
-(16, 'sys:permission:query', '查看权限', 'permission', 'query', '查看权限详情', 1, 302, 0),
-(17, 'sys:permission:update', '更新权限', 'permission', 'update', '更新权限信息', 1, 303, 0),
-(18, 'sys:permission:delete', '删除权限', 'permission', 'delete', '删除权限', 1, 304, 0),
-(19, 'sys:menu:query', '菜单列表', 'menu', 'query', '查看菜单列表', 1, 400, 0),
-(20, 'sys:menu:create', '创建菜单', 'menu', 'create', '创建新菜单', 1, 401, 0),
-(21, 'sys:menu:query', '查看菜单', 'menu', 'query', '查看菜单详情', 1, 402, 0),
-(22, 'sys:menu:update', '更新菜单', 'menu', 'update', '更新菜单信息', 1, 403, 0),
-(23, 'sys:menu:sort', '菜单排序', 'menu', 'sort', '调整菜单排序', 1, 404, 0),
-(24, 'sys:menu:delete', '删除菜单', 'menu', 'delete', '删除菜单', 1, 405, 0),
-(25, 'sys:file:list', '文件列表', 'file', 'list', '查看文件列表', 1, 500, 0),
-(26, 'sys:file:create', '创建文件', 'file', 'create', '上传或创建文件', 1, 501, 0),
-(27, 'sys:file:update', '编辑文件', 'file', 'update', '编辑文件信息', 1, 502, 0),
-(28, 'sys:file:delete', '删除文件', 'file', 'delete', '删除文件', 1, 503, 0),
-(29, 'sys:dict:type:query', '字典列表', 'dict-type', 'query', '查看字典列表', 1, 600, 0),
-(30, 'sys:dict:type:create', '创建字典', 'dict-type', 'create', '创建新字典', 1, 601, 0),
-(31, 'sys:dict:type:update', '编辑字典', 'dict-type', 'update', '编辑字典信息', 1, 602, 0),
-(32, 'sys:dict:type:delete', '删除字典', 'dict-type', 'delete', '删除字典', 1, 603, 0),
-(33, 'sys:config:query', '配置列表', 'config', 'query', '查看配置列表', 1, 700, 0),
-(34, 'sys:config:create', '创建配置', 'config', 'create', '创建新配置', 1, 701, 0),
-(35, 'sys:config:update', '编辑配置', 'config', 'update', '编辑配置信息', 1, 702, 0),
-(36, 'sys:config:delete', '删除配置', 'config', 'delete', '删除配置', 1, 703, 0),
-(37, 'sys:log:query', '日志列表', 'log', 'query', '查看日志列表', 1, 800, 0),
-(38, 'sys:log:create', '创建日志', 'log', 'create', '创建日志记录', 1, 801, 0),
-(39, 'sys:log:update', '编辑日志', 'log', 'update', '编辑日志信息', 1, 802, 0),
-(40, 'sys:log:delete', '删除日志', 'log', 'delete', '删除日志', 1, 803, 0)
-ON DUPLICATE KEY UPDATE
-`name` = VALUES(`name`),
-`resource` = VALUES(`resource`),
-`action` = VALUES(`action`),
-`description` = VALUES(`description`),
-`status` = VALUES(`status`),
-`sort` = VALUES(`sort`),
-`updated_at` = VALUES(`updated_at`);
-
-INSERT INTO `na_sys_role_permission` (`role_id`, `permission_id`) VALUES
-(2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
-(2, 7), (2, 8), (2, 9), (2, 10), (2, 11), (2, 12), (2, 13),
-(2, 14), (2, 15), (2, 16), (2, 17), (2, 18),
-(2, 19), (2, 20), (2, 21), (2, 22), (2, 23), (2, 24),
-(2, 25), (2, 26), (2, 27), (2, 28),
-(2, 29), (2, 30), (2, 31), (2, 32),
-(2, 33), (2, 34), (2, 35), (2, 36),
-(2, 37), (2, 38), (2, 39), (2, 40)
-ON DUPLICATE KEY UPDATE `permission_id` = VALUES(`permission_id`);
-
--- =====================================================
--- 菜单数据
--- 请在安装完成后执行 sql/menu_init.sql 填充菜单初始数据
--- menu_init.sql 中遵循 P0-1 按钮节点强规则：
--- 1. 按钮节点（type='B'）必须设置 permission，且挂在父级菜单页面（type='M'）下
--- 2. 页面节点（type='M' 或 'D'）不设置 permission
--- 3. 同级按钮节点 permission 不可重复
--- =====================================================
 
 -- =====================================================
 -- 代码生成器表
@@ -543,19 +473,81 @@ CREATE TABLE IF NOT EXISTS `na_sys_generate_columns` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='代码生成字段表';
 
 -- =====================================================
--- 代码生成器菜单
--- =====================================================
-INSERT INTO `na_sys_menu`(`id`, `parent_id`, `name`, `icon`, `path`, `component`, `type`, `sort`, `hide`, `hide_tab`, `cache`, `fixed_tab`, `full_page`, `status`) VALUES
-(100, 0, '代码生成', 'ri:code-box-line', 'tool/generate', '/plugin/tool/generate/index', 'M', 100, 0, 0, 1, 0, 0, 1)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `icon` = VALUES(`icon`), `path` = VALUES(`path`), `component` = VALUES(`component`);
 
--- 代码生成器权限
-INSERT INTO `na_sys_permission`(`code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`) VALUES
-('tool:generate:index', '代码生成列表', 'generate', 'index', '查看代码生成列表', 1, 100, 0),
-('tool:generate:loadTable', '装载数据表', 'generate', 'loadTable', '装载数据表', 1, 101, 0),
-('tool:generate:sync', '同步表结构', 'generate', 'sync', '同步表结构', 1, 102, 0),
-('tool:generate:preview', '代码预览', 'generate', 'preview', '预览生成代码', 1, 103, 0),
-('tool:generate:generate', '生成代码', 'generate', 'generate', '生成代码', 1, 104, 0),
-('tool:generate:generateFile', '生成到项目', 'generate', 'generateFile', '生成代码到项目', 1, 105, 0)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `description` = VALUES(`description`);
+INSERT INTO `na_sys_permission` (`id`, `code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`) VALUES
+(1, 'sys:admin:query', '管理员列表', 'admin', 'query', '查看管理员列表', 1, 100, 0),
+(2, 'sys:admin:create', '创建管理员', 'admin', 'create', '创建新管理员', 1, 101, 0),
+(3, 'sys:admin:query', '查看管理员', 'admin', 'query', '查看管理员详情', 1, 102, 0),
+(4, 'sys:admin:update', '更新管理员', 'admin', 'update', '更新管理员信息', 1, 103, 0),
+(5, 'sys:admin:assign-role', '分配管理员角色', 'admin', 'assign-role', '为管理员分配角色', 1, 104, 0),
+(6, 'sys:admin:delete', '删除管理员', 'admin', 'delete', '删除管理员', 1, 105, 0),
+(7, 'sys:role:query', '角色列表', 'role', 'query', '查看角色列表', 1, 200, 0),
+(8, 'sys:role:create', '创建角色', 'role', 'create', '创建新角色', 1, 201, 0),
+(9, 'sys:role:query', '查看角色', 'role', 'query', '查看角色详情', 1, 202, 0),
+(10, 'sys:role:update', '更新角色', 'role', 'update', '更新角色信息', 1, 203, 0),
+(11, 'sys:role:assign-permission', '分配角色权限', 'role', 'assign-permission', '为角色分配权限', 1, 204, 0),
+(12, 'sys:role:assign-menu', '分配角色菜单', 'role', 'assign-menu', '为角色分配菜单', 1, 205, 0),
+(13, 'sys:role:delete', '删除角色', 'role', 'delete', '删除角色', 1, 206, 0),
+(14, 'sys:permission:query', '权限列表', 'permission', 'query', '查看权限列表', 1, 300, 0),
+(15, 'sys:permission:create', '创建权限', 'permission', 'create', '创建新权限', 1, 301, 0),
+(16, 'sys:permission:query', '查看权限', 'permission', 'query', '查看权限详情', 1, 302, 0),
+(17, 'sys:permission:update', '更新权限', 'permission', 'update', '更新权限信息', 1, 303, 0),
+(18, 'sys:permission:delete', '删除权限', 'permission', 'delete', '删除权限', 1, 304, 0),
+(19, 'sys:menu:query', '菜单列表', 'menu', 'query', '查看菜单列表', 1, 400, 0),
+(20, 'sys:menu:create', '创建菜单', 'menu', 'create', '创建新菜单', 1, 401, 0),
+(21, 'sys:menu:query', '查看菜单', 'menu', 'query', '查看菜单详情', 1, 402, 0),
+(22, 'sys:menu:update', '更新菜单', 'menu', 'update', '更新菜单信息', 1, 403, 0),
+(23, 'sys:menu:sort', '菜单排序', 'menu', 'sort', '调整菜单排序', 1, 404, 0),
+(24, 'sys:menu:delete', '删除菜单', 'menu', 'delete', '删除菜单', 1, 405, 0),
+(25, 'sys:file:list', '文件列表', 'file', 'list', '查看文件列表', 1, 500, 0),
+(26, 'sys:file:create', '创建文件', 'file', 'create', '上传或创建文件', 1, 501, 0),
+(27, 'sys:file:update', '编辑文件', 'file', 'update', '编辑文件信息', 1, 502, 0),
+(28, 'sys:file:delete', '删除文件', 'file', 'delete', '删除文件', 1, 503, 0),
+(29, 'sys:dict:type:query', '字典列表', 'dict-type', 'query', '查看字典列表', 1, 600, 0),
+(30, 'sys:dict:type:create', '创建字典', 'dict-type', 'create', '创建新字典', 1, 601, 0),
+(31, 'sys:dict:type:update', '编辑字典', 'dict-type', 'update', '编辑字典信息', 1, 602, 0),
+(32, 'sys:dict:type:delete', '删除字典', 'dict-type', 'delete', '删除字典', 1, 603, 0),
+(33, 'sys:config:query', '配置列表', 'config', 'query', '查看配置列表', 1, 700, 0),
+(34, 'sys:config:create', '创建配置', 'config', 'create', '创建新配置', 1, 701, 0),
+(35, 'sys:config:update', '编辑配置', 'config', 'update', '编辑配置信息', 1, 702, 0),
+(36, 'sys:config:delete', '删除配置', 'config', 'delete', '删除配置', 1, 703, 0),
+(37, 'sys:log:query', '日志列表', 'log', 'query', '查看日志列表', 1, 800, 0),
+(38, 'sys:log:create', '创建日志', 'log', 'create', '创建日志记录', 1, 801, 0),
+(39, 'sys:log:update', '编辑日志', 'log', 'update', '编辑日志信息', 1, 802, 0),
+(40, 'sys:log:delete', '删除日志', 'log', 'delete', '删除日志', 1, 803, 0),
+(41, 'tool:generate:index', '代码生成列表', 'generate', 'index', '查看代码生成列表', 1, 900, 0),
+(42, 'tool:generate:loadTable', '装载数据表', 'generate', 'loadTable', '装载数据表', 1, 901, 0),
+(43, 'tool:generate:sync', '同步表结构', 'generate', 'sync', '同步表结构', 1, 902, 0),
+(44, 'tool:generate:preview', '代码预览', 'generate', 'preview', '预览生成代码', 1, 903, 0),
+(45, 'tool:generate:generate', '生成代码', 'generate', 'generate', '生成代码', 1, 904, 0),
+(46, 'tool:generate:generateFile', '生成到项目', 'generate', 'generateFile', '生成代码到项目', 1, 905, 0)
+ON DUPLICATE KEY UPDATE
+`name` = VALUES(`name`),
+`resource` = VALUES(`resource`),
+`action` = VALUES(`action`),
+`description` = VALUES(`description`),
+`status` = VALUES(`status`),
+`sort` = VALUES(`sort`),
+`updated_at` = VALUES(`updated_at`);
+
+INSERT INTO `na_sys_role_permission` (`role_id`, `permission_id`) VALUES
+(2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
+(2, 7), (2, 8), (2, 9), (2, 10), (2, 11), (2, 12), (2, 13),
+(2, 14), (2, 15), (2, 16), (2, 17), (2, 18),
+(2, 19), (2, 20), (2, 21), (2, 22), (2, 23), (2, 24),
+(2, 25), (2, 26), (2, 27), (2, 28),
+(2, 29), (2, 30), (2, 31), (2, 32),
+(2, 33), (2, 34), (2, 35), (2, 36),
+(2, 37), (2, 38), (2, 39), (2, 40),
+(2, 41), (2, 42), (2, 43), (2, 44), (2, 45), (2, 46)
+ON DUPLICATE KEY UPDATE `permission_id` = VALUES(`permission_id`);
+
+-- =====================================================
+-- 菜单数据
+-- 请在安装完成后执行 sql/menu_init.sql 填充菜单初始数据
+-- menu_init.sql 中遵循 P0-1 按钮节点强规则：
+-- 1. 按钮节点（type='B'）必须设置 permission，且挂在父级菜单页面（type='M'）下
+-- 2. 页面节点（type='M' 或 'D'）不设置 permission
+-- 3. 同级按钮节点 permission 不可重复
+-- =====================================================
 

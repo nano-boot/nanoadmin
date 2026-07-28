@@ -40,7 +40,7 @@ class Admin extends BaseModel
      * @var array
      */
     protected static array $searchLikeFields = ['username', 'nickname'];
-    protected static array $searchEqualFields = ['phone', 'email', 'status', 'gender', 'deleted'];
+    protected static array $searchEqualFields = ['phone', 'email', 'status', 'gender', 'deleted_at'];
     protected static array $searchKeywordFields = ['username', 'nickname', 'phone'];
     protected static array $searchRangeFields = ['last_login_time'];
 

@@ -118,7 +118,7 @@ class DictTypeService extends BaseService
             return $cached;
         }
 
-        $types = $this->model->where('status', 1)->where('deleted', 0)->get()->toArray();
+        $types = $this->model->where('status', 1)->where('deleted_at', 0)->get()->toArray();
 
         $this->setCache($cacheKey, $types);
 
@@ -164,7 +164,7 @@ class DictTypeService extends BaseService
             return $cached;
         }
 
-        $record = $this->model->where('code', $code)->where('deleted', 0)->first();
+        $record = $this->model->where('code', $code)->where('deleted_at', 0)->first();
         if (!$record) {
             return null;
         }
@@ -213,7 +213,7 @@ class DictTypeService extends BaseService
     public function create(array $data): DictType
     {
         // 检查编码是否已存在
-        if ($this->model->where('code', $data['code'])->where('deleted', 0)->exists()) {
+        if ($this->model->where('code', $data['code'])->where('deleted_at', 0)->exists()) {
             throw new ApiException(Code::BAD_REQUEST, '字典编码已存在');
         }
 
@@ -236,7 +236,7 @@ class DictTypeService extends BaseService
             $exists = $this->model
                 ->where('code', $data['code'])
                 ->where('id', '!=', $id)
-                ->where('deleted', 0)
+                ->where('deleted_at', 0)
                 ->exists();
 
             if ($exists) {

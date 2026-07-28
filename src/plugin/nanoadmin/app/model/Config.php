@@ -55,7 +55,7 @@ class Config extends BaseModel
      * @var array
      */
     protected static array $searchLikeFields = ['name', 'key', 'description'];
-    protected static array $searchEqualFields = ['group', 'type', 'status', 'deleted'];
+    protected static array $searchEqualFields = ['group', 'type', 'status', 'deleted_at'];
     protected static array $searchKeywordFields = ['name', 'key'];
     protected static array $searchRangeFields = ['created_at'];
 

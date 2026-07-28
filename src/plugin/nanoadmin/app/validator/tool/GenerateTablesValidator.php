@@ -268,7 +268,7 @@ class GenerateTablesValidator extends ValidatorBase
     public function scenes(): array
     {
         return [
-            'page' => ['page', 'limit', 'table_name', 'table_comment', 'namespace', 'keyword'],
+            'page' => ['page', 'limit', 'keyword'],
             'show' => ['id'],
             'update' => [
                 'id',

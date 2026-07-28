@@ -325,7 +325,7 @@ class MenuPermissionService
             }
 
             if ($menuScope['scope'] === self::MENU_SCOPE_ALLOW_ALL) {
-                $menus = $this->menuModel->where('status', 1)->where('deleted', 0)->get();
+                $menus = $this->menuModel->where('status', 1)->where('deleted_at', 0)->get();
             } else {
                 $menus = $this->menuModel->whereIn('id', $menuIds)->get();
             }
@@ -381,7 +381,7 @@ class MenuPermissionService
      */
     private function isMenuActive(array $menu): bool
     {
-        return ($menu['status'] ?? true) && !($menu['deleted'] ?? false);
+        return ($menu['status'] ?? true) && ($menu['deleted_at'] ?? 0) == 0;
     }
 
     /**
@@ -581,7 +581,7 @@ class MenuPermissionService
         // 获取菜单数据
         $menus = $this->menuModel->whereIn('id', $allMenuIds)
                                  ->where('status', 1)
-                                 ->where('deleted', 0)
+                                 ->where('deleted_at', 0)
                                  ->orderBy('sort', 'asc')
                                  ->orderBy('id', 'asc')
                                  ->get();
@@ -683,7 +683,7 @@ class MenuPermissionService
     {
         try {
             $stats = [
-                'total_menus' => $this->menuModel->where('status', 1)->where('deleted', 0)->count(),
+                'total_menus' => $this->menuModel->where('status', 1)->where('deleted_at', 0)->count(),
                 'accessible_menus' => 0,
                 'total_permissions' => 0,
                 'accessible_permissions' => 0,
@@ -707,7 +707,7 @@ class MenuPermissionService
             }
 
             // 计算总权限数量
-            $allMenus = $this->menuModel->where('status', 1)->where('deleted', 0)->get();
+            $allMenus = $this->menuModel->where('status', 1)->where('deleted_at', 0)->get();
             $totalPermissions = [];
             foreach ($allMenus as $menu) {
                 $menuArray = $menu->toArray();

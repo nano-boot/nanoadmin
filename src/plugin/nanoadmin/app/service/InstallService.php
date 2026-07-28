@@ -985,7 +985,7 @@ PHP;
             return;
         }
 
-        $stmt = $pdo->query("SELECT id FROM `{$menuTable}` WHERE `deleted` = 0");
+        $stmt = $pdo->query("SELECT id FROM `{$menuTable}` WHERE `deleted_at` = 0");
         $menuIds = $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
         if (empty($menuIds)) {
             return;
@@ -1062,14 +1062,14 @@ PHP;
         $roleTable = $this->prefix . 'sys_role';
         $adminRoleTable = $this->prefix . 'sys_admin_role';
 
-        $sql = "INSERT INTO `{$adminTable}` (`id`, `username`, `password`, `nickname`, `status`, `deleted`, `created_at`, `updated_at`)
+        $sql = "INSERT INTO `{$adminTable}` (`id`, `username`, `password`, `nickname`, `status`, `deleted_at`, `created_at`, `updated_at`)
                 VALUES (1, ?, ?, ?, 1, 0, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     `username`   = VALUES(`username`),
                     `password`   = VALUES(`password`),
                     `nickname`   = VALUES(`nickname`),
                     `status`     = 1,
-                    `deleted`    = 0,
+                    `deleted_at` = 0,
                     `updated_at` = VALUES(`updated_at`)";
 
         $stmt = $pdo->prepare($sql);

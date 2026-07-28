@@ -83,7 +83,7 @@ class Menu extends BaseModel
         'iframe',
         'status',
         'sort',
-        'deleted',
+        'deleted_at',
         'roles',
         'auth_list',
         // 底层数据库字段（snake_case）
@@ -116,7 +116,7 @@ class Menu extends BaseModel
         'show_badge' => 'boolean',
         'status' => 'boolean',
         'sort' => 'integer',
-        'deleted' => 'boolean',
+        'deleted_at' => 'integer',
     ];
 
     /**
@@ -492,7 +492,7 @@ class Menu extends BaseModel
             $query->where('status', 1);
         }
         if (!$includeDeleted) {
-            $query->where('deleted', false);
+            $query->where('deleted_at', 0);
         }
         $allMenus = $query->orderBy('sort', 'desc')
                           ->orderBy('id', 'asc')
@@ -579,7 +579,7 @@ class Menu extends BaseModel
         // 一次性取出所有相关菜单,转为数组后纯内存构建树形结构
         $menus = $this->whereIn('id', $menuIds)
                      ->where('status', 1)
-                     ->where('deleted', false)
+                     ->where('deleted_at', 0)
                      ->orderBy('sort', 'desc')
                      ->orderBy('id', 'asc')
                      ->get()
@@ -1053,7 +1053,7 @@ class Menu extends BaseModel
      */
     public function isActive(): bool
     {
-        return $this->status == 1 && !$this->deleted;
+        return $this->status == 1 && $this->deleted_at == 0;
     }
 
     /**
@@ -1095,7 +1095,7 @@ class Menu extends BaseModel
         }
         
         if (!$includeDeleted) {
-            $query->where('deleted', false);
+            $query->where('deleted_at', 0);
         }
         
         return $query->orderBy('sort', 'desc')
@@ -1164,7 +1164,7 @@ class Menu extends BaseModel
     {
         /** @var Builder<Menu> $query */
         $query = $this->where('status', 1)
-                      ->where('deleted', false);
+                      ->where('deleted_at', 0);
 
         return $query->orderBy('sort', 'desc')
                    ->orderBy('id', 'asc')
@@ -1774,7 +1774,7 @@ class Menu extends BaseModel
             return false;
         }
         
-        return $this->where('id', $id)->update(['deleted' => true]) !== false;
+        return $this->where('id', $id)->update(['deleted_at' => time()]) !== false;
     }
 
     /**
@@ -1784,7 +1784,7 @@ class Menu extends BaseModel
      */
     public function restoreMenu(int $id): bool
     {
-        return $this->where('id', $id)->update(['deleted' => false]) !== false;
+        return $this->where('id', $id)->update(['deleted_at' => 0]) !== false;
     }
 
     /**
@@ -1805,7 +1805,7 @@ class Menu extends BaseModel
             }
         }
         
-        return $this->whereIn('id', $ids)->update(['deleted' => true]) !== false;
+        return $this->whereIn('id', $ids)->update(['deleted_at' => time()]) !== false;
     }
 
     /**
@@ -1819,7 +1819,7 @@ class Menu extends BaseModel
             return false;
         }
         
-        return $this->whereIn('id', $ids)->update(['deleted' => false]) !== false;
+        return $this->whereIn('id', $ids)->update(['deleted_at' => 0]) !== false;
     }
 
     /**
@@ -1850,7 +1850,7 @@ class Menu extends BaseModel
      */
     public function getDeletedMenus(int $page = 1, int $limit = 15): LengthAwarePaginator
     {
-        return $this->where('deleted', true)
+        return $this->where('deleted_at', '>', 0)
                    ->orderBy('updated_at', 'desc')
                    ->paginate($limit, ['*'], 'page', $page);
     }
@@ -1922,7 +1922,7 @@ class Menu extends BaseModel
     public function getSortStats(int $parentId = 0): array
     {
         $menus = $this->where('parent_id', $parentId)
-                     ->where('deleted', false)
+                     ->where('deleted_at', 0)
                      ->orderBy('sort', 'desc')
                      ->get();
         
@@ -1972,7 +1972,7 @@ class Menu extends BaseModel
     public function fixSort(int $parentId = 0): bool
     {
         $menus = $this->where('parent_id', $parentId)
-                     ->where('deleted', false)
+                     ->where('deleted_at', 0)
                      ->orderBy('sort', 'desc')
                      ->orderBy('id', 'asc')
                      ->get();
@@ -2032,12 +2032,12 @@ class Menu extends BaseModel
     public function getStatusStats(): array
     {
         return [
-            'total' => $this->where('deleted', false)->count(),
-            'enabled' => $this->where('deleted', false)->where('status', 1)->count(),
-            'disabled' => $this->where('deleted', false)->where('status', 0)->count(),
-            'hide' => $this->where('deleted', false)->where('hide', true)->count(),
-            'visible' => $this->where('deleted', false)->where('hide', false)->count(),
-            'deleted' => $this->where('deleted', true)->count()
+            'total' => $this->where('deleted_at', 0)->count(),
+            'enabled' => $this->where('deleted_at', 0)->where('status', 1)->count(),
+            'disabled' => $this->where('deleted_at', 0)->where('status', 0)->count(),
+            'hide' => $this->where('deleted_at', 0)->where('hide', true)->count(),
+            'visible' => $this->where('deleted_at', 0)->where('hide', false)->count(),
+            'deleted' => $this->where('deleted_at', '>', 0)->count()
         ];
     }
 }

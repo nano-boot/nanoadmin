@@ -307,7 +307,11 @@ class GenerateTablesService extends BaseService
     public function getDatabaseTables(string $source = ''): array
     {
         $prefix = config('database.connections.mysql.prefix', '');
-        $tables = Db::select("SHOW TABLE STATUS WHERE Name NOT LIKE '{$prefix}%' AND Name NOT LIKE '%_view'");
+        if ($prefix) {
+            $tables = Db::select("SHOW TABLE STATUS WHERE Name LIKE '{$prefix}%' AND Name NOT LIKE '%_view'");
+        } else {
+            $tables = Db::select("SHOW TABLE STATUS WHERE Name NOT LIKE '%_view'");
+        }
 
         $result = [];
         foreach ($tables as $table) {

@@ -85,7 +85,7 @@ class MenuService
         }
         
         // 排除已删除的记录
-        $where['deleted'] = false;
+        $where['deleted_at'] = 0;
         
         // 分页参数
         $page = $params['page'] ?? 1;

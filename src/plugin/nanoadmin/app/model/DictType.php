@@ -47,7 +47,7 @@ class DictType extends BaseModel
      * @var array
      */
     protected static array $searchLikeFields = ['name', 'code', 'description'];
-    protected static array $searchEqualFields = ['status', 'deleted'];
+    protected static array $searchEqualFields = ['status', 'deleted_at'];
     protected static array $searchKeywordFields = ['name', 'code'];
     protected static array $searchRangeFields = ['created_at'];
 

@@ -338,7 +338,7 @@ class AdminService extends BaseService
     {
         try {
             $adminModel = $this->model;
-            $admin = $adminModel->where('deleted', false)->find($adminId);
+            $admin = $adminModel->where('deleted_at', 0)->find($adminId);
             
             if (!$admin) {
                 return false;

@@ -146,7 +146,7 @@ class DictDataService extends BaseService
             return [];
         }
 
-        $type = $dictTypeModel->where('code', $typeCode)->where('deleted', 0)->first();
+        $type = $dictTypeModel->where('code', $typeCode)->where('deleted_at', 0)->first();
         if (!$type) {
             return [];
         }
@@ -154,7 +154,7 @@ class DictDataService extends BaseService
         $data = $this->model
             ->where('dict_type_id', $type->id)
             ->where('status', 1)
-            ->where('deleted', 0)
+            ->where('deleted_at', 0)
             ->orderBy('sort', 'asc')
             ->get()
             ->toArray();
@@ -212,7 +212,7 @@ class DictDataService extends BaseService
         // 检查字典类型是否存在
         $dictTypeModel = $this->getDictTypeModel();
         if ($dictTypeModel) {
-            $type = $dictTypeModel->where('id', $data['dict_type_id'])->where('deleted', 0)->first();
+            $type = $dictTypeModel->where('id', $data['dict_type_id'])->where('deleted_at', 0)->first();
             if (!$type) {
                 throw new ApiException(Code::BAD_REQUEST, '字典类型不存在');
             }
@@ -241,7 +241,7 @@ class DictDataService extends BaseService
         if ($oldRecord) {
             $dictTypeModel = $this->getDictTypeModel();
             if ($dictTypeModel) {
-                $type = $dictTypeModel->where('id', $oldRecord->dict_type_id)->where('deleted', 0)->first();
+                $type = $dictTypeModel->where('id', $oldRecord->dict_type_id)->where('deleted_at', 0)->first();
                 if ($type) {
                     $oldTypeCode = $type->code;
                 }
@@ -252,7 +252,7 @@ class DictDataService extends BaseService
         if (isset($data['dict_type_id'])) {
             $dictTypeModel = $this->getDictTypeModel();
             if ($dictTypeModel) {
-                $type = $dictTypeModel->where('id', $data['dict_type_id'])->where('deleted', 0)->first();
+                $type = $dictTypeModel->where('id', $data['dict_type_id'])->where('deleted_at', 0)->first();
                 if (!$type) {
                     throw new ApiException(Code::BAD_REQUEST, '字典类型不存在');
                 }
@@ -270,7 +270,7 @@ class DictDataService extends BaseService
         if (isset($data['dict_type_id'])) {
             $dictTypeModel = $this->getDictTypeModel();
             if ($dictTypeModel) {
-                $type = $dictTypeModel->where('id', $data['dict_type_id'])->where('deleted', 0)->first();
+                $type = $dictTypeModel->where('id', $data['dict_type_id'])->where('deleted_at', 0)->first();
                 if ($type) {
                     $this->clearCache($type->code);
                 }
@@ -297,7 +297,7 @@ class DictDataService extends BaseService
         $dictTypeModel = $this->getDictTypeModel();
         $typeCode = null;
         if ($dictTypeModel) {
-            $type = $dictTypeModel->where('id', $record->dict_type_id)->where('deleted', 0)->first();
+            $type = $dictTypeModel->where('id', $record->dict_type_id)->where('deleted_at', 0)->first();
             if ($type) {
                 $typeCode = $type->code;
             }
@@ -326,7 +326,7 @@ class DictDataService extends BaseService
         foreach ($records as $record) {
             $dictTypeModel = $this->getDictTypeModel();
             if ($dictTypeModel) {
-                $type = $dictTypeModel->where('id', $record->dict_type_id)->where('deleted', 0)->first();
+                $type = $dictTypeModel->where('id', $record->dict_type_id)->where('deleted_at', 0)->first();
                 if ($type && !in_array($type->code, $typeCodes)) {
                     $typeCodes[] = $type->code;
                 }

@@ -42,7 +42,7 @@ class PermissionService
         }
         
         // 排除已删除的记录
-        $where['deleted'] = false;
+        $where['deleted_at'] = 0;
         
         // 分页参数
         $page = $params['page'] ?? 1;
@@ -116,7 +116,7 @@ class PermissionService
         
         // 设置默认值
         $data['status'] = $data['status'] ?? true;
-        $data['deleted'] = false;
+        $data['deleted_at'] = 0;
         $data['created_at'] = date('Y-m-d H:i:s');
         $data['updated_at'] = date('Y-m-d H:i:s');
         

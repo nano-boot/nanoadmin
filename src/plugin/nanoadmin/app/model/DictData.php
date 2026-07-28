@@ -45,7 +45,7 @@ class DictData extends BaseModel
      * @var array
      */
     protected static array $searchLikeFields = [];
-    protected static array $searchEqualFields = ['dict_type_id', 'status', 'deleted'];
+    protected static array $searchEqualFields = ['dict_type_id', 'status', 'deleted_at'];
     protected static array $searchKeywordFields = ['label', 'value'];
     protected static array $searchRangeFields = ['created_at'];
 
