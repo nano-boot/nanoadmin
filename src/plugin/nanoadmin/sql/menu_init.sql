@@ -48,6 +48,8 @@ REPLACE INTO `na_sys_menu` (
  2,  100, 'M', 1, 0, 0, 1, 0, '', 0),
 (202, '菜单管理', 'menu', '/permission/menu', 'ri:menu-line', '', '',
  2,  100, 'M', 1, 0, 0, 0, 0,  'user', 0),
+(203, '部门管理', 'dept', '/system/dept', 'ri:organization-line', '', '',
+ 2, 100, 'M', 1, 0, 0, 1, 0,  '', 0);
 (300, '文件管理', 'file', '/system/file', 'ri:file-2-line', '', '',
  3,  100, 'M', 1, 0, 0, 1, 0, '', 0),
 (301, '字典管理', 'dict-type', '/system/dict-type', 'ri:book-2-line', '', '',
@@ -73,25 +75,31 @@ REPLACE INTO `na_sys_menu` (
     `sort`, `type`, `status`, `hide`, `deleted_at`
 ) VALUES
 -- 用户管理按钮（parent_id=200 -> 用户管理，path 只写自己那一段）
-(2000, '用户列表', 'list',      '', 'sys:admin:query',           200,  100, 'B', 1, 1, 0),
-(2001, '创建用户', 'create',    '', 'sys:admin:create',         200,  100, 'B', 1, 1, 0),
-(2002, '编辑用户', 'edit',     '', 'sys:admin:update',         200,  100, 'B', 1, 1, 0),
-(2003, '删除用户', 'delete',   '', 'sys:admin:delete',         200,  100, 'B', 1, 1, 0),
-(2004, '重置密码', 'reset-pwd', '', 'sys:admin:assign-role',    200,  100, 'B', 1, 1, 0),
+(2000, '用户列表', 'list',      '', 'sys:admin:query',              200,  100, 'B', 1, 1, 0),
+(2001, '创建用户', 'create',    '', 'sys:admin:create',             200,  100, 'B', 1, 1, 0),
+(2002, '编辑用户', 'edit',     '', 'sys:admin:update',              200,  100, 'B', 1, 1, 0),
+(2003, '删除用户', 'delete',   '', 'sys:admin:delete',              200,  100, 'B', 1, 1, 0),
+(2004, '重置密码', 'reset-pwd', '', 'sys:admin:assign-role',        200,  100, 'B', 1, 1, 0),
 
 -- 角色管理按钮（parent_id=201 -> 角色管理，path 只写自己那一段）
-(2010, '角色列表', 'list',       '', 'sys:role:query',             201,  100, 'B', 1, 1, 0),
-(2011, '创建角色', 'create',    '', 'sys:role:create',           201,  100, 'B', 1, 1, 0),
-(2012, '编辑角色', 'edit',      '', 'sys:role:update',           201,  100, 'B', 1, 1, 0),
-(2013, '删除角色', 'delete',    '', 'sys:role:delete',           201,  100, 'B', 1, 1, 0),
-(2014, '分配权限', 'permission', '', 'sys:role:assign-permission', 201,  100, 'B', 1, 1, 0),
+(2010, '角色列表', 'list',       '', 'sys:role:query',              201,  100, 'B', 1, 1, 0),
+(2011, '创建角色', 'create',    '', 'sys:role:create',              201,  100, 'B', 1, 1, 0),
+(2012, '编辑角色', 'edit',      '', 'sys:role:update',              201,  100, 'B', 1, 1, 0),
+(2013, '删除角色', 'delete',    '', 'sys:role:delete',              201,  100, 'B', 1, 1, 0),
+(2014, '分配权限', 'permission', '', 'sys:role:assign-permission',  201,  100, 'B', 1, 1, 0),
 
 -- 菜单管理按钮（parent_id=202 -> 菜单管理，path 只写自己那一段）
-(2020, '菜单列表', 'list',       '', 'sys:menu:query',             202,  100, 'B', 1, 1, 0),
-(2021, '创建菜单', 'create',    '', 'sys:menu:create',           202,  100, 'B', 1, 1, 0),
-(2022, '编辑菜单', 'edit',      '', 'sys:menu:update',           202,  100, 'B', 1, 1, 0),
-(2023, '删除菜单', 'delete',    '', 'sys:menu:delete',           202,  100, 'B', 1, 1, 0),
-(2024, '菜单排序', 'sort',     '', 'sys:menu:sort',             202,  100, 'B', 1, 1, 0),
+(2020, '菜单列表', 'list',       '', 'sys:menu:query', 202,  100, 'B', 1, 1, 0),
+(2021, '创建菜单', 'create',    '', 'sys:menu:create', 202,  100, 'B', 1, 1, 0),
+(2022, '编辑菜单', 'edit',      '', 'sys:menu:update', 202,  100, 'B', 1, 1, 0),
+(2023, '删除菜单', 'delete',    '', 'sys:menu:delete', 202,  100, 'B', 1, 1, 0),
+(2024, '菜单排序', 'sort',     '', 'sys:menu:sort',    202,  100, 'B', 1, 1, 0),
+
+-- 部门管理按钮（parent_id=203 -> 部门管理）
+(2030, '部门列表', 'list',   '', 'sys:dept:query',  203,  100, 'B', 1, 1, 0),
+(2031, '创建部门', 'create', '', 'sys:dept:create', 203,  100, 'B', 1, 1, 0),
+(2032, '编辑部门', 'edit',   '', 'sys:dept:update', 203,  100, 'B', 1, 1, 0),
+(2033, '删除部门', 'delete', '', 'sys:dept:delete', 203,  100, 'B', 1, 1, 0);
 
 -- 文件管理按钮（parent_id=300 -> 文件管理，path 只写自己那一段）
 (3001, '文件列表', 'list',   '', 'sys:file:list',   300,  100, 'B', 1, 1, 0),
@@ -100,30 +108,32 @@ REPLACE INTO `na_sys_menu` (
 (3004, '删除文件', 'delete', '', 'sys:file:delete', 300,  100, 'B', 1, 1, 0),
 
 -- 字典管理按钮（parent_id=301 -> 字典管理，path 只写自己那一段）
-(3010, '字典列表', 'list',   '', 'sys:dict:type:query',   301,  100, 'B', 1, 1, 0),
+(3010, '字典列表', 'list',   '', 'sys:dict:type:query',  301,  100, 'B', 1, 1, 0),
 (3011, '创建字典', 'create', '', 'sys:dict:type:create', 301,  100, 'B', 1, 1, 0),
 (3012, '编辑字典', 'edit',   '', 'sys:dict:type:update', 301,  100, 'B', 1, 1, 0),
 (3013, '删除字典', 'delete', '', 'sys:dict:type:delete', 301,  100, 'B', 1, 1, 0),
 
 -- 配置管理按钮（parent_id=302 -> 配置管理，path 只写自己那一段）
-(3020, '配置列表', 'list',   '', 'sys:config:query',   302,  100, 'B', 1, 1, 0),
+(3020, '配置列表', 'list',   '', 'sys:config:query',  302,  100, 'B', 1, 1, 0),
 (3021, '创建配置', 'create', '', 'sys:config:create', 302,  100, 'B', 1, 1, 0),
 (3022, '编辑配置', 'edit',   '', 'sys:config:update', 302,  100, 'B', 1, 1, 0),
 (3023, '删除配置', 'delete', '', 'sys:config:delete', 302,  100, 'B', 1, 1, 0),
 
 -- 日志管理按钮（parent_id=303 -> 日志管理，path 只写自己那一段）
-(3040, '登录日志列表', 'list',   '', 'sys:log:login:query',   304,  100, 'B', 1, 1, 0),
-(3041, '删除登录日志', 'delete', '', 'sys:log:login:delete', 304,  100, 'B', 1, 1, 0),
-(3050, '操作日志列表', 'list',   '', 'sys:log:operation:query',   305,  100, 'B', 1, 1, 0),
+(3040, '登录日志列表', 'list',   '', 'sys:log:login:query',      304,  100, 'B', 1, 1, 0),
+(3041, '删除登录日志', 'delete', '', 'sys:log:login:delete',     304,  100, 'B', 1, 1, 0),
+(3050, '操作日志列表', 'list',   '', 'sys:log:operation:query',  305,  100, 'B', 1, 1, 0),
 (3051, '删除操作日志', 'delete', '', 'sys:log:operation:delete', 305,  100, 'B', 1, 1, 0),
 
 -- 代码生成器按钮（parent_id=5 -> 代码生成器，path 只写自己那一段）
 (5000, '代码生成列表', 'list',       '', 'tool:generate:index',        5,  100, 'B', 1, 1, 0),
 (5001, '装载数据表', 'load-table',   '', 'tool:generate:loadTable',    5,  100, 'B', 1, 1, 0),
-(5002, '同步表结构', 'sync',         '', 'tool:generate:sync',          5,  100, 'B', 1, 1, 0),
-(5003, '代码预览',   'preview',      '', 'tool:generate:preview',       5,  100, 'B', 1, 1, 0),
+(5002, '同步表结构', 'sync',         '', 'tool:generate:sync',         5,  100, 'B', 1, 1, 0),
+(5003, '代码预览',   'preview',      '', 'tool:generate:preview',      5,  100, 'B', 1, 1, 0),
 (5004, '生成代码',   'generate',    '', 'tool:generate:generate',      5,  100, 'B', 1, 1, 0),
 (5005, '生成到项目', 'generateFile','', 'tool:generate:generateFile',  5,  100, 'B', 1, 1, 0);
+
+
 
 -- =====================================================
 -- swagger 文档菜单特殊配置（link 字段不在上方批量插入的列定义中，单独 UPDATE）

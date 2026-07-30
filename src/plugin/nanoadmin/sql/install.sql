@@ -416,6 +416,35 @@ INSERT INTO `na_sys_admin_role` (`admin_id`, `role_id`) VALUES
 ON DUPLICATE KEY UPDATE `role_id` = VALUES(`role_id`);
 
 -- =====================================================
+-- 部门表
+-- =====================================================
+DROP TABLE IF EXISTS `na_sys_dept`;
+CREATE TABLE `na_sys_dept` (
+  `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '部门ID',
+  `parent_id` int(11) UNSIGNED NOT NULL DEFAULT 0 COMMENT '父部门ID，0为顶级部门',
+  `path` varchar(500) NOT NULL DEFAULT ',' COMMENT '父节点路径，格式: ,0,1,12,',
+  `name` varchar(100) NOT NULL COMMENT '部门名称',
+  `code` varchar(50) DEFAULT NULL COMMENT '部门编码',
+  `phone` varchar(20) DEFAULT NULL COMMENT '联系电话',
+  `email` varchar(100) DEFAULT NULL COMMENT '邮箱',
+  `sort` int(11) NOT NULL DEFAULT 100 COMMENT '排序',
+  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态: 0禁用 1启用',
+  `created_at` datetime DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
+  `deleted_at` int(11) UNSIGNED DEFAULT 0 COMMENT '删除时间戳',
+  PRIMARY KEY (`id`),
+  KEY `idx_parent_id` (`parent_id`),
+  KEY `idx_path` (`path`),
+  KEY `idx_status` (`status`),
+  KEY `idx_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='部门表';
+
+-- 初始化顶级部门数据
+INSERT INTO `na_sys_dept` (`id`, `parent_id`, `path`, `name`, `code`, `sort`, `status`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 0, ',0,', '总公司', 'HQ', 100, 1, NOW(), NOW(), 0)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+
+-- =====================================================
 -- 代码生成器表
 -- =====================================================
 
@@ -515,12 +544,17 @@ INSERT INTO `na_sys_permission` (`id`, `code`, `name`, `resource`, `action`, `de
 (38, 'sys:log:create', '创建日志', 'log', 'create', '创建日志记录', 1, 801, 0),
 (39, 'sys:log:update', '编辑日志', 'log', 'update', '编辑日志信息', 1, 802, 0),
 (40, 'sys:log:delete', '删除日志', 'log', 'delete', '删除日志', 1, 803, 0),
-(41, 'tool:generate:index', '代码生成列表', 'generate', 'index', '查看代码生成列表', 1, 900, 0),
-(42, 'tool:generate:loadTable', '装载数据表', 'generate', 'loadTable', '装载数据表', 1, 901, 0),
-(43, 'tool:generate:sync', '同步表结构', 'generate', 'sync', '同步表结构', 1, 902, 0),
-(44, 'tool:generate:preview', '代码预览', 'generate', 'preview', '预览生成代码', 1, 903, 0),
-(45, 'tool:generate:generate', '生成代码', 'generate', 'generate', '生成代码', 1, 904, 0),
-(46, 'tool:generate:generateFile', '生成到项目', 'generate', 'generateFile', '生成代码到项目', 1, 905, 0)
+(41, 'sys:dept:query', '部门列表', 'dept', 'query', '查看部门列表', 1, 1000, 0),
+(42, 'sys:dept:create', '创建部门', 'dept', 'create', '创建新部门', 1, 1001, 0),
+(43, 'sys:dept:update', '更新部门', 'dept', 'update', '更新部门信息', 1, 1002, 0),
+(44, 'sys:dept:delete', '删除部门', 'dept', 'delete', '删除部门', 1, 1003, 0)
+(45, 'sys:generate:index', '代码生成列表', 'generate', 'index', '查看代码生成列表', 1, 900, 0),
+(46, 'sys:generate:loadTable', '装载数据表', 'generate', 'loadTable', '装载数据表', 1, 901, 0),
+(47, 'sys:generate:sync', '同步表结构', 'generate', 'sync', '同步表结构', 1, 902, 0),
+(48, 'sys:generate:preview', '代码预览', 'generate', 'preview', '预览生成代码', 1, 903, 0),
+(49, 'sys:generate:generate', '生成代码', 'generate', 'generate', '生成代码', 1, 904, 0),
+(50, 'sys:generate:generateFile', '生成到项目', 'generate', 'generateFile', '生成代码到项目', 1, 906, 0),
+
 ON DUPLICATE KEY UPDATE
 `name` = VALUES(`name`),
 `resource` = VALUES(`resource`),
@@ -539,8 +573,11 @@ INSERT INTO `na_sys_role_permission` (`role_id`, `permission_id`) VALUES
 (2, 29), (2, 30), (2, 31), (2, 32),
 (2, 33), (2, 34), (2, 35), (2, 36),
 (2, 37), (2, 38), (2, 39), (2, 40),
-(2, 41), (2, 42), (2, 43), (2, 44), (2, 45), (2, 46)
+(2, 41), (2, 42), (2, 43), (2, 44), (2, 45), (2, 46),
+(2, 47), (2, 48), (2, 49), (2, 50)
 ON DUPLICATE KEY UPDATE `permission_id` = VALUES(`permission_id`);
+
+
 
 -- =====================================================
 -- 菜单数据
