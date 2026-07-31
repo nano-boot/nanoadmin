@@ -19,6 +19,7 @@ use plugin\nanoadmin\app\common\Code;
  * @property string $email 邮箱
  * @property string $avatar 头像
  * @property int $status 状态
+ * @property int $gender 性别
  * @property int $id
  */
 class Admin extends BaseModel

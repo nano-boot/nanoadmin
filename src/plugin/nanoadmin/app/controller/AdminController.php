@@ -228,7 +228,7 @@ class AdminController extends BaseController
             'avatar' => $admin->avatar,
             'status' => $admin->status,
             'gender' => $admin->gender,
-            'roles' => $admin->roles->pluck('name')->toArray()
+            'roles' => $admin->roles()->pluck('name')->toArray()
         ], '更新用户资料成功');
     }
 }

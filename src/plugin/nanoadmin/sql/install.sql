@@ -78,12 +78,12 @@ CREATE TABLE IF NOT EXISTS `na_sys_role` (
 -- 3. 权限表
 DROP TABLE IF EXISTS `na_sys_permission`;
 CREATE TABLE IF NOT EXISTS na_sys_permission (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '权限ID',
-    code VARCHAR(100) NOT NULL UNIQUE COMMENT '权限代码',
-    name VARCHAR(100) NOT NULL COMMENT '权限名称',
-    resource VARCHAR(50) NOT NULL COMMENT '资源类型',
-    action VARCHAR(50) NOT NULL COMMENT '操作类型',
-    description VARCHAR(500) COMMENT '权限描述',
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '权限ID',
+    `code` VARCHAR(100) NOT NULL UNIQUE COMMENT '权限代码',
+    `name` VARCHAR(100) NOT NULL COMMENT '权限名称',
+    `resource` VARCHAR(50) NOT NULL COMMENT '资源类型',
+    `action` VARCHAR(50) NOT NULL COMMENT '操作类型',
+    `description` VARCHAR(500) COMMENT '权限描述',
     `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
     `sort` int(11) DEFAULT 100 COMMENT '排序',
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -402,8 +402,8 @@ ON DUPLICATE KEY UPDATE
 `deleted_at` = VALUES(`deleted_at`);
 
 INSERT INTO `na_sys_admin` (`id`, `username`, `password`, `nickname`, `gender`, `status`, `deleted_at`) VALUES
-(1, 'admin', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '超级管理员', 1,1, 0),
-(2, 'system', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '系统管理员', 2, 1,0)
+(1, 'admin', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '超级管理员', 1, 1, 0),
+(2, 'system', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '系统管理员', 2, 1, 0)
 ON DUPLICATE KEY UPDATE
 `password` = VALUES(`password`),
 `nickname` = VALUES(`nickname`),
@@ -439,9 +439,36 @@ CREATE TABLE `na_sys_dept` (
   KEY `idx_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='部门表';
 
--- 初始化顶级部门数据
+-- 初始化部门数据：顶层为集团公司，下层为分公司，分公司下设各部门
 INSERT INTO `na_sys_dept` (`id`, `parent_id`, `path`, `name`, `code`, `sort`, `status`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 0, ',0,', '总公司', 'HQ', 100, 1, NOW(), NOW(), 0)
+-- 顶层：集团总部
+(1, 0, ',0,', '华创科技集团', 'HCGROUP', 100, 1, NOW(), NOW(), 0),
+
+-- 分公司
+(2, 1, ',0,1,', '北京分公司', 'BJ', 100, 1, NOW(), NOW(), 0),
+(3, 1, ',0,1,', '上海分公司', 'SH', 100, 1, NOW(), NOW(), 0),
+
+-- 北京分公司-研发体系
+(10, 2, ',0,1,2,', '研发中心', 'BJ-RD', 100, 1, NOW(), NOW(), 0),
+(11, 10, ',0,1,2,10,', '开发部', 'BJ-FE', 100, 1, NOW(), NOW(), 0),
+(12, 10, ',0,1,2,10,', '运维部', 'BJ-BE', 100, 1, NOW(), NOW(), 0),
+(13, 10, ',0,1,2,10,', 'AI研发部', 'BJ-AI', 100, 1, NOW(), NOW(), 0),
+
+-- 北京分公司-职能支撑
+(19, 2, ',0,1,2,', '综合管理部', 'BJ-ADMIN', 100, 1, NOW(), NOW(), 0),
+(20, 2, ',0,1,2,', '财务部', 'BJ-FIN', 100, 1, NOW(), NOW(), 0),
+(21, 2, ',0,1,2,', '人力资源部', 'BJ-HR', 100, 1, NOW(), NOW(), 0),
+
+-- 上海分公司-业务体系
+(30, 3, ',0,1,3,', '市场营销部', 'SH-MKT', 100, 1, NOW(), NOW(), 0),
+(31, 3, ',0,1,3,', '销售部', 'SH-SALES', 100, 1, NOW(), NOW(), 0),
+(32, 30, ',0,1,3,30,', '品牌推广组', 'SH-BRAND', 100, 1, NOW(), NOW(), 0),
+(33, 30, ',0,1,3,30,', '数字营销组', 'SH-DM', 100, 1, NOW(), NOW(), 0),
+
+-- 上海分公司-客户服务
+(34, 3, ',0,1,3,', '客户成功部', 'SH-CS', 100, 1, NOW(), NOW(), 0),
+(35, 34, ',0,1,3,34,', '客户服务组', 'SH-CS-CS', 100, 1, NOW(), NOW(), 0),
+(36, 34, ',0,1,3,34,', '技术支持组', 'SH-CS-TS', 100, 1, NOW(), NOW(), 0),
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
 
 -- =====================================================
@@ -505,56 +532,55 @@ CREATE TABLE IF NOT EXISTS `na_sys_generate_columns` (
 
 INSERT INTO `na_sys_permission` (`id`, `code`, `name`, `resource`, `action`, `description`, `status`, `sort`, `deleted_at`) VALUES
 (1, 'sys:admin:query', '管理员列表', 'admin', 'query', '查看管理员列表', 1, 100, 0),
-(2, 'sys:admin:create', '创建管理员', 'admin', 'create', '创建新管理员', 1, 101, 0),
-(3, 'sys:admin:query', '查看管理员', 'admin', 'query', '查看管理员详情', 1, 102, 0),
-(4, 'sys:admin:update', '更新管理员', 'admin', 'update', '更新管理员信息', 1, 103, 0),
-(5, 'sys:admin:assign-role', '分配管理员角色', 'admin', 'assign-role', '为管理员分配角色', 1, 104, 0),
-(6, 'sys:admin:delete', '删除管理员', 'admin', 'delete', '删除管理员', 1, 105, 0),
-(7, 'sys:role:query', '角色列表', 'role', 'query', '查看角色列表', 1, 200, 0),
-(8, 'sys:role:create', '创建角色', 'role', 'create', '创建新角色', 1, 201, 0),
-(9, 'sys:role:query', '查看角色', 'role', 'query', '查看角色详情', 1, 202, 0),
-(10, 'sys:role:update', '更新角色', 'role', 'update', '更新角色信息', 1, 203, 0),
-(11, 'sys:role:assign-permission', '分配角色权限', 'role', 'assign-permission', '为角色分配权限', 1, 204, 0),
-(12, 'sys:role:assign-menu', '分配角色菜单', 'role', 'assign-menu', '为角色分配菜单', 1, 205, 0),
-(13, 'sys:role:delete', '删除角色', 'role', 'delete', '删除角色', 1, 206, 0),
-(14, 'sys:permission:query', '权限列表', 'permission', 'query', '查看权限列表', 1, 300, 0),
-(15, 'sys:permission:create', '创建权限', 'permission', 'create', '创建新权限', 1, 301, 0),
-(16, 'sys:permission:query', '查看权限', 'permission', 'query', '查看权限详情', 1, 302, 0),
-(17, 'sys:permission:update', '更新权限', 'permission', 'update', '更新权限信息', 1, 303, 0),
-(18, 'sys:permission:delete', '删除权限', 'permission', 'delete', '删除权限', 1, 304, 0),
-(19, 'sys:menu:query', '菜单列表', 'menu', 'query', '查看菜单列表', 1, 400, 0),
-(20, 'sys:menu:create', '创建菜单', 'menu', 'create', '创建新菜单', 1, 401, 0),
-(21, 'sys:menu:query', '查看菜单', 'menu', 'query', '查看菜单详情', 1, 402, 0),
-(22, 'sys:menu:update', '更新菜单', 'menu', 'update', '更新菜单信息', 1, 403, 0),
-(23, 'sys:menu:sort', '菜单排序', 'menu', 'sort', '调整菜单排序', 1, 404, 0),
-(24, 'sys:menu:delete', '删除菜单', 'menu', 'delete', '删除菜单', 1, 405, 0),
-(25, 'sys:file:list', '文件列表', 'file', 'list', '查看文件列表', 1, 500, 0),
-(26, 'sys:file:create', '创建文件', 'file', 'create', '上传或创建文件', 1, 501, 0),
-(27, 'sys:file:update', '编辑文件', 'file', 'update', '编辑文件信息', 1, 502, 0),
-(28, 'sys:file:delete', '删除文件', 'file', 'delete', '删除文件', 1, 503, 0),
-(29, 'sys:dict:type:query', '字典列表', 'dict-type', 'query', '查看字典列表', 1, 600, 0),
-(30, 'sys:dict:type:create', '创建字典', 'dict-type', 'create', '创建新字典', 1, 601, 0),
-(31, 'sys:dict:type:update', '编辑字典', 'dict-type', 'update', '编辑字典信息', 1, 602, 0),
-(32, 'sys:dict:type:delete', '删除字典', 'dict-type', 'delete', '删除字典', 1, 603, 0),
-(33, 'sys:config:query', '配置列表', 'config', 'query', '查看配置列表', 1, 700, 0),
-(34, 'sys:config:create', '创建配置', 'config', 'create', '创建新配置', 1, 701, 0),
-(35, 'sys:config:update', '编辑配置', 'config', 'update', '编辑配置信息', 1, 702, 0),
-(36, 'sys:config:delete', '删除配置', 'config', 'delete', '删除配置', 1, 703, 0),
-(37, 'sys:log:query', '日志列表', 'log', 'query', '查看日志列表', 1, 800, 0),
-(38, 'sys:log:create', '创建日志', 'log', 'create', '创建日志记录', 1, 801, 0),
-(39, 'sys:log:update', '编辑日志', 'log', 'update', '编辑日志信息', 1, 802, 0),
-(40, 'sys:log:delete', '删除日志', 'log', 'delete', '删除日志', 1, 803, 0),
-(41, 'sys:dept:query', '部门列表', 'dept', 'query', '查看部门列表', 1, 1000, 0),
-(42, 'sys:dept:create', '创建部门', 'dept', 'create', '创建新部门', 1, 1001, 0),
-(43, 'sys:dept:update', '更新部门', 'dept', 'update', '更新部门信息', 1, 1002, 0),
-(44, 'sys:dept:delete', '删除部门', 'dept', 'delete', '删除部门', 1, 1003, 0)
-(45, 'sys:generate:index', '代码生成列表', 'generate', 'index', '查看代码生成列表', 1, 900, 0),
-(46, 'sys:generate:loadTable', '装载数据表', 'generate', 'loadTable', '装载数据表', 1, 901, 0),
-(47, 'sys:generate:sync', '同步表结构', 'generate', 'sync', '同步表结构', 1, 902, 0),
-(48, 'sys:generate:preview', '代码预览', 'generate', 'preview', '预览生成代码', 1, 903, 0),
-(49, 'sys:generate:generate', '生成代码', 'generate', 'generate', '生成代码', 1, 904, 0),
-(50, 'sys:generate:generateFile', '生成到项目', 'generate', 'generateFile', '生成代码到项目', 1, 906, 0),
-
+(2, 'sys:admin:create', '创建管理员', 'admin', 'create', '创建新管理员', 1, 100, 0),
+(3, 'sys:admin:show', '查看管理员', 'admin', 'show', '查看管理员详情', 1, 100, 0),
+(4, 'sys:admin:update', '更新管理员', 'admin', 'update', '更新管理员信息', 1, 100, 0),
+(5, 'sys:admin:assign-role', '分配管理员角色', 'admin', 'assign-role', '为管理员分配角色', 1, 100, 0),
+(6, 'sys:admin:delete', '删除管理员', 'admin', 'delete', '删除管理员', 1, 100, 0),
+(7, 'sys:role:query', '角色列表', 'role', 'query', '查看角色列表', 1, 100, 0),
+(8, 'sys:role:create', '创建角色', 'role', 'create', '创建新角色', 1, 100, 0),
+(9, 'sys:role:show', '查看角色', 'role', 'show', '查看角色详情', 1, 100, 0),
+(10, 'sys:role:update', '更新角色', 'role', 'update', '更新角色信息', 1, 100, 0),
+(11, 'sys:role:assign-permission', '分配角色权限', 'role', 'assign-permission', '为角色分配权限', 1, 100, 0),
+(12, 'sys:role:assign-menu', '分配角色菜单', 'role', 'assign-menu', '为角色分配菜单', 1, 100, 0),
+(13, 'sys:role:delete', '删除角色', 'role', 'delete', '删除角色', 1, 100, 0),
+(14, 'sys:permission:query', '权限列表', 'permission', 'query', '查看权限列表', 1, 100, 0),
+(15, 'sys:permission:create', '创建权限', 'permission', 'create', '创建新权限', 1, 100, 0),
+(16, 'sys:permission:show', '查看权限', 'permission', 'show', '查看权限详情', 1, 100, 0),
+(17, 'sys:permission:update', '更新权限', 'permission', 'update', '更新权限信息', 1, 100, 0),
+(18, 'sys:permission:delete', '删除权限', 'permission', 'delete', '删除权限', 1, 100, 0),
+(19, 'sys:menu:query', '菜单列表', 'menu', 'query', '查看菜单列表', 1, 100, 0),
+(20, 'sys:menu:create', '创建菜单', 'menu', 'create', '创建新菜单', 1, 100, 0),
+(21, 'sys:menu:show', '查看菜单', 'menu', 'show', '查看菜单详情', 1, 100, 0),
+(22, 'sys:menu:update', '更新菜单', 'menu', 'update', '更新菜单信息', 1, 100, 0),
+(23, 'sys:menu:sort', '菜单排序', 'menu', 'sort', '调整菜单排序', 1, 100, 0),
+(24, 'sys:menu:delete', '删除菜单', 'menu', 'delete', '删除菜单', 1, 100, 0),
+(25, 'sys:file:list', '文件列表', 'file', 'list', '查看文件列表', 1, 100, 0),
+(26, 'sys:file:create', '创建文件', 'file', 'create', '上传或创建文件', 1, 100, 0),
+(27, 'sys:file:update', '编辑文件', 'file', 'update', '编辑文件信息', 1, 100, 0),
+(28, 'sys:file:delete', '删除文件', 'file', 'delete', '删除文件', 1, 100, 0),
+(29, 'sys:dict:type:query', '字典列表', 'dict-type', 'query', '查看字典列表', 1, 100, 0),
+(30, 'sys:dict:type:create', '创建字典', 'dict-type', 'create', '创建新字典', 1, 100, 0),
+(31, 'sys:dict:type:update', '编辑字典', 'dict-type', 'update', '编辑字典信息', 1, 100, 0),
+(32, 'sys:dict:type:delete', '删除字典', 'dict-type', 'delete', '删除字典', 1, 100, 0),
+(33, 'sys:config:query', '配置列表', 'config', 'query', '查看配置列表', 1, 100, 0),
+(34, 'sys:config:create', '创建配置', 'config', 'create', '创建新配置', 1, 100, 0),
+(35, 'sys:config:update', '编辑配置', 'config', 'update', '编辑配置信息', 1, 100, 0),
+(36, 'sys:config:delete', '删除配置', 'config', 'delete', '删除配置', 1, 100, 0),
+(37, 'sys:log:query', '日志列表', 'log', 'query', '查看日志列表', 1, 100, 0),
+(38, 'sys:log:create', '创建日志', 'log', 'create', '创建日志记录', 1, 100, 0),
+(39, 'sys:log:update', '编辑日志', 'log', 'update', '编辑日志信息', 1, 100, 0),
+(40, 'sys:log:delete', '删除日志', 'log', 'delete', '删除日志', 1, 100, 0),
+(41, 'sys:dept:query', '部门列表', 'dept', 'query', '查看部门列表', 1, 100, 0),
+(42, 'sys:dept:create', '创建部门', 'dept', 'create', '创建新部门', 1, 100, 0),
+(43, 'sys:dept:update', '更新部门', 'dept', 'update', '更新部门信息', 1, 100, 0),
+(44, 'sys:dept:delete', '删除部门', 'dept', 'delete', '删除部门', 1, 100, 0),
+(45, 'sys:generate:index', '代码生成列表', 'generate', 'index', '查看代码生成列表', 1, 100, 0),
+(46, 'sys:generate:loadTable', '装载数据表', 'generate', 'loadTable', '装载数据表', 1, 100, 0),
+(47, 'sys:generate:sync', '同步表结构', 'generate', 'sync', '同步表结构', 1, 100, 0),
+(48, 'sys:generate:preview', '代码预览', 'generate', 'preview', '预览生成代码', 1, 100, 0),
+(49, 'sys:generate:generate', '生成代码', 'generate', 'generate', '生成代码', 1, 100, 0),
+(50, 'sys:generate:generateFile', '生成到项目', 'generate', 'generateFile', '生成代码到项目', 1, 100, 0)
 ON DUPLICATE KEY UPDATE
 `name` = VALUES(`name`),
 `resource` = VALUES(`resource`),

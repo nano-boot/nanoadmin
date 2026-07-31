@@ -38,8 +38,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Webman\\nanoadmin\\": "src/"
-        }
+            "Webman\\nanoadmin\\": "src/",
+            "plugin\\nanoadmin\\": "src/plugin/nanoadmin/"
+        },
+        "files": [
+            "src/plugin/nanoadmin/app/functions.php"
+        ]
     },
     "minimum-stability": "stable",
     "prefer-stable": true,

@@ -48,8 +48,8 @@ REPLACE INTO `na_sys_menu` (
  2,  100, 'M', 1, 0, 0, 1, 0, '', 0),
 (202, '菜单管理', 'menu', '/permission/menu', 'ri:menu-line', '', '',
  2,  100, 'M', 1, 0, 0, 0, 0,  'user', 0),
-(203, '部门管理', 'dept', '/system/dept', 'ri:organization-line', '', '',
- 2, 100, 'M', 1, 0, 0, 1, 0,  '', 0);
+(203, '部门管理', 'dept', '/system/dept', 'ri:organization-chart', '', '',
+ 2, 100, 'M', 1, 0, 0, 1, 0,  '', 0),
 (300, '文件管理', 'file', '/system/file', 'ri:file-2-line', '', '',
  3,  100, 'M', 1, 0, 0, 1, 0, '', 0),
 (301, '字典管理', 'dict-type', '/system/dict-type', 'ri:book-2-line', '', '',
@@ -99,7 +99,7 @@ REPLACE INTO `na_sys_menu` (
 (2030, '部门列表', 'list',   '', 'sys:dept:query',  203,  100, 'B', 1, 1, 0),
 (2031, '创建部门', 'create', '', 'sys:dept:create', 203,  100, 'B', 1, 1, 0),
 (2032, '编辑部门', 'edit',   '', 'sys:dept:update', 203,  100, 'B', 1, 1, 0),
-(2033, '删除部门', 'delete', '', 'sys:dept:delete', 203,  100, 'B', 1, 1, 0);
+(2033, '删除部门', 'delete', '', 'sys:dept:delete', 203,  100, 'B', 1, 1, 0),
 
 -- 文件管理按钮（parent_id=300 -> 文件管理，path 只写自己那一段）
 (3001, '文件列表', 'list',   '', 'sys:file:list',   300,  100, 'B', 1, 1, 0),

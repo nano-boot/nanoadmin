@@ -248,14 +248,15 @@ class Dept extends BaseModel
 
     /**
      * 获取下一个排序值
-     * @param int $parentId 父部门ID
+     * @param array $where 查询条件（支持 parent_id 字段）
      * @return int
      */
-    public function getNextSort(int $parentId = 0): int
+    public function getNextSort(array $where = []): int
     {
-        $maxSort = $this->where('parent_id', $parentId)
-            ->where('deleted_at', 0)
-            ->max('sort');
+        $query = $this->where($where);
+        $parentId = $where['parent_id'] ?? 0;
+        $query->where('parent_id', $parentId);
+        $maxSort = $query->max('sort');
         return $maxSort ? $maxSort + 10 : 100;
     }
 
