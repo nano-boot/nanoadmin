@@ -64,16 +64,16 @@ class DeptController extends BaseController
     #[OA\Get(
         path: '/sys/dept/tree',
         summary: '部门树形列表',
-        tags: ['部门']
+        description: '获取部门树形结构，支持按关键词、名称、编码、状态、父部门等条件搜索，搜索时通过 BFS 加载祖先以保持树形结构',
+        tags: ['部门'],
+        x: [SchemaConstants::X_SCHEMA_TO_PARAMETERS => DeptQuery::class]
     )]
     #[Permission(title: '部门树形列表', code: 'sys:dept:tree', action: 'query')]
     #[DataResponse(schema: DeptResponse::class)]
     public function tree(Request $request): Response
     {
-        $parentId = $request->input('parent_id', 0);
-        $onlyEnabled = filter_var($request->input('enabled', true), FILTER_VALIDATE_BOOLEAN);
-        $tree = $this->deptService->getTree($parentId, $onlyEnabled);
-        return R::success($tree, '获取部门树成功');
+        $params = $this->validator->scene('tree')->setGet()->check();
+        return R::success($this->deptService->getDeptTreeWithSearch($params), '获取部门树成功');
     }
 
     #[OA\Get(

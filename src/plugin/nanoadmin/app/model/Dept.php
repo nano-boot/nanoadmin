@@ -72,20 +72,25 @@ class Dept extends BaseModel
     }
 
     /**
-     * 获取部门树形结构
-     *
-     * 一次性查询全部数据，在内存中构建树形结构，避免 N+1 问题
-     *
      * @param int $parentId 树的根节点父ID（0 = 全树）
      * @param bool $onlyEnabled 是否只获取启用的部门
+     * @param string|null $keyword 部门名称或编码关键词
      * @return array
      */
-    public function getTree(int $parentId = 0, bool $onlyEnabled = true): array
+    public function getTree(int $parentId = 0, bool $onlyEnabled = true, ?string $keyword = null): array
     {
         $query = $this->where('deleted_at', 0);
 
         if ($onlyEnabled) {
             $query->where('status', 1);
+        }
+
+        if ($keyword !== null && trim($keyword) !== '') {
+            $keyword = trim($keyword);
+            $query->where(function ($query) use ($keyword) {
+                $query->where('name', 'like', '%' . $keyword . '%')
+                    ->orWhere('code', 'like', '%' . $keyword . '%');
+            });
         }
 
         $allDepts = $query->orderBy('sort', 'asc')

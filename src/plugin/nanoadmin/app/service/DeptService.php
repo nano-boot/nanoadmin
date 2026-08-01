@@ -28,7 +28,7 @@ class DeptService extends BaseService
      */
     protected function getNotFoundCode(): Code
     {
-        return Code::DEPT_NOT_FOUND;
+        return Code::NOT_FOUND;
     }
 
     /**
@@ -75,11 +75,70 @@ class DeptService extends BaseService
      * 获取部门树形结构
      * @param int|null $parentId 父部门ID
      * @param bool $onlyEnabled 是否只获取启用的部门
+     * @param string|null $keyword 部门名称或编码关键词
      * @return array
      */
-    public function getTree(?int $parentId = 0, bool $onlyEnabled = true): array
+    public function getTree(?int $parentId = 0, bool $onlyEnabled = true, ?string $keyword = null): array
     {
-        return $this->model->getTree($parentId ?? 0, $onlyEnabled);
+        return $this->model->getTree($parentId ?? 0, $onlyEnabled, $keyword);
+    }
+
+    /**
+     * 获取部门树（支持高级搜索条件）
+     *
+     * 薄 Controller 入口：当 query 参数含搜索条件时走 DeptSearchService，
+     * 无搜索条件时走 model.getTree 单次高效查询。
+     *
+     * 与 MenuController::getMenuTreeWithSearch 同构：
+     *  - keyword / name / code 单独或组合传入都会触发搜索服务
+     *  - 搜索时通过 BFS 加载匹配部门的祖先（基于 dept.path 物化路径），
+     *    保证返回的树形结构能正确展示匹配部门在组织里的位置
+     *
+     * @param array $params 搜索参数（parent_id / keyword / status / name / code / only_enabled）
+     * @return array
+     */
+    public function getDeptTreeWithSearch(array $params = []): array
+    {
+        $parentId    = (int)($params['parent_id'] ?? 0);
+        $onlyEnabled = (bool)($params['only_enabled'] ?? true);
+
+        $keyword = trim((string)($params['keyword'] ?? ''));
+        $name    = trim((string)($params['name'] ?? ''));
+        $code    = trim((string)($params['code'] ?? ''));
+        $status  = $params['status'] ?? null;
+
+        // 判断是否存在真实搜索条件
+        $hasSearch = $keyword !== ''
+            || $name !== ''
+            || $code !== ''
+            || ($status !== null && $status !== '');
+
+        if ($hasSearch) {
+            $searchParams = [];
+            if ($parentId > 0) {
+                $searchParams['parent_id'] = $parentId;
+            }
+            if ($keyword !== '') {
+                $searchParams['keyword'] = $keyword;
+            }
+            if ($name !== '') {
+                $searchParams['name'] = $name;
+            }
+            if ($code !== '') {
+                $searchParams['code'] = $code;
+            }
+            if ($status !== null && $status !== '') {
+                $searchParams['status'] = (int)$status;
+            } elseif ($onlyEnabled) {
+                // 与 Menu 行为一致：only_enabled=true 默认收 status=1
+                $searchParams['status'] = 1;
+            }
+
+            $searchService = new DeptSearchService();
+            return $searchService->advancedSearch($searchParams);
+        }
+
+        return $this->model->getTree($parentId, $onlyEnabled);
     }
 
     /**
@@ -105,7 +164,7 @@ class DeptService extends BaseService
         if ($parentId > 0) {
             $parent = $this->model->find($parentId);
             if (!$parent) {
-                throw new ApiException(Code::DEPT_NOT_FOUND, '父部门不存在');
+                throw new ApiException(Code::NOT_FOUND, '父部门不存在');
             }
         }
 
@@ -131,19 +190,19 @@ class DeptService extends BaseService
     {
         $dept = $this->model->find($id);
         if (!$dept) {
-            throw new ApiException(Code::DEPT_NOT_FOUND, '部门不存在');
+            throw new ApiException(Code::NOT_FOUND, '部门不存在');
         }
 
         $newParentId = $data['parent_id'] ?? $dept->parent_id;
 
         // 不能将自己设为父部门
         if ($newParentId == $id) {
-            throw new ApiException(Code::INVALID_PARAMETER, '不能将部门设为自己的子部门');
+            throw new ApiException(Code::BAD_REQUEST, '不能将部门设为自己的子部门');
         }
 
         // 检查循环引用
         if ($newParentId > 0 && $this->model->wouldCreateCircularReference($id, $newParentId)) {
-            throw new ApiException(Code::INVALID_PARAMETER, '不能将部门移动到自己的子部门下');
+            throw new ApiException(Code::BAD_REQUEST, '不能将部门移动到自己的子部门下');
         }
 
         // 如果父部门发生变化，重新计算 path
@@ -168,12 +227,12 @@ class DeptService extends BaseService
     {
         $dept = $this->model->find($id);
         if (!$dept) {
-            throw new ApiException(Code::DEPT_NOT_FOUND, '部门不存在');
+            throw new ApiException(Code::NOT_FOUND, '部门不存在');
         }
 
         // 检查是否有子部门
         if ($this->model->hasChildren($id)) {
-            throw new ApiException(Code::DATA_HAS_CHILDREN, '该部门下存在子部门，无法删除');
+            throw new ApiException(Code::BAD_REQUEST, '该部门下存在子部门，无法删除');
         }
 
         return $this->delete($id);
@@ -198,12 +257,12 @@ class DeptService extends BaseService
 
         if (!empty($failedDepts)) {
             throw new ApiException(
-                Code::DATA_HAS_CHILDREN,
+                Code::BAD_REQUEST,
                 '以下部门存在子部门，无法删除：' . implode('、', $failedDepts)
             );
         }
 
-        return $this->batchDeleteRecords($ids);
+        return $this->batchDelete($ids);
     }
 
     /**

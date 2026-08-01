@@ -24,10 +24,13 @@ class DeptValidator extends ValidatorBase
 
     /**
      * 验证规则
+     *
+     * 规则按"全场景兼容"原则编写：默认用 `nullable` 让字段在所有场景都可选。
+     * store / update 场景需要 `name` 必填，在 `rules()` 内根据 `_scene` 动态收紧。
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'id' => [
                 'required',
                 'integer',
@@ -39,7 +42,7 @@ class DeptValidator extends ValidatorBase
                 'min:0',
             ],
             'name' => [
-                'required',
+                'nullable',
                 'string',
                 'min:1',
                 'max:100',
@@ -96,7 +99,34 @@ class DeptValidator extends ValidatorBase
                 'integer',
                 'gt:0',
             ],
+            'only_enabled' => [
+                'nullable',
+                'boolean',
+            ],
         ];
+
+        // store / update 场景必须传部门名称
+        if (in_array($this->_scene, ['store', 'update'], true)) {
+            $rules['name'] = [
+                'required',
+                'string',
+                'min:1',
+                'max:100',
+            ];
+        }
+
+        // 未绑定场景时返回全部规则（兼容老调用）
+        if ($this->_scene === null) {
+            return $rules;
+        }
+
+        // 按场景过滤字段
+        $sceneFields = $this->getScenes()[$this->_scene] ?? [];
+        if (empty($sceneFields)) {
+            return $rules;
+        }
+
+        return array_intersect_key($rules, array_flip($sceneFields));
     }
 
     /**
@@ -183,6 +213,15 @@ class DeptValidator extends ValidatorBase
             'destroy' => ['id'],
             'batchDestroy' => ['ids'],
             'page' => ['page', 'limit', 'keyword', 'status', 'parent_id'],
+
+            'tree' => [
+                'parent_id',
+                'keyword',
+                'status',
+                'only_enabled',
+                'name',
+                'code',
+            ],
         ];
     }
 }
