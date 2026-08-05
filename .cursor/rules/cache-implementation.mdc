@@ -1,0 +1,76 @@
+# 缓存实现规范
+
+## 强制要求
+
+项目**必须**使用 `webman/think-cache` 作为缓存方案。
+
+| 禁止 | 原因 |
+|------|------|
+| 手动 `new \Redis()` 建立连接 | 绕过统一配置，难以管理 |
+| 自行实现文件缓存 | 重复造轮子，维护成本高 |
+| 硬编码 Redis 配置 | 配置分散，无法集中管理 |
+
+## 正确做法
+
+### 1. 引入依赖
+
+```php
+use plugin\nanoadmin\app\common\Cache;
+use Webman\ThinkCache\Driver;
+```
+
+### 2. 读取配置
+
+```php
+$this->config = config('nanoadmin.cache.模块名', []);
+```
+
+### 3. 初始化缓存
+
+```php
+private function initializeCache(): void
+{
+    if (!($this->config['enabled'] ?? true)) {
+        $this->cache = null;
+        return;
+    }
+    try {
+        $store = $this->config['store'] ?? null;
+        $this->cache = ($store !== null && $store !== '')
+            ? Cache::store($store)
+            : Cache::store();
+    } catch (\Throwable $e) {
+        $this->cache = null;
+    }
+}
+```
+
+### 4. 使用 tag 批量失效
+
+```php
+// 写入时打标签
+$this->cache->tag($this->cacheTag)->set($key, $data, $ttl);
+
+// 失效时批量清除
+$this->cache->tag($this->cacheTag)->clear();
+```
+
+## 配置位置
+
+缓存配置在 `config/nanoadmin.php` 的 `cache` 节点：
+
+```php
+'cache' => [
+    '模块名' => [
+        'enabled' => true,
+        'store' => 'redis',    // 可选，默认使用 default store
+        'prefix' => '模块:',  // 缓存键前缀
+        'ttl' => 3600,       // 默认过期时间
+    ],
+],
+```
+
+## 参考实现
+
+- `plugin/nanoadmin/app/service/DictTypeService.php` - 字典缓存
+- `plugin/nanoadmin/app/service/MenuTransformService.php` - 菜单缓存

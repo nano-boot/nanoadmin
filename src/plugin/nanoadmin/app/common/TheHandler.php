@@ -142,7 +142,9 @@ class TheHandler extends Handler
     private function buildResponse(Throwable $exception, string $message, int $status): Response
     {
         $json = $this->buildJsonResponse($exception, $message);
-        return json($json, $status);
+        return new Response($status, ['Content-Type' => 'application/json'],
+            json_encode($json, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
     }
 
     /**

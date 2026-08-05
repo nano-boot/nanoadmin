@@ -120,7 +120,7 @@ class AdminAuthCache
     {
         $this->ensureCacheValid();
 
-        $cacheKey = $this->prefix . 'admin_perms_' . $adminId;
+        $cacheKey = $this->prefix . 'admin_persu_' . $adminId;
 
         try {
             if ($this->cache) {
@@ -192,7 +192,7 @@ class AdminAuthCache
      */
     public function clearAdminCache(int $adminId): void
     {
-        $cacheKey = $this->prefix . 'admin_perms_' . $adminId;
+        $cacheKey = $this->prefix . 'admin_persu_' . $adminId;
         $this->cache?->delete($cacheKey);
     }
 
