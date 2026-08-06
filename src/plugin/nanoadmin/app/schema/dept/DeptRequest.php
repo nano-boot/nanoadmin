@@ -3,11 +3,17 @@
 namespace plugin\nanoadmin\app\schema\dept;
 
 use OpenApi\Attributes as OA;
+use plugin\nanoadmin\app\library\swagger\RequestSchema;
 
 /**
  * 部门请求体
+ *
+ * 只做 OpenAPI 文档，校验统一走 DeptValidator（ValidatorBase）。
+ *
+ * @see plugin\nanoadmin\app\validator\dept\DeptValidator
  */
-class DeptRequest
+#[OA\Schema(title: '部门请求', description: '部门创建/更新请求参数')]
+class DeptRequest extends RequestSchema
 {
     #[OA\Property(description: '部门名称', example: '研发部')]
     public string $name;
@@ -29,8 +35,4 @@ class DeptRequest
 
     #[OA\Property(description: '状态', example: 1, nullable: true)]
     public ?int $status;
-
-    public function __construct()
-    {
-    }
 }

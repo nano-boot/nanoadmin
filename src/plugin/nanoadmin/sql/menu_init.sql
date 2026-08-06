@@ -36,7 +36,7 @@ REPLACE INTO `na_sys_menu` (
  0,  100, 'D', 1, 0, 0, 1, 0, '', 0),
 (4, '接口管理', '/interface', '', 'ri:code-view', '', '',
  0,  100, 'D', 1, 0, 0, 1, 0,  '', 0),
-(5, '代码生成', '/tool/generate', '/plugin/tool/generate/index', 'ri:code-box-line', '', '',
+(5, '代码生成', '/tool/generate', '/tool/generate/index', 'ri:code-box-line', '', '',
  0,  100, 'M', 1, 0, 0, 1, 0,  '', 0),
 
 -- === 二级页面（M 类型，permission 为空，path 只写自己那一段，由 buildFullPath 自动拼接父路径）===

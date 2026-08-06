@@ -3,11 +3,17 @@
 namespace plugin\nanoadmin\app\schema\dept;
 
 use OpenApi\Attributes as OA;
+use plugin\nanoadmin\app\library\swagger\ResponseSchema;
 
 /**
  * 部门响应体
+ *
+ * 只做 OpenAPI 文档，校验统一走 DeptValidator（ValidatorBase）。
+ *
+ * @see plugin\nanoadmin\app\validator\dept\DeptValidator
  */
-class DeptResponse
+#[OA\Schema(title: '部门响应', description: '部门详情响应结构')]
+class DeptResponse extends ResponseSchema
 {
     #[OA\Property(description: '部门ID', example: 1)]
     public int $id;
@@ -53,7 +59,8 @@ class DeptResponse
 /**
  * 部门树形响应体
  */
-class DeptTreeResponse
+#[OA\Schema(title: '部门树响应', description: '部门树形结构响应')]
+class DeptTreeResponse extends ResponseSchema
 {
     #[OA\Property(description: '部门ID', example: 1)]
     public int $id;
