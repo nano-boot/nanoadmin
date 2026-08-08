@@ -9,7 +9,8 @@ CREATE DATABASE IF NOT EXISTS nanoadmin CHARACTER SET utf8mb4 COLLATE utf8mb4_un
 USE nanoadmin;
 
 -- 1. 用户表
-CREATE TABLE IF NOT EXISTS `na_sys_user` (
+DROP TABLE IF EXISTS `na_sys_user`;
+CREATE TABLE `na_sys_user` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '用户ID',
     `nickname` VARCHAR(50) NOT NULL default '' UNIQUE COMMENT '昵称',
     `password` VARCHAR(255) NOT NULL default '' COMMENT '密码（加密后）',
@@ -64,7 +65,8 @@ CREATE TABLE `na_sys_admin` (
 
 
 -- 2. 角色表
-CREATE TABLE IF NOT EXISTS `na_sys_role` (
+DROP TABLE IF EXISTS `na_sys_role`;
+CREATE TABLE `na_sys_role` (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '角色ID',
     code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色代码',
     name VARCHAR(100) NOT NULL COMMENT '角色名称',
@@ -83,7 +85,7 @@ CREATE TABLE IF NOT EXISTS `na_sys_role` (
 
 -- 3. 权限表
 DROP TABLE IF EXISTS `na_sys_permission`;
-CREATE TABLE IF NOT EXISTS na_sys_permission (
+CREATE TABLE `na_sys_permission` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '权限ID',
     `code` VARCHAR(100) NOT NULL UNIQUE COMMENT '权限代码',
     `name` VARCHAR(100) NOT NULL COMMENT '权限名称',
@@ -104,7 +106,8 @@ CREATE TABLE IF NOT EXISTS na_sys_permission (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';
 
 -- 4. 菜单表
-CREATE TABLE IF NOT EXISTS `na_sys_menu` (
+DROP TABLE IF EXISTS `na_sys_menu`;
+CREATE TABLE `na_sys_menu` (
     -- 基础字段
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '菜单ID',
     `parent_id` BIGINT DEFAULT 0 COMMENT '父菜单ID，0为顶级菜单',
@@ -166,7 +169,8 @@ CREATE TABLE IF NOT EXISTS `na_sys_menu` (
 
 
 -- 5. 用户角色关联表
-CREATE TABLE IF NOT EXISTS `na_sys_admin_role` (
+DROP TABLE IF EXISTS `na_sys_admin_role`;
+CREATE TABLE `na_sys_admin_role` (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     admin_id BIGINT NOT NULL COMMENT '管理员ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
@@ -176,7 +180,8 @@ CREATE TABLE IF NOT EXISTS `na_sys_admin_role` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员角色关联表';
 
 -- 6. 角色权限关联表
-CREATE TABLE IF NOT EXISTS `na_sys_role_permission` (
+DROP TABLE IF EXISTS `na_sys_role_permission`;
+CREATE TABLE `na_sys_role_permission` (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     permission_id BIGINT NOT NULL COMMENT '权限ID',
@@ -186,7 +191,8 @@ CREATE TABLE IF NOT EXISTS `na_sys_role_permission` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限关联表';
 
 -- 7. 角色菜单关联表
-CREATE TABLE IF NOT EXISTS `na_sys_role_menu` (
+DROP TABLE IF EXISTS `na_sys_role_menu`;
+CREATE TABLE `na_sys_role_menu` (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
     role_id BIGINT NOT NULL COMMENT '角色ID',
     menu_id BIGINT NOT NULL COMMENT '菜单ID',
@@ -196,7 +202,8 @@ CREATE TABLE IF NOT EXISTS `na_sys_role_menu` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色菜单关联表';
 
 -- 8. 文件表
-CREATE TABLE IF NOT EXISTS `na_sys_file` (
+DROP TABLE IF EXISTS `na_sys_file`;
+CREATE TABLE `na_sys_file` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '文件ID',
     `original_name` VARCHAR(255) NOT NULL COMMENT '原始文件名',
     `file_name` VARCHAR(255) NOT NULL COMMENT '存储文件名',
@@ -225,7 +232,8 @@ CREATE TABLE IF NOT EXISTS `na_sys_file` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文件表';
 
 -- 9. 字典类型表
-CREATE TABLE IF NOT EXISTS `na_sys_dict_type` (
+DROP TABLE IF EXISTS `na_sys_dict_type`;
+CREATE TABLE `na_sys_dict_type` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典类型ID',
     `name` VARCHAR(100) NOT NULL COMMENT '字典名称',
     `code` VARCHAR(100) NOT NULL UNIQUE COMMENT '字典编码',
@@ -243,7 +251,8 @@ CREATE TABLE IF NOT EXISTS `na_sys_dict_type` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='字典类型表';
 
 -- 10. 字典数据表
-CREATE TABLE IF NOT EXISTS `na_sys_dict_data` (
+DROP TABLE IF EXISTS `na_sys_dict_data`;
+CREATE TABLE `na_sys_dict_data` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '字典数据ID',
     `dict_type_id` BIGINT NOT NULL COMMENT '字典类型ID',
     `label` VARCHAR(100) NOT NULL COMMENT '字典标签',
@@ -295,7 +304,8 @@ INSERT INTO `na_sys_dict_data` (`dict_type_id`, `label`, `value`, `sort`, `statu
 -- =====================================================
 -- 11. 配置表
 -- =====================================================
-CREATE TABLE IF NOT EXISTS `na_sys_config` (
+DROP TABLE IF EXISTS `na_sys_config`;
+CREATE TABLE `na_sys_config` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '配置ID',
     `name` VARCHAR(100) NOT NULL COMMENT '配置名称',
     `key` VARCHAR(100) NOT NULL UNIQUE COMMENT '配置键名',
@@ -349,7 +359,8 @@ INSERT INTO `na_sys_config` (`name`, `key`, `value`, `type`, `options`, `group`,
 -- =====================================================
 -- 12. 登录日志表
 -- =====================================================
-CREATE TABLE IF NOT EXISTS `na_sys_log_login` (
+DROP TABLE IF EXISTS `na_sys_log_login`;
+CREATE TABLE `na_sys_log_login` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
     `admin_id` BIGINT NOT NULL COMMENT '管理员ID',
     `username` VARCHAR(50) NOT NULL COMMENT '用户名',
@@ -370,7 +381,8 @@ CREATE TABLE IF NOT EXISTS `na_sys_log_login` (
 -- =====================================================
 -- 13. 操作日志表
 -- =====================================================
-CREATE TABLE IF NOT EXISTS `na_sys_log_operation` (
+DROP TABLE IF EXISTS `na_sys_log_operation`;
+CREATE TABLE `na_sys_log_operation` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
     `admin_id` BIGINT NOT NULL COMMENT '管理员ID',
     `username` VARCHAR(50) NOT NULL COMMENT '管理员名称',
@@ -482,7 +494,8 @@ ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
 -- =====================================================
 
 -- 代码生成配置表
-CREATE TABLE IF NOT EXISTS `na_sys_generate_tables` (
+DROP TABLE IF EXISTS `na_sys_generate_tables`;
+CREATE TABLE `na_sys_generate_tables` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `table_name` varchar(100) NOT NULL DEFAULT '' COMMENT '表名称',
   `table_comment` varchar(500) NOT NULL DEFAULT '' COMMENT '表描述',
@@ -506,7 +519,8 @@ CREATE TABLE IF NOT EXISTS `na_sys_generate_tables` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='代码生成配置表';
 
 -- 代码生成字段表
-CREATE TABLE IF NOT EXISTS `na_sys_generate_columns` (
+DROP TABLE IF EXISTS `na_sys_generate_columns`;
+CREATE TABLE `na_sys_generate_columns` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `table_id` bigint NOT NULL DEFAULT 0 COMMENT '所属表ID',
   `column_name` varchar(100) NOT NULL DEFAULT '' COMMENT '字段名称',

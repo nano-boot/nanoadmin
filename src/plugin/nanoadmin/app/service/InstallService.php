@@ -308,9 +308,9 @@ class InstallService
         $this->validateDbParams($params);
         $this->validateAdminParams($params);
 
+        // 空字符串表示用户主动选择"不使用表前缀"，与未传参（回落到默认 na_）区分对待
         $prefix = $params['prefix'] ?? self::SQL_TABLE_PREFIX;
-        $prefix = preg_replace('/[^a-zA-Z0-9_]/', '', (string) $prefix);
-        $this->prefix = $prefix ?: self::SQL_TABLE_PREFIX;
+        $this->prefix = preg_replace('/[^a-zA-Z0-9_]/', '', (string) $prefix) ?? '';
 
         if ($this->isInstalled()) {
             throw new \RuntimeException('系统已安装，无需重复安装');
@@ -589,7 +589,7 @@ return [
             'password'    => env('DB_PASSWORD', ''),
             'charset'     => env('DB_CHARSET', 'utf8mb4'),
             'collation'   => 'utf8mb4_general_ci',
-            'prefix'      => env('DB_PREFIX', 'na_'),
+            'prefix'      => env('DB_PREFIX', ''),
             'strict'      => true,
             'engine'      => null,
             'options'     => [

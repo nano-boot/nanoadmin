@@ -150,12 +150,14 @@ class InstallController
     }
 
     /**
-     * 归一化表前缀：仅允许字母数字下划线；为空时回落到 na_
+     * 归一化表前缀：仅允许字母数字下划线。
+     *
+     * 用户显式清空该字段即表示"不使用前缀"，此处保留空字符串，
+     * 不再强制回落到 na_（未提交该字段时的默认值由 extractDbParams 处理）。
      */
     private function normalizePrefix(string $raw): string
     {
-        $cleaned = preg_replace('/[^a-zA-Z0-9_]/', '', $raw) ?? '';
-        return $cleaned === '' ? 'na_' : $cleaned;
+        return preg_replace('/[^a-zA-Z0-9_]/', '', $raw) ?? '';
     }
 
     /**
