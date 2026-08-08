@@ -4,6 +4,7 @@ namespace plugin\nanoadmin\app\model;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
@@ -20,6 +21,7 @@ use plugin\nanoadmin\app\common\Code;
  * @property string $avatar 头像
  * @property int $status 状态
  * @property int $gender 性别
+ * @property int $dept_id 所属部门ID
  * @property int $id
  */
 class Admin extends BaseModel
@@ -50,7 +52,7 @@ class Admin extends BaseModel
      * @var array
      */
     protected $fillable = [
-        'username', 'password', 'nickname','gender', 'phone', 'email', 'avatar', 'status'
+        'username', 'password', 'nickname','gender', 'phone', 'email', 'avatar', 'status', 'dept_id'
     ];
 
     /**
@@ -95,6 +97,15 @@ class Admin extends BaseModel
     }
 
     /**
+     * 关联部门
+     * @return BelongsTo
+     */
+    public function dept(): BelongsTo
+    {
+        return $this->belongsTo(Dept::class, 'dept_id', 'id');
+    }
+
+    /**
      * 关联管理员角色中间表
      * @return HasMany
      */
@@ -123,7 +134,25 @@ class Admin extends BaseModel
                 $q->where('role_id', $roleId);
             });
         }
-        $query->with(['adminRoles:admin_id,role_id']);
+
+        // 按部门筛选（含其全部子部门）
+        // 借助 Dept 表的物化 path 字段（如 ",0,1,"）做子树展开：
+        //   1) 先用 Dept::getDescendantIds() 通过 LIKE 'path . deptId ,%' 拿到所有子孙 ID
+        //   2) 把自身 ID 也合并进去（getDescendantIds 不含自身）
+        //   3) 最终 whereIn('dept_id', [...])
+        $deptId = Arr::get($params, 'dept_id');
+        if ($deptId !== null && $deptId !== '' && (int) $deptId > 0) {
+            $deptId = (int) $deptId;
+            $deptModel = ModelFactory::dept();
+            $descendantIds = $deptModel->getDescendantIds($deptId);
+            $deptIds = array_values(array_unique(array_merge([$deptId], $descendantIds)));
+
+            if (!empty($deptIds)) {
+                $query->whereIn('dept_id', $deptIds);
+            }
+        }
+
+        $query->with(['adminRoles:admin_id,role_id', 'dept:id,name']);
 
         return $query;
     }

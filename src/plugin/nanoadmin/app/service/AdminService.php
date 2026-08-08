@@ -73,7 +73,7 @@ class AdminService extends BaseService
      */
     public function getById(int $id): Admin
     {
-        return $this->model->with('roles')->find($id) ?? throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
+        return $this->model->with(['roles', 'dept'])->find($id) ?? throw new ApiException(Code::ADMIN_NOT_FOUND, '管理员不存在');
     }
 
     /**

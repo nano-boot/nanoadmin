@@ -48,7 +48,7 @@ class DeptResponse extends ResponseSchema
     #[OA\Property(description: '更新时间', example: '2024-01-01 00:00:00', nullable: true)]
     public ?string $updated_at;
 
-    #[OA\Property(description: '子部门列表', nullable: true)]
+    #[OA\Property(description: '子部门列表', nullable: true, type: 'array', items: new OA\Items(ref: '#/components/schemas/DeptTreeResponse'))]
     public array $children;
 
     public function __construct()
@@ -89,7 +89,7 @@ class DeptTreeResponse extends ResponseSchema
     #[OA\Property(description: '状态: 0禁用 1启用', example: 1)]
     public int $status;
 
-    #[OA\Property(description: '子部门列表', nullable: true)]
+    #[OA\Property(description: '子部门列表', nullable: true, type: 'array', items: new OA\Items(ref: '#/components/schemas/DeptTreeResponse'))]
     public array $children;
 
     public function __construct()

@@ -33,6 +33,15 @@ class ModelFactory
     }
 
     /**
+     * 获取Dept模型实例
+     * @return Dept
+     */
+    public static function dept(): Dept
+    {
+        return self::getInstance(Dept::class);
+    }
+
+    /**
      * 获取Permission模型实例
      * @return Permission
      */

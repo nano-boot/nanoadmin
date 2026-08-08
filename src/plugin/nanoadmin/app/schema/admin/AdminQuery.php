@@ -26,4 +26,12 @@ class AdminQuery extends QuerySchema
 
     #[OA\Property(description: '状态（0禁用 1启用）', type: 'integer', example: 1)]
     public int $status = 1;
+
+    #[OA\Property(
+        description: '部门ID（按部门子树过滤，会同时返回该部门及所有子部门的用户）',
+        type: 'integer',
+        example: 1,
+        nullable: true
+    )]
+    public ?int $dept_id = null;
 }

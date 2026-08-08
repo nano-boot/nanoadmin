@@ -113,6 +113,17 @@ class AdminValidator extends ValidatorBase
                 'integer',
                 'gt:0',
             ],
+            'dept_id' => [
+                'nullable',
+                'integer',
+                'gte:0',
+                Rule::when(
+                    fn ($input) => isset($input['dept_id']) && (int) $input['dept_id'] > 0,
+                    [Rule::exists('sys_dept', 'id')->where(function ($q) {
+                        $q->where('deleted_at', 0);
+                    })]
+                ),
+            ],
             'ids' => [
                 'required',
                 'array',
@@ -190,6 +201,10 @@ class AdminValidator extends ValidatorBase
             'role_ids.*.integer' => '角色ID必须是整数',
             'role_ids.*.gt' => '角色ID必须大于0',
 
+            'dept_id.integer' => '部门ID必须是整数',
+            'dept_id.gte' => '部门ID必须大于等于0',
+            'dept_id.exists' => '所选部门不存在或已删除',
+
             'ids.required' => 'ID数组不能为空',
             'ids.array' => 'ID必须是数组',
             'ids.min' => '至少选择一个项目',
@@ -229,6 +244,7 @@ class AdminValidator extends ValidatorBase
                 'avatar',
                 'status',
                 'gender',
+                'dept_id',
             ],
 
             'update' => [
@@ -242,6 +258,7 @@ class AdminValidator extends ValidatorBase
                 'status',
                 'gender',
                 'role_ids',
+                'dept_id',
             ],
 
             'assignRoles' => ['role_ids'],
@@ -252,7 +269,7 @@ class AdminValidator extends ValidatorBase
 
             'destroy' => ['id'],
 
-            'page' => ['page', 'limit', 'keyword'],
+            'page' => ['page', 'limit', 'keyword', 'dept_id'],
 
             'updatePassword' => ['id', 'password'],
 

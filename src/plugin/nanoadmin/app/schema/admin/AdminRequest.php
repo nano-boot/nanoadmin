@@ -41,4 +41,7 @@ class AdminRequest extends RequestSchema
 
     #[OA\Property(description: '性别（0未知 1男 2女）', type: 'integer', example: 1)]
     public int $gender = 0;
+
+    #[OA\Property(description: '所属部门ID（0=未分配）', type: 'integer', example: 1, nullable: true)]
+    public ?int $dept_id = 0;
 }

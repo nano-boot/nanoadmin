@@ -45,6 +45,7 @@ CREATE TABLE `na_sys_admin` (
     `avatar` varchar(255) DEFAULT '' COMMENT '头像',
     `phone` varchar(20) DEFAULT '' COMMENT '手机号',
     `email` varchar(100) DEFAULT '' COMMENT '邮箱',
+    `dept_id` BIGINT NOT NULL DEFAULT 0 COMMENT '所属部门ID（0=未分配）',
     `last_login_ip` varchar(50) DEFAULT NULL COMMENT '最后登录IP',
     `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
     `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
@@ -53,8 +54,13 @@ CREATE TABLE `na_sys_admin` (
     `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
     INDEX idx_nickname (`nickname`),
     UNIQUE KEY idx_username (`username`),
+    INDEX idx_dept_id (`dept_id`),
     INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员表';
+
+-- 兼容旧库升级（仅在已存在 na_sys_admin 表的旧库上需要执行）：
+-- ALTER TABLE `na_sys_admin` ADD COLUMN `dept_id` BIGINT NOT NULL DEFAULT 0 COMMENT '所属部门ID（0=未分配）' AFTER `email`;
+-- ALTER TABLE `na_sys_admin` ADD INDEX `idx_dept_id` (`dept_id`);
 
 
 -- 2. 角色表
@@ -401,9 +407,9 @@ ON DUPLICATE KEY UPDATE
 `sort` = VALUES(`sort`),
 `deleted_at` = VALUES(`deleted_at`);
 
-INSERT INTO `na_sys_admin` (`id`, `username`, `password`, `nickname`, `gender`, `status`, `deleted_at`) VALUES
-(1, 'admin', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '超级管理员', 1, 1, 0),
-(2, 'system', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '系统管理员', 2, 1, 0)
+INSERT INTO `na_sys_admin` (`id`, `username`, `password`, `nickname`, `gender`, `dept_id` , `status`, `deleted_at`) VALUES
+(1, 'admin', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '超级管理员', 1, 1, 1, 0),
+(2, 'system', '$2y$10$M0KKw2uuChaAt0GQmvtXQeQtUs6WoqKWJXwUSZeSmJ/QWHBO7Jzz.', '系统管理员', 2, 1, 1, 0)
 ON DUPLICATE KEY UPDATE
 `password` = VALUES(`password`),
 `nickname` = VALUES(`nickname`),

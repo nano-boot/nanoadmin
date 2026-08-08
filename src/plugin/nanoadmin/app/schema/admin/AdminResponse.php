@@ -35,6 +35,12 @@ class AdminResponse extends ResponseSchema
     #[OA\Property(description: '性别（0未知 1男 2女）', type: 'integer', example: 1)]
     public int $gender = 0;
 
+    #[OA\Property(description: '所属部门ID', type: 'integer', example: 1, nullable: true)]
+    public ?int $dept_id = 0;
+
+    #[OA\Property(description: '所属部门名称', type: 'string', example: '研发中心', nullable: true)]
+    public ?string $dept_name = '';
+
     #[OA\Property(description: '角色列表', type: 'array', items: new OA\Items(type: 'string'), example: ['管理员'])]
     public array $roles = [];
 
