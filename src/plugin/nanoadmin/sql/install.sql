@@ -47,6 +47,7 @@ CREATE TABLE `na_sys_admin` (
     `phone` varchar(20) DEFAULT '' COMMENT '手机号',
     `email` varchar(100) DEFAULT '' COMMENT '邮箱',
     `dept_id` BIGINT NOT NULL DEFAULT 0 COMMENT '所属部门ID（0=未分配）',
+    `created_by` BIGINT NOT NULL DEFAULT 0 COMMENT '创建人ID（0=系统创建）',
     `last_login_ip` varchar(50) DEFAULT NULL COMMENT '最后登录IP',
     `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
     `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
@@ -56,12 +57,15 @@ CREATE TABLE `na_sys_admin` (
     INDEX idx_nickname (`nickname`),
     UNIQUE KEY idx_username (`username`),
     INDEX idx_dept_id (`dept_id`),
+    INDEX idx_created_by (`created_by`),
     INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员表';
 
 -- 兼容旧库升级（仅在已存在 na_sys_admin 表的旧库上需要执行）：
 -- ALTER TABLE `na_sys_admin` ADD COLUMN `dept_id` BIGINT NOT NULL DEFAULT 0 COMMENT '所属部门ID（0=未分配）' AFTER `email`;
+-- ALTER TABLE `na_sys_admin` ADD COLUMN `created_by` BIGINT NOT NULL DEFAULT 0 COMMENT '创建人ID（0=系统创建）' AFTER `dept_id`;
 -- ALTER TABLE `na_sys_admin` ADD INDEX `idx_dept_id` (`dept_id`);
+-- ALTER TABLE `na_sys_admin` ADD INDEX `idx_created_by` (`created_by`);
 
 
 -- 2. 角色表
@@ -73,6 +77,7 @@ CREATE TABLE `na_sys_role` (
     description VARCHAR(500) COMMENT '角色描述',
     `status` tinyint(1) DEFAULT '1' COMMENT '状态（0禁用 1正常）',
     `sort` int(11) DEFAULT 100 COMMENT '排序',
+    `data_scope` tinyint(1) DEFAULT 1 COMMENT '数据权限范围（1全部数据 2本部门及下级 3本部门 4仅本人 5自定义部门）',
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at` int(11) NOT NULL DEFAULT 0 COMMENT '是否删除',
@@ -82,6 +87,17 @@ CREATE TABLE `na_sys_role` (
     INDEX idx_sort (`sort`),
     INDEX idx_deleted_at (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色表';
+
+-- 2.1 角色数据权限部门关联表
+DROP TABLE IF EXISTS `na_sys_role_dept`;
+CREATE TABLE `na_sys_role_dept` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
+    `role_id` BIGINT NOT NULL COMMENT '角色ID',
+    `dept_id` BIGINT NOT NULL COMMENT '部门ID',
+    UNIQUE KEY `uk_role_dept` (`role_id`, `dept_id`),
+    INDEX `idx_role_id` (`role_id`),
+    INDEX `idx_dept_id` (`dept_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色数据权限部门关联表';
 
 -- 3. 权限表
 DROP TABLE IF EXISTS `na_sys_permission`;

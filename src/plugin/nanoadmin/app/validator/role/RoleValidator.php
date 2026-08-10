@@ -78,6 +78,17 @@ class RoleValidator extends ValidatorBase
                 'integer',
                 Rule::in([0, 1]),
             ],
+            'data_scope' => [
+                'nullable',
+                'integer',
+                Rule::in([
+                    Role::DATA_SCOPE_ALL,
+                    Role::DATA_SCOPE_DEPT_AND_CHILD,
+                    Role::DATA_SCOPE_DEPT,
+                    Role::DATA_SCOPE_SELF,
+                    Role::DATA_SCOPE_CUSTOM,
+                ]),
+            ],
             'role_ids' => [
                 'nullable',
                 'array',
@@ -131,6 +142,15 @@ class RoleValidator extends ValidatorBase
             ],
             'authCodes.*' => [
                 'string',
+            ],
+            // 分配数据权限部门参数
+            'deptIds' => [
+                'nullable',
+                'array',
+            ],
+            'deptIds.*' => [
+                'integer',
+                'gt:0',
             ],
         ];
     }
@@ -197,6 +217,10 @@ class RoleValidator extends ValidatorBase
 
             'authCodes.array' => '权限编码列表必须是数组',
             'authCodes.*.string' => '权限编码必须是字符串',
+
+            'deptIds.array' => '部门ID列表必须是数组',
+            'deptIds.*.integer' => '部门ID必须是整数',
+            'deptIds.*.gt' => '部门ID必须大于0',
         ];
     }
 
@@ -212,14 +236,17 @@ class RoleValidator extends ValidatorBase
                 'description',
                 'sort',
                 'status',
+                'data_scope',
             ],
 
             'update' => [
                 'id',
                 'name',
+                'code',
                 'description',
                 'sort',
                 'status',
+                'data_scope',
             ],
 
             'assignRoles' => ['id', 'role_ids'],
@@ -230,6 +257,7 @@ class RoleValidator extends ValidatorBase
             'page' => ['page', 'limit', 'keyword', 'status_filter'],
             'assignPermissions' => ['id', 'menuIds', 'authCodes'],
             'assignMenus' => ['id', 'menuIds'],
+            'assignDepts' => ['id', 'deptIds'],
         ];
     }
 }

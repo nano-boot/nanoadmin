@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use plugin\nanoadmin\app\common\ApiException;
 use plugin\nanoadmin\app\common\Code;
+use plugin\nanoadmin\app\model\ModelFactory;
+use plugin\nanoadmin\app\model\Role;
 
 /**
  * 管理员模型
@@ -52,7 +54,16 @@ class Admin extends BaseModel
      * @var array
      */
     protected $fillable = [
-        'username', 'password', 'nickname','gender', 'phone', 'email', 'avatar', 'status', 'dept_id'
+        'username', 'password', 'nickname', 'gender', 'phone', 'email', 'avatar', 'status', 'dept_id', 'created_by'
+    ];
+
+    /**
+     * 类型转换
+     * @var array
+     */
+    protected $casts = [
+        'created_by' => 'integer',
+        'dept_id' => 'integer',
     ];
 
     /**
@@ -152,7 +163,118 @@ class Admin extends BaseModel
             }
         }
 
+        // ===== 数据权限自动过滤 =====
+        // 根据当前管理员的角色数据权限，自动限制查询范围
+        $query = $this->applyDataScopeFilter($query);
+
         $query->with(['adminRoles:admin_id,role_id', 'dept:id,name']);
+
+        return $query;
+    }
+
+    /**
+     * 应用数据权限过滤
+     * 根据当前管理员的角色数据权限，自动限制查询范围
+     *
+     * 数据权限范围：
+     * 1. 全部数据 - 不限制
+     * 2. 本部门及下级 - 本部门 + 子孙部门
+     * 3. 本部门 - 只看本部门
+     * 4. 仅本人 - 只看自己（通过 created_by 过滤）
+     * 5. 自定义部门 - 使用 sys_role_dept 表配置的部门
+     *
+     * @param Builder $query
+     * @return Builder
+     */
+    private function applyDataScopeFilter(Builder $query): Builder
+    {
+        // 获取当前请求
+        $request = request();
+        if (!$request || !isset($request->admin)) {
+            return $query;
+        }
+
+        $admin = $request->admin;
+        if (!$admin || !isset($admin->id)) {
+            return $query;
+        }
+
+        // 获取管理员的角色
+        $roleIds = $admin->roles()->pluck('id')->toArray();
+        if (empty($roleIds)) {
+            return $query;
+        }
+
+        // 加载所有角色及其数据权限配置
+        $roleModel = ModelFactory::role();
+        $roles = $roleModel
+            ->whereIn('id', $roleIds)
+            ->with('depts')
+            ->get();
+
+        if ($roles->isEmpty()) {
+            return $query;
+        }
+
+        // 获取管理员所属部门
+        $adminDeptId = $admin->dept_id ?? 0;
+
+        // 合并所有允许访问的部门ID
+        $allowedDeptIds = [];
+        $hasSelfScope = false; // 是否存在"仅本人"模式
+
+        foreach ($roles as $role) {
+            $scope = $role->data_scope ?? Role::DATA_SCOPE_ALL;
+
+            switch ($scope) {
+                case Role::DATA_SCOPE_ALL:
+                    // 全部数据：不限制，直接返回
+                    return $query;
+
+                case Role::DATA_SCOPE_DEPT_AND_CHILD:
+                    // 本部门及下级
+                    if ($adminDeptId > 0) {
+                        $deptModel = ModelFactory::dept();
+                        $descendantIds = $deptModel->getDescendantIds($adminDeptId);
+                        $allowedDeptIds = array_merge($allowedDeptIds, [$adminDeptId], $descendantIds);
+                    }
+                    break;
+
+                case Role::DATA_SCOPE_DEPT:
+                    // 本部门
+                    if ($adminDeptId > 0) {
+                        $allowedDeptIds[] = $adminDeptId;
+                    }
+                    break;
+
+                case Role::DATA_SCOPE_SELF:
+                    // 仅本人：只看自己创建的数据（通过 created_by 过滤）
+                    $hasSelfScope = true;
+                    break;
+
+                case Role::DATA_SCOPE_CUSTOM:
+                    // 自定义部门
+                    foreach ($role->depts as $dept) {
+                        $deptModel = ModelFactory::dept();
+                        $descendantIds = $deptModel->getDescendantIds($dept->id);
+                        $allowedDeptIds = array_merge($allowedDeptIds, [$dept->id], $descendantIds);
+                    }
+                    break;
+            }
+        }
+
+        // 去除重复
+        $allowedDeptIds = array_values(array_unique($allowedDeptIds));
+
+        // 应用过滤条件
+        if ($hasSelfScope) {
+            // 仅本人模式：只看自己创建的数据（通过 created_by 过滤）
+            $query->where('created_by', $admin->id);
+        }
+
+        if (!empty($allowedDeptIds)) {
+            $query->whereIn('dept_id', $allowedDeptIds);
+        }
 
         return $query;
     }

@@ -33,6 +33,7 @@ enum Code: int
     case ADMIN_NOT_FOUND = 40403;        // 管理员不存在
     case PERMISSION_NOT_FOUND = 40404;   // 权限不存在
     case MENU_NOT_FOUND = 40405;         // 菜单不存在
+    case DEPT_NOT_FOUND = 40407;         // 部门不存在
     case LOG_NOT_FOUND = 40406;          // 日志不存在
     case METHOD_NOT_ALLOWED = 40500;     // 请求方法不允许
     case VALIDATION_ERROR = 40600;       // 数据验证失败
@@ -94,6 +95,7 @@ enum Code: int
 
             // 业务资源不存在
             self::MENU_NOT_FOUND => '菜单不存在',
+            self::DEPT_NOT_FOUND => '部门不存在',
             self::ROLE_NOT_FOUND => '角色不存在',
             self::ADMIN_NOT_FOUND => '管理员不存在',
             self::PERMISSION_NOT_FOUND => '权限不存在',
@@ -153,6 +155,7 @@ enum Code: int
             // 404资源不存在
             self::NOT_FOUND,
             self::MENU_NOT_FOUND,
+            self::DEPT_NOT_FOUND,
             self::ROLE_NOT_FOUND,
             self::ADMIN_NOT_FOUND,
             self::PERMISSION_NOT_FOUND,

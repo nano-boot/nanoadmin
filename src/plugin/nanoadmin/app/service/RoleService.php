@@ -98,6 +98,7 @@ class RoleService extends BaseService
             'description' => $role->description,
             'status' => $role->status,
             'sort' => $role->sort,
+            'data_scope' => $role->data_scope ?? Role::DATA_SCOPE_ALL,
             'userCount' => $role->userCount ?? 0,
             'created_at' => $role->created_at,
             'updated_at' => $role->updated_at
@@ -105,14 +106,14 @@ class RoleService extends BaseService
     }
 
     /**
-     * 根据ID获取角色详情（含权限和菜单信息）
+     * 根据ID获取角色详情（含权限、菜单、数据权限部门信息）
      * @param int $id 角色ID
      * @return Role
      * @throws ApiException
      */
     public function getById(int $id): Role
     {
-        return $this->model->with(['permissions', 'menus'])->find($id) ?? throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
+        return $this->model->with(['permissions', 'menus', 'depts'])->find($id) ?? throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
     }
 
     /**
@@ -170,6 +171,8 @@ class RoleService extends BaseService
             $role->menus()->detach();
             // 清理角色与权限的关联
             $role->permissions()->detach();
+            // 清理角色与数据权限部门的关联
+            $role->depts()->detach();
 
             \support\Db::commit();
 
@@ -385,6 +388,62 @@ class RoleService extends BaseService
     }
 
     /**
+     * 为角色分配数据权限部门
+     * @param int $roleId 角色ID
+     * @param array $deptIds 部门ID数组
+     * @return bool
+     * @throws ApiException
+     */
+    public function assignDepts(int $roleId, array $deptIds): bool
+    {
+        // 检查角色是否存在
+        $role = $this->model->find($roleId);
+        if (!$role) {
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
+        }
+        
+        // 验证部门是否存在
+        if (!empty($deptIds)) {
+            $deptModel = ModelFactory::dept();
+            $existingDepts = $deptModel->whereIn('id', $deptIds)
+                ->where('status', 1)
+                ->pluck('id')
+                ->toArray();
+            
+            $invalidDeptIds = array_diff($deptIds, $existingDepts);
+            if (!empty($invalidDeptIds)) {
+                throw new ApiException(Code::DEPT_NOT_FOUND, '部门不存在: ' . implode(',', $invalidDeptIds));
+            }
+        }
+        
+        // 分配部门
+        $result = $role->assignDepts($deptIds);
+
+        if ($result === false) {
+            throw new ApiException(Code::SYSTEM_ERROR, '分配数据权限部门失败');
+        }
+
+        return true;
+    }
+
+    /**
+     * 获取角色的数据权限部门列表
+     * @param int $roleId 角色ID
+     * @return array
+     * @throws ApiException
+     */
+    public function getRoleDepts(int $roleId): array
+    {
+        // 检查角色是否存在
+        $role = $this->model->find($roleId);
+        if (!$role) {
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
+        }
+        
+        return $role->depts()->get()->toArray();
+    }
+
+    /**
      * 检查角色权限
      * @param int $roleId 角色ID
      * @param string $permission 权限代码
@@ -580,14 +639,15 @@ class RoleService extends BaseService
         try {
             \support\Db::beginTransaction();
 
-            // 批量清理角色与菜单、权限的关联（必须使用 Role 模型以访问关系方法）
+            // 批量清理角色与菜单、权限、数据权限部门的关联（必须使用 Role 模型以访问关系方法）
             $rolesToDelete = ModelFactory::role()->whereIn('id', $ids)->get();
             /** @var Role $role */
             foreach ($rolesToDelete as $role) {
                 $role->menus()->detach();
                 $role->permissions()->detach();
+                $role->depts()->detach();
             }
-
+            
             \support\Db::commit();
 
             $result = parent::batchDelete($ids);

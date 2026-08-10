@@ -12,7 +12,25 @@ use plugin\nanoadmin\app\common\Code;
  */
 class Role extends BaseModel
 {
-   
+    // 数据权限范围常量
+    public const DATA_SCOPE_ALL = 1;          // 全部数据
+    public const DATA_SCOPE_DEPT_AND_CHILD = 2; // 本部门及下级
+    public const DATA_SCOPE_DEPT = 3;          // 本部门
+    public const DATA_SCOPE_SELF = 4;          // 仅本人
+    public const DATA_SCOPE_CUSTOM = 5;        // 自定义部门
+
+    /**
+     * 数据权限范围选项（用于前端下拉框）
+     * @var array
+     */
+    public static array $dataScopeOptions = [
+        self::DATA_SCOPE_ALL => '全部数据',
+        self::DATA_SCOPE_DEPT_AND_CHILD => '本部门及下级',
+        self::DATA_SCOPE_DEPT => '本部门',
+        self::DATA_SCOPE_SELF => '仅本人',
+        self::DATA_SCOPE_CUSTOM => '自定义部门',
+    ];
+
     /**
      * 表名
      * @var string
@@ -30,12 +48,13 @@ class Role extends BaseModel
      * @var array
      */
     protected $fillable = [
-        'name', 'code', 'description', 'status', 'sort'
+        'name', 'code', 'description', 'status', 'sort', 'data_scope'
     ];
 
     protected $casts = [
         'created_at' => 'string',
         'updated_at' => 'string',
+        'data_scope' => 'integer',
     ];
 
     protected static array $searchLikeFields = ['name','code'];
@@ -45,17 +64,12 @@ class Role extends BaseModel
 
     protected static function booted(): void
     {
-        static::updating(function (Role $role) {
-            if ($role->id === 1) {
-                if ($role->isDirty('status')) {
-                    $role->syncOriginalAttribute('status');
-                }
-            }
-        });
         static::deleting(function (Role $role) {
             if ($role->id === 1) {
                 throw new ApiException(Code::FORBIDDEN, '系统默认角色不允许删除');
             }
+            // 清理数据权限部门关联
+            $role->depts()->detach();
         });
     }
     /**
@@ -77,12 +91,21 @@ class Role extends BaseModel
     }
 
     /**
-     * 关联菜单
-     * @return BelongsToMany
-     */
+    * 关联菜单
+    * @return BelongsToMany
+    */
     public function menus(): BelongsToMany
     {
         return $this->belongsToMany(Menu::class, 'sys_role_menu', 'role_id', 'menu_id');
+    }
+
+    /**
+     * 关联数据权限部门
+     * @return BelongsToMany
+     */
+    public function depts(): BelongsToMany
+    {
+        return $this->belongsToMany(Dept::class, 'sys_role_dept', 'role_id', 'dept_id');
     }
 
 
@@ -197,6 +220,24 @@ class Role extends BaseModel
     }
 
     /**
+     * 分配数据权限部门
+     * @param array $deptIds 部门ID数组
+     * @return bool
+     */
+    public function assignDepts(array $deptIds): bool
+    {
+        // 先删除现有部门关联
+        $this->depts()->detach();
+        
+        // 添加新的部门关联
+        if (!empty($deptIds)) {
+            $this->depts()->attach($deptIds);
+        }
+        
+        return true;
+    }
+
+    /**
      * 检查角色是否被使用
      * @param int $id 角色ID
      * @return bool
@@ -236,6 +277,22 @@ class Role extends BaseModel
         
         foreach ($menus as $menu) {
             $ids[] = $menu->id;
+        }
+        
+        return $ids;
+    }
+
+    /**
+     * 获取角色的数据权限部门ID列表
+     * @return array
+     */
+    public function getDeptIds(): array
+    {
+        $depts = $this->depts()->get();
+        $ids = [];
+        
+        foreach ($depts as $dept) {
+            $ids[] = $dept->id;
         }
         
         return $ids;
@@ -437,5 +494,69 @@ class Role extends BaseModel
     {
         $maxSort = $this->where($where)->max('sort');
         return $maxSort ? $maxSort + 10 : 100;
+    }
+
+    /**
+     * 获取数据权限范围标签
+     * @return string
+     */
+    public function getDataScopeLabel(): string
+    {
+        return self::$dataScopeOptions[$this->data_scope] ?? '全部数据';
+    }
+
+    /**
+     * 检查是否为自定义数据权限模式
+     * @return bool
+     */
+    public function isCustomDataScope(): bool
+    {
+        return $this->data_scope === self::DATA_SCOPE_CUSTOM;
+    }
+
+    /**
+     * 获取该角色允许查看的部门ID列表（根据 data_scope 自动计算）
+     * @param int|null $adminDeptId 管理员所属部门ID（用于本部门/本部门及下级/仅本人模式）
+     * @return array 允许访问的部门ID数组
+     */
+    public function getAllowedDeptIds(?int $adminDeptId = null): array
+    {
+        switch ($this->data_scope) {
+            case self::DATA_SCOPE_ALL:
+                // 全部数据：返回空数组（不限制）
+                return [];
+
+            case self::DATA_SCOPE_DEPT_AND_CHILD:
+                // 本部门及下级：返回本部门及所有子孙部门
+                if (!$adminDeptId || $adminDeptId === 0) {
+                    return [];
+                }
+                $deptModel = new Dept();
+                $descendantIds = $deptModel->getDescendantIds($adminDeptId);
+                return array_values(array_unique(array_merge([$adminDeptId], $descendantIds)));
+
+            case self::DATA_SCOPE_DEPT:
+                // 本部门：只返回本部门
+                return $adminDeptId && $adminDeptId > 0 ? [$adminDeptId] : [];
+
+            case self::DATA_SCOPE_SELF:
+                // 仅本人：不限制部门，但需要在查询时过滤 created_by = admin_id
+                return [];
+
+            case self::DATA_SCOPE_CUSTOM:
+                // 自定义部门：返回配置的自定义部门及其子孙
+                $deptModel = new Dept();
+                $customDeptIds = [];
+
+                foreach ($this->depts()->get() as $dept) {
+                    $descendantIds = $deptModel->getDescendantIds($dept->id);
+                    $customDeptIds = array_merge($customDeptIds, $descendantIds, [$dept->id]);
+                }
+
+                return array_values(array_unique($customDeptIds));
+
+            default:
+                return [];
+        }
     }
 }

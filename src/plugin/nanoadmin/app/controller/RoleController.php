@@ -12,6 +12,8 @@ use plugin\nanoadmin\app\schema\role\RoleRequest;
 use plugin\nanoadmin\app\schema\role\RoleResponse;
 use plugin\nanoadmin\app\schema\role\RolePermissionResponse;
 use plugin\nanoadmin\app\schema\role\RoleMenuResponse;
+use plugin\nanoadmin\app\schema\role\RoleDeptRequest;
+use plugin\nanoadmin\app\schema\role\RoleDeptResponse;
 use plugin\nanoadmin\app\library\swagger\OpenApiModifier;
 use plugin\nanoadmin\app\library\swagger\SchemaConstants;
 use plugin\nanoadmin\app\library\swagger\annotation\response\PageResponse;
@@ -217,5 +219,39 @@ class RoleController extends BaseController
         $this->validator->scene('show')->setPath()->check();
         $menus = $this->roleService->getRoleMenus($id);
         return R::list($menus, '获取角色菜单成功');
+    }
+
+    #[OA\Post(
+        path: '/sys/role/{id}/depts',
+        summary: '分配数据权限部门',
+        description: '为角色分配数据权限部门，控制角色下用户能查看哪些部门的数据',
+        tags: ['角色'],
+        x: [OpenApiModifier::X_REQUEST_BODY => RoleDeptRequest::class]
+    )]
+    #[Permission(title: '分配角色数据权限', code: 'sys:role:assign-dept', action: 'update')]
+    #[DataResponse()]
+    public function assignDepts(int $id, Request $request): Response
+    {
+        $data = $this->validator
+            ->scene('assignDepts')
+            ->check();
+
+        $deptIds = array_values(array_filter($data['deptIds'] ?? [], fn($v) => $v > 0));
+        $result = $this->roleService->assignDepts($id, $deptIds);
+        return R::data($result, '分配数据权限部门成功');
+    }
+
+    #[OA\Get(
+        path: '/sys/role/{id}/depts',
+        summary: '获取角色数据权限部门',
+        tags: ['角色']
+    )]
+    #[Permission(title: '查看角色数据权限', code: 'sys:role:get-depts', action: 'query')]
+    #[DataResponse(schema: RoleDeptResponse::class)]
+    public function getDepts(int $id): Response
+    {
+        $this->validator->scene('show')->setPath()->check();
+        $depts = $this->roleService->getRoleDepts($id);
+        return R::data($depts, '获取数据权限部门成功');
     }
 }

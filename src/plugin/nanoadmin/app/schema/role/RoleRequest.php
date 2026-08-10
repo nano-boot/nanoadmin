@@ -32,4 +32,11 @@ class RoleRequest extends RequestSchema
 
     #[OA\Property(description: '状态（0禁用 1启用）', type: 'integer', example: 1)]
     public int $status = 1;
+
+    #[OA\Property(
+        description: '数据权限范围（1全部数据 2本部门及下级 3本部门 4仅本人 5自定义部门）',
+        type: 'integer',
+        example: 1
+    )]
+    public int $data_scope = 1;
 }
