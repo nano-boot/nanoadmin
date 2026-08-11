@@ -78,6 +78,7 @@ class RoleValidator extends ValidatorBase
                 'integer',
                 Rule::in([0, 1]),
             ],
+            // 数据权限范围（仅 assignDepts 场景使用，新建/编辑角色不再走这里）
             'data_scope' => [
                 'nullable',
                 'integer',
@@ -188,6 +189,9 @@ class RoleValidator extends ValidatorBase
             'status.integer' => '角色状态必须是整数',
             'status.in' => '角色状态值只能是0或1',
 
+            'data_scope.integer' => '数据权限范围必须是整数',
+            'data_scope.in' => '数据权限范围值不合法',
+
             'role_ids.array' => '角色ID列表必须是数组',
             'role_ids.*.integer' => '角色ID必须是整数',
             'role_ids.*.gt' => '角色ID必须大于0',
@@ -236,7 +240,6 @@ class RoleValidator extends ValidatorBase
                 'description',
                 'sort',
                 'status',
-                'data_scope',
             ],
 
             'update' => [
@@ -246,7 +249,6 @@ class RoleValidator extends ValidatorBase
                 'description',
                 'sort',
                 'status',
-                'data_scope',
             ],
 
             'assignRoles' => ['id', 'role_ids'],
@@ -257,7 +259,7 @@ class RoleValidator extends ValidatorBase
             'page' => ['page', 'limit', 'keyword', 'status_filter'],
             'assignPermissions' => ['id', 'menuIds', 'authCodes'],
             'assignMenus' => ['id', 'menuIds'],
-            'assignDepts' => ['id', 'deptIds'],
+            'assignDepts' => ['id', 'data_scope', 'deptIds'],
         ];
     }
 }

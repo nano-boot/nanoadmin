@@ -128,6 +128,10 @@ class RoleService extends BaseService
         if (!isset($data['sort'])) {
             $data['sort'] = $this->model->getNextSort();
         }
+        // 数据权限范围不在创建/编辑表单中维护，新建角色默认"全部数据"
+        if (!isset($data['data_scope'])) {
+            $data['data_scope'] = Role::DATA_SCOPE_ALL;
+        }
         // 创建角色
         return parent::create($data);
     }
@@ -388,35 +392,125 @@ class RoleService extends BaseService
     }
 
     /**
-     * 为角色分配数据权限部门
+     * 为角色分配数据权限范围 + 自定义部门（一个接口、一笔事务）
      * @param int $roleId 角色ID
-     * @param array $deptIds 部门ID数组
-     * @return bool
+     * @param int $dataScope 数据权限范围（1-5）
+     * @param array $deptIds 自定义部门ID数组（仅 dataScope=5 时生效）
+     * @return array 返回写入后的 deptIds
      * @throws ApiException
      */
-    public function assignDepts(int $roleId, array $deptIds): bool
+    public function assignDataScope(int $roleId, int $dataScope, array $deptIds = []): array
     {
-        // 检查角色是否存在
+        $validScopes = [
+            Role::DATA_SCOPE_ALL,
+            Role::DATA_SCOPE_DEPT_AND_CHILD,
+            Role::DATA_SCOPE_DEPT,
+            Role::DATA_SCOPE_SELF,
+            Role::DATA_SCOPE_CUSTOM,
+        ];
+        if (!in_array($dataScope, $validScopes, true)) {
+            throw new ApiException(Code::PARAMETER_ERROR, '数据权限范围值不合法');
+        }
+
         $role = $this->model->find($roleId);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
-        
-        // 验证部门是否存在
+
+        // 仅在自定义模式下校验部门列表；其他模式强制清空已分配部门
+        $deptIds = $dataScope === Role::DATA_SCOPE_CUSTOM
+            ? array_values(array_unique(array_filter($deptIds, fn($v) => is_int($v) || (is_string($v) && ctype_digit($v)))))
+            : [];
+
+        if ($dataScope === Role::DATA_SCOPE_CUSTOM && !empty($deptIds)) {
+            $deptModel = ModelFactory::dept();
+            $existingDepts = $deptModel->whereIn('id', $deptIds)
+                ->where('status', 1)
+                ->pluck('id')
+                ->toArray();
+
+            $invalidDeptIds = array_diff($deptIds, $existingDepts);
+            if (!empty($invalidDeptIds)) {
+                throw new ApiException(Code::DEPT_NOT_FOUND, '部门不存在: ' . implode(',', $invalidDeptIds));
+            }
+        }
+
+        try {
+            \support\Db::beginTransaction();
+
+            // 1. 写入数据权限范围
+            $this->model->where('id', $roleId)->update([
+                'data_scope' => $dataScope,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            // 2. 写入自定义部门关联（其他模式也 detach 一次，保证一致）
+            $role->assignDepts($deptIds);
+
+            \support\Db::commit();
+
+            // 数据权限范围 / 自定义部门变化，清理持有该角色的管理员路由缓存
+            $this->routeCache->clearAdminsByRoleIds([$roleId]);
+
+            return ['deptIds' => $deptIds, 'dataScope' => $dataScope];
+        } catch (\Exception $e) {
+            \support\Db::rollBack();
+            throw new ApiException(Code::SYSTEM_ERROR, '保存数据权限失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取角色的数据权限配置（范围 + 自定义部门列表）
+     * @param int $roleId 角色ID
+     * @return array { dataScope: int, deptIds: int[], depts: array }
+     * @throws ApiException
+     */
+    public function getRoleDataScope(int $roleId): array
+    {
+        $role = $this->model->find($roleId);
+        if (!$role) {
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
+        }
+
+        $depts = $role->depts()->get()->toArray();
+        $deptIds = [];
+        foreach ($depts as $dept) {
+            if (isset($dept['id'])) {
+                $deptIds[] = (int) $dept['id'];
+            }
+        }
+
+        return [
+            'dataScope' => (int) ($role->data_scope ?? Role::DATA_SCOPE_ALL),
+            'deptIds' => $deptIds,
+            'depts' => $depts,
+        ];
+    }
+
+    /**
+     * 保留旧方法以兼容已有调用方（仅分配部门，不再处理范围）
+     * @deprecated 1.0.0 起请使用 assignDataScope
+     */
+    public function assignDepts(int $roleId, array $deptIds): bool
+    {
+        $role = $this->model->find($roleId);
+        if (!$role) {
+            throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
+        }
+
         if (!empty($deptIds)) {
             $deptModel = ModelFactory::dept();
             $existingDepts = $deptModel->whereIn('id', $deptIds)
                 ->where('status', 1)
                 ->pluck('id')
                 ->toArray();
-            
+
             $invalidDeptIds = array_diff($deptIds, $existingDepts);
             if (!empty($invalidDeptIds)) {
                 throw new ApiException(Code::DEPT_NOT_FOUND, '部门不存在: ' . implode(',', $invalidDeptIds));
             }
         }
-        
-        // 分配部门
+
         $result = $role->assignDepts($deptIds);
 
         if ($result === false) {
@@ -427,19 +521,16 @@ class RoleService extends BaseService
     }
 
     /**
-     * 获取角色的数据权限部门列表
-     * @param int $roleId 角色ID
-     * @return array
-     * @throws ApiException
+     * 保留旧方法以兼容已有调用方
+     * @deprecated 1.0.0 起请使用 getRoleDataScope
      */
     public function getRoleDepts(int $roleId): array
     {
-        // 检查角色是否存在
         $role = $this->model->find($roleId);
         if (!$role) {
             throw new ApiException(Code::ROLE_NOT_FOUND, '角色不存在');
         }
-        
+
         return $role->depts()->get()->toArray();
     }
 

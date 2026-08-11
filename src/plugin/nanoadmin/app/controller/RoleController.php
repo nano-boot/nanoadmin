@@ -7,6 +7,7 @@ use plugin\nanoadmin\app\attribute\Permission;
 use plugin\nanoadmin\app\common\R;
 use plugin\nanoadmin\app\middleware\AuthMiddleware;
 use plugin\nanoadmin\app\middleware\PermissionMiddleware;
+use plugin\nanoadmin\app\model\Role;
 use plugin\nanoadmin\app\schema\role\RoleQuery;
 use plugin\nanoadmin\app\schema\role\RoleRequest;
 use plugin\nanoadmin\app\schema\role\RoleResponse;
@@ -223,8 +224,8 @@ class RoleController extends BaseController
 
     #[OA\Post(
         path: '/sys/role/{id}/depts',
-        summary: '分配数据权限部门',
-        description: '为角色分配数据权限部门，控制角色下用户能查看哪些部门的数据',
+        summary: '分配数据权限',
+        description: '为角色分配数据权限范围与自定义部门；dataScope=5 时 deptIds 生效，其他模式自动清空已分配部门',
         tags: ['角色'],
         x: [OpenApiModifier::X_REQUEST_BODY => RoleDeptRequest::class]
     )]
@@ -236,14 +237,17 @@ class RoleController extends BaseController
             ->scene('assignDepts')
             ->check();
 
-        $deptIds = array_values(array_filter($data['deptIds'] ?? [], fn($v) => $v > 0));
-        $result = $this->roleService->assignDepts($id, $deptIds);
-        return R::data($result, '分配数据权限部门成功');
+        $dataScope = (int) ($data['data_scope'] ?? Role::DATA_SCOPE_ALL);
+        $deptIds = array_values(array_filter($data['deptIds'] ?? [], fn($v) => is_int($v) || (is_string($v) && ctype_digit($v))));
+
+        $result = $this->roleService->assignDataScope($id, $dataScope, $deptIds);
+        return R::data($result, '分配数据权限成功');
     }
 
     #[OA\Get(
         path: '/sys/role/{id}/depts',
-        summary: '获取角色数据权限部门',
+        summary: '获取角色数据权限',
+        description: '返回角色当前的数据权限范围与自定义部门列表',
         tags: ['角色']
     )]
     #[Permission(title: '查看角色数据权限', code: 'sys:role:get-depts', action: 'query')]
@@ -251,7 +255,7 @@ class RoleController extends BaseController
     public function getDepts(int $id): Response
     {
         $this->validator->scene('show')->setPath()->check();
-        $depts = $this->roleService->getRoleDepts($id);
-        return R::data($depts, '获取数据权限部门成功');
+        $data = $this->roleService->getRoleDataScope($id);
+        return R::data($data, '获取数据权限成功');
     }
 }
