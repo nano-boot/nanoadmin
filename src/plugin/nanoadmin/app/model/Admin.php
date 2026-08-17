@@ -200,7 +200,7 @@ class Admin extends BaseModel
         }
 
         // 获取管理员的角色
-        $roleIds = $admin->roles()->pluck('id')->toArray();
+        $roleIds = $admin->roles()->pluck('sys_role.id')->toArray();
         if (empty($roleIds)) {
             return $query;
         }
