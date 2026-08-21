@@ -554,10 +554,9 @@ class MenuService
                 ? $redirect
                 : ($link !== '' ? $link : $path);
             $activePath = $this->resolveNavigationPath((string)($meta['activePath'] ?? ''), $parentPath);
-            $matchPaths = array_values(array_unique(array_filter([
-                $path,
-                $activePath,
-            ], static fn (string $value): bool => $value !== '')));
+            // activePath 是当前路由要激活的“目标菜单路径”，不能放进当前菜单自身的
+            // matchPaths，否则访问目标菜单时会反向激活当前菜单。
+            $matchPaths = $path === '' ? [] : [$path];
 
             if ($activePath !== '') {
                 $meta['activePath'] = $activePath;
