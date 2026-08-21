@@ -15,6 +15,7 @@ use plugin\nanoadmin\app\schema\menu\MenuQuery;
 use plugin\nanoadmin\app\schema\menu\MenuRequest;
 use plugin\nanoadmin\app\schema\menu\MenuResponse;
 use plugin\nanoadmin\app\schema\menu\MenuSortRequest;
+use plugin\nanoadmin\app\schema\menu\NavigationResponse;
 use plugin\nanoadmin\app\service\MenuService;
 use plugin\nanoadmin\app\validator\menu\MenuValidator;
 use support\annotation\Middleware;
@@ -28,6 +29,7 @@ use support\Response;
  *  GET    /sys/menu         tree   菜单树（支持搜索）
  *  POST   /sys/menu         store  创建菜单
  *  GET    /sys/menu/route   route  当前管理员可访问的路由
+ *  GET    /sys/menu/navigation navigation  versioned routes + sidebar 导航契约
  *  GET    /sys/menu/{id}    show   菜单详情
  *  PUT    /sys/menu/{id}    update 更新菜单
  *  DELETE /sys/menu/{id}    destroy 删除菜单
@@ -104,6 +106,24 @@ class MenuController extends BaseController
     {
         $adminId = (int)($request->adminId ?? 0);
         return R::success($this->service->getAdminRoutes($adminId), '获取路由配置成功');
+    }
+
+    /**
+     * 获取 versioned routes + sidebar 导航契约。
+     * 已登录但免菜单权限，保持与旧 route 接口一致的登录恢复语义。
+     */
+    #[OA\Get(
+        path: '/sys/menu/navigation',
+        summary: '版本化导航契约',
+        description: '从同一权限菜单树生成 routes 与 sidebar，固定返回 v1 shape；旧 /sys/menu/route 保留兼容。',
+        tags: ['菜单管理']
+    )]
+    #[AllowAnonymous(requireToken: true, requirePermission: false, description: '版本化导航契约（已登录免权限）')]
+    #[DataResponse(schema: NavigationResponse::class)]
+    public function navigation(Request $request): Response
+    {
+        $adminId = (int)($request->adminId ?? 0);
+        return R::success($this->service->getAdminNavigation($adminId), '获取导航配置成功');
     }
 
     /**

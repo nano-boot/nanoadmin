@@ -503,6 +503,185 @@ class MenuService
     }
 
     /**
+     * 获取 versioned routes + sidebar 导航契约。
+     * routes 与 sidebar 都从同一次权限过滤后的路由树生成，避免两套查询导致顺序或权限漂移。
+     *
+     * @return array{schemaVersion:string,fingerprint:string,homePath:string,routes:array,sidebarGroups:array}
+     */
+    public function getAdminNavigation(int $adminId): array
+    {
+        $routes = $this->normalizeNavigationRoutes($this->getAdminRoutes($adminId));
+        $sidebarItems = $this->buildSidebarItems($routes);
+        $fingerprint = hash('sha256', json_encode([
+            'schemaVersion' => 'v1',
+            'permissionFingerprint' => $this->routeCache->getFingerprint(),
+            'buttonPermissions' => $this->collectButtonPermissions($routes),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        return [
+            'schemaVersion' => 'v1',
+            'fingerprint' => $fingerprint,
+            'homePath' => $this->findFirstNavigationPath($routes),
+            'routes' => $routes,
+            'sidebarGroups' => $sidebarItems === [] ? [] : [[
+                'id' => 'main',
+                'title' => '',
+                'items' => $sidebarItems,
+            ]],
+        ];
+    }
+
+    /** @param array<int,array<string,mixed>> $routes */
+    private function normalizeNavigationRoutes(array $routes, string $parentPath = ''): array
+    {
+        return array_values(array_map(function (array $route) use ($parentPath): array {
+            $meta = is_array($route['meta'] ?? null) ? $route['meta'] : [];
+            $link = trim((string)($meta['link'] ?? ''));
+            $iframe = (bool)($meta['isIframe'] ?? false);
+            $path = $this->resolveNavigationPath((string)($route['path'] ?? ''), $parentPath);
+            $children = $this->normalizeNavigationRoutes(
+                is_array($route['children'] ?? null) ? $route['children'] : [],
+                $path
+            );
+            $component = (string)($route['component'] ?? '');
+            $kind = $link !== '' && $iframe ? 'iframe' : ($link !== '' ? 'external' : ($children !== [] || $component === '' ? 'directory' : 'page'));
+            $configuredRedirect = $this->resolveNavigationPath((string)($route['redirect'] ?? ''), $parentPath);
+            $firstChildPath = $this->findFirstNavigationPath($children);
+            $redirect = $configuredRedirect !== ''
+                ? $configuredRedirect
+                : ($kind === 'directory' ? $firstChildPath : '');
+            $defaultUrl = $redirect !== ''
+                ? $redirect
+                : ($link !== '' ? $link : $path);
+            $activePath = $this->resolveNavigationPath((string)($meta['activePath'] ?? ''), $parentPath);
+            $matchPaths = array_values(array_unique(array_filter([
+                $path,
+                $activePath,
+            ], static fn (string $value): bool => $value !== '')));
+
+            if ($activePath !== '') {
+                $meta['activePath'] = $activePath;
+            }
+
+            return [
+                'id' => (int)($route['id'] ?? 0),
+                'name' => (string)($route['name'] ?? ''),
+                'path' => $path,
+                'component' => $component,
+                'redirect' => $redirect,
+                'kind' => $kind,
+                'defaultUrl' => $defaultUrl,
+                'matchPaths' => $matchPaths,
+                'meta' => $meta,
+                'children' => $children,
+            ];
+        }, $routes));
+    }
+
+    /**
+     * 将菜单节点的相对路径解析为完整路由地址。
+     * 外链和已是绝对地址的路径保持不变。
+     */
+    private function resolveNavigationPath(string $path, string $parentPath): string
+    {
+        $path = trim($path);
+        if ($path === '' || preg_match('#^https?://#i', $path) === 1 || str_starts_with($path, '/')) {
+            return $path;
+        }
+
+        if ($parentPath === '' || preg_match('#^https?://#i', $parentPath) === 1) {
+            return '/' . ltrim($path, '/');
+        }
+
+        return rtrim($parentPath, '/') . '/' . ltrim($path, '/');
+    }
+
+    /** @param array<int,array<string,mixed>> $routes */
+    private function buildSidebarItems(array $routes): array
+    {
+        $items = [];
+        foreach ($routes as $route) {
+            $meta = is_array($route['meta'] ?? null) ? $route['meta'] : [];
+            if (($meta['isHide'] ?? false) === true) {
+                continue;
+            }
+            $items[] = $this->routeToSidebarItem($route);
+        }
+        return $items;
+    }
+
+    /** @param array<string,mixed> $route */
+    private function routeToSidebarItem(array $route): array
+    {
+        $meta = is_array($route['meta'] ?? null) ? $route['meta'] : [];
+        $children = $this->buildSidebarItems($route['children'] ?? []);
+        $title = (string)($meta['title'] ?? $route['name'] ?? '');
+        $kind = (string)($route['kind'] ?? 'page');
+        return [
+            'id' => (int)($route['id'] ?? 0),
+            'key' => (string)($route['name'] ?? $route['path'] ?? ''),
+            'title' => $title,
+            'titleKey' => $title,
+            'icon' => (string)($meta['icon'] ?? ''),
+            'path' => (string)($route['path'] ?? ''),
+            'kind' => $kind,
+            'defaultUrl' => (string)($route['defaultUrl'] ?? ''),
+            'matchPaths' => array_values($route['matchPaths'] ?? []),
+            'badge' => (bool)($meta['showBadge'] ?? false),
+            'badgeText' => (string)($meta['showTextBadge'] ?? ''),
+            'hidden' => (bool)($meta['isHide'] ?? false),
+            'disabled' => false,
+            'external' => $kind === 'external',
+            'iframe' => $kind === 'iframe',
+            'children' => $children,
+        ];
+    }
+
+    /** @param array<int,array<string,mixed>> $routes */
+    private function collectButtonPermissions(array $routes): array
+    {
+        $permissions = [];
+        foreach ($routes as $route) {
+            $meta = is_array($route['meta'] ?? null) ? $route['meta'] : [];
+            foreach ((array)($meta['authList'] ?? []) as $auth) {
+                $code = trim((string)($auth['authMark'] ?? ''));
+                if ($code !== '') {
+                    $permissions[$code] = true;
+                }
+            }
+            foreach ($this->collectButtonPermissions($route['children'] ?? []) as $childCode) {
+                $permissions[$childCode] = true;
+            }
+        }
+        $codes = array_keys($permissions);
+        sort($codes, SORT_STRING);
+        return $codes;
+    }
+
+    /** @param array<int,array<string,mixed>> $routes */
+    private function findFirstNavigationPath(array $routes): string
+    {
+        foreach ($routes as $route) {
+            $meta = is_array($route['meta'] ?? null) ? $route['meta'] : [];
+            if (($meta['isHide'] ?? false) === true) {
+                continue;
+            }
+            if (($route['kind'] ?? '') === 'external' || ($route['kind'] ?? '') === 'iframe') {
+                continue;
+            }
+            $childrenPath = $this->findFirstNavigationPath($route['children'] ?? []);
+            if ($childrenPath !== '') {
+                return $childrenPath;
+            }
+            $path = (string)($route['defaultUrl'] ?? '');
+            if ($path !== '') {
+                return $path;
+            }
+        }
+        return '';
+    }
+
+    /**
      * 获取管理员可访问的按钮权限范围
      *
      * 缓存由 AdminRouteCache::getAdminButtonPermissionScope() 提供，此处保留方法

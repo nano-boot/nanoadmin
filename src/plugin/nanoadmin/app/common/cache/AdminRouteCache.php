@@ -147,6 +147,21 @@ class AdminRouteCache
     }
 
     /**
+     * 返回当前权限菜单缓存指纹，供 versioned navigation DTO 使用。
+     * 指纹由菜单、角色、权限及三张关联表共同决定，排序稳定且不暴露给客户端。
+     */
+    public function getFingerprint(): string
+    {
+        try {
+            $this->ensureCacheValid();
+            return $this->buildFingerprint();
+        } catch (\Throwable $e) {
+            error_log('[AdminRouteCache] navigation fingerprint skipped: ' . $e->getMessage());
+            return hash('sha256', 'navigation:v1:unavailable');
+        }
+    }
+
+    /**
      * 联合多张表的 (id, updated_at) 构造指纹
      *
      * 注意：3 张关联表 (sys_role_menu / sys_role_permission / sys_admin_role) 没有 updated_at 列，
@@ -188,6 +203,10 @@ class AdminRouteCache
         $rows = Db::table('sys_admin_role')->select('admin_id', 'role_id')->orderBy('admin_id')->orderBy('role_id')->get();
         $parts['admin_role'] = $rows->map(fn ($r) => $r->admin_id . ':' . $r->role_id)->all();
 
+        foreach ($parts as &$part) {
+            sort($part, SORT_STRING);
+        }
+        unset($part);
         ksort($parts);
         $fingerprint = md5(json_encode($parts, JSON_UNESCAPED_UNICODE));
 
