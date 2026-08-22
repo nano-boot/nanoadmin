@@ -544,8 +544,17 @@ class MenuService
                 $path
             );
             $component = (string)($route['component'] ?? '');
-            $kind = $link !== '' && $iframe ? 'iframe' : ($link !== '' ? 'external' : ($children !== [] || $component === '' ? 'directory' : 'page'));
-            $configuredRedirect = $this->resolveNavigationPath((string)($route['redirect'] ?? ''), $parentPath);
+            $kind = $link !== '' && $iframe
+                ? 'iframe'
+                : ($link !== ''
+                    ? 'external'
+                    : ($children !== [] || in_array($component, ['', 'Layout', '/index/index'], true)
+                        ? 'directory'
+                        : 'page'));
+            // redirect 属于当前节点：相对值应基于当前完整 path 解析。
+            // 例如 /system 的 redirect=file 必须得到 /system/file，而不是 /file。
+            $redirectBasePath = $path !== '' ? $path : $parentPath;
+            $configuredRedirect = $this->resolveNavigationPath((string)($route['redirect'] ?? ''), $redirectBasePath);
             $firstChildPath = $this->findFirstNavigationPath($children);
             $redirect = $configuredRedirect !== ''
                 ? $configuredRedirect
@@ -562,6 +571,8 @@ class MenuService
                 $meta['activePath'] = $activePath;
             }
 
+            $meta = $this->normalizeNavigationMeta($meta, (string)($route['name'] ?? ''));
+
             return [
                 'id' => (int)($route['id'] ?? 0),
                 'name' => (string)($route['name'] ?? ''),
@@ -575,6 +586,56 @@ class MenuService
                 'children' => $children,
             ];
         }, $routes));
+    }
+
+    /**
+     * 固定新版导航契约中的 meta shape，同时保留未来扩展字段。
+     *
+     * @param array<string,mixed> $meta
+     * @return array<string,mixed>
+     */
+    private function normalizeNavigationMeta(array $meta, string $fallbackTitle): array
+    {
+        $roles = [];
+        foreach ((array)($meta['roles'] ?? []) as $role) {
+            if (is_scalar($role)) {
+                $role = trim((string)$role);
+                if ($role !== '') {
+                    $roles[] = $role;
+                }
+            }
+        }
+
+        $authList = [];
+        foreach ((array)($meta['authList'] ?? []) as $auth) {
+            if (!is_array($auth)) {
+                continue;
+            }
+            $authList[] = [
+                'title' => (string)($auth['title'] ?? ''),
+                'authMark' => (string)($auth['authMark'] ?? ''),
+            ];
+        }
+
+        return array_merge($meta, [
+            'title' => (string)($meta['title'] ?? $fallbackTitle),
+            'icon' => (string)($meta['icon'] ?? ''),
+            'keepAlive' => (bool)($meta['keepAlive'] ?? true),
+            'isHide' => (bool)($meta['isHide'] ?? false),
+            'isHideTab' => (bool)($meta['isHideTab'] ?? false),
+            'fixedTab' => (bool)($meta['fixedTab'] ?? false),
+            'isFullPage' => (bool)($meta['isFullPage'] ?? false),
+            'showBadge' => (bool)($meta['showBadge'] ?? false),
+            'showTextBadge' => is_string($meta['showTextBadge'] ?? null)
+                ? $meta['showTextBadge']
+                : '',
+            'permission' => (string)($meta['permission'] ?? ''),
+            'roles' => array_values(array_unique($roles)),
+            'authList' => $authList,
+            'link' => (string)($meta['link'] ?? ''),
+            'isIframe' => (bool)($meta['isIframe'] ?? false),
+            'activePath' => (string)($meta['activePath'] ?? ''),
+        ]);
     }
 
     /**

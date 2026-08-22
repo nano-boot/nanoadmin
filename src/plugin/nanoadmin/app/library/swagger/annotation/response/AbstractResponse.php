@@ -108,6 +108,11 @@ abstract class AbstractResponse extends BaseResponse
         $properties = [];
 
         foreach ($reflection->getProperties() as $property) {
+            // ResourceSchema 的内部用途标记不是业务响应字段，不能出现在 data DTO 中。
+            if ($property->getName() === 'schemaKind') {
+                continue;
+            }
+
             $propAttributes = $property->getAttributes(Property::class);
 
             if (!empty($propAttributes)) {

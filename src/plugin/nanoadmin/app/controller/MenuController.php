@@ -115,7 +115,7 @@ class MenuController extends BaseController
     #[OA\Get(
         path: '/sys/menu/navigation',
         summary: '版本化导航契约',
-        description: '从同一权限菜单树生成 routes 与 sidebar，固定返回 v1 shape；旧 /sys/menu/route 保留兼容。',
+        description: '从同一权限菜单树生成 routes 与 sidebarGroups，固定返回 v1 shape。routes 使用完整路径并保留可直接访问的隐藏路由；sidebarGroups 过滤隐藏分支并区分目录、外链与 iframe。旧 /sys/menu/route 保留兼容。',
         tags: ['菜单管理']
     )]
     #[AllowAnonymous(requireToken: true, requirePermission: false, description: '版本化导航契约（已登录免权限）')]
