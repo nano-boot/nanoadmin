@@ -47,7 +47,7 @@ REPLACE INTO `na_sys_menu` (
 (201, '角色管理', 'role', '/permission/role', 'ri:user-settings-line', '', '',
  2,  100, 'M', 1, 0, 0, 1, 0, '', 0),
 (202, '菜单管理', 'menu', '/permission/menu', 'ri:menu-line', '', '',
- 2,  100, 'M', 1, 0, 0, 0, 0,  'user', 0),
+ 2,  100, 'M', 1, 0, 0, 0, 0,  '', 0),
 (203, '部门管理', 'dept', '/system/dept', 'ri:organization-chart', '', '',
  2, 100, 'M', 1, 0, 0, 1, 0,  '', 0),
 (300, '文件管理', 'file', '/system/file', 'ri:file-2-line', '', '',
